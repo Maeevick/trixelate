@@ -20,8 +20,7 @@ pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
 }
 
 fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
-    let colours = colouring.palette().colours().iter().zip(1..);
-    for (bubble, (&colour, number)) in layout.bubbles().iter().zip(colours) {
+    for (bubble, (number, colour)) in layout.bubbles().iter().zip(colouring.palette().numbered()) {
         paper.disc(bubble, colour);
         let radius = bubble.diameter / 2;
         paper.write(

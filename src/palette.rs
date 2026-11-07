@@ -76,6 +76,14 @@ impl Palette {
         ColourNumber(nearest + 1)
     }
 
+    /// Each colour with its number, colour 1 first.
+    pub fn numbered(&self) -> impl Iterator<Item = (ColourNumber, Rgb)> + '_ {
+        self.0
+            .iter()
+            .enumerate()
+            .map(|(index, &colour)| (ColourNumber(index + 1), colour))
+    }
+
     pub fn colours(&self) -> &[Rgb] {
         &self.0
     }
