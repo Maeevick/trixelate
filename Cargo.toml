@@ -1,0 +1,15 @@
+[package]
+name = "trixelate"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+description = "Turns a picture into a colour-by-number pixel sheet, ready to print"
+repository = "https://github.com/Maeevick/trixelate"
+readme = "README.md"
+keywords = ["pixel-art", "colouring", "paint-by-number", "cli", "png"]
+categories = ["command-line-utilities", "multimedia::images"]
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+png = "0.18"
