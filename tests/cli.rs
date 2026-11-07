@@ -69,3 +69,54 @@ fn a_picture_becomes_an_a4_sheet_written_beside_it_and_the_command_says_where() 
     );
     assert!(text(&run.stdout).contains(&sheet_path.display().to_string()));
 }
+
+/// Twelve colours in a four by three picture, so the sheet writes every digit from 0 to 9.
+fn a_twelve_colour_picture_in(folder: &Path) -> PathBuf {
+    let pixels: Vec<u8> = (0..12u8)
+        .flat_map(|index| [index * 21, 255 - index * 21, (index % 3) * 120, 255])
+        .collect();
+    let picture = Picture::from_rgba(4, 3, &pixels).expect("a picture");
+    let path = folder.join("twelve.png");
+    fs::write(&path, png_file::write(&picture).expect("a PNG")).expect("the picture on disk");
+    path
+}
+
+/// Compares a sheet with its golden master, or writes the master when TRIXELATE_BLESS is set.
+fn matches_golden(sheet: &Path, golden: &str) -> bool {
+    let golden = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/golden")
+        .join(golden);
+    if std::env::var_os("TRIXELATE_BLESS").is_some() {
+        fs::copy(sheet, &golden).expect("the golden master written");
+    }
+    let read = |path: &Path| {
+        fs::read(path)
+            .ok()
+            .and_then(|bytes| png_file::read(&bytes).ok())
+    };
+    read(sheet).is_some() && read(sheet) == read(&golden)
+}
+
+#[test]
+fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot() {
+    let folder = folder("golden");
+    let picture = a_twelve_colour_picture_in(&folder);
+    let sheet = folder.join("twelve.sheet.png");
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "--height",
+        "3",
+        "--colours",
+        "12",
+        "--format",
+        "a5",
+        "--output",
+        sheet.to_str().unwrap_or_default(),
+    ]);
+
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert!(matches_golden(&sheet, "twelve-a5.sheet.png"));
+}
