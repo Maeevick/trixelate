@@ -105,17 +105,18 @@ pub struct Layout {
 }
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
+const GAP_BETWEEN_TWINS_MM: u32 = 10;
 const WIDEST_BUBBLE_MM: u32 = 15;
 const LINES_PER_CELL_SIDE: u32 = 16;
 
 impl Layout {
-    /// Lays out a colouring's grid and legend on the page, inside its margin.
+    /// Lays out a colouring's grids and legend on the page, inside its margin.
     pub fn of(
         colouring: &Colouring,
         format: PageFormat,
         orientation: Orientation,
         margin: Margin,
-        _grids: Grids,
+        grids: Grids,
     ) -> Result<Layout, NoRoom> {
         let (width, height) = match (orientation, format.millimetres()) {
             (Orientation::Portrait, (short, long)) => (short, long),
@@ -133,11 +134,19 @@ impl Layout {
             .checked_sub(dots(GAP_ABOVE_THE_LEGEND_MM) + bubble)
             .ok_or(NoRoom::InsideTheMargin)?;
 
+        let twins = match grids {
+            Grids::Alone => 1,
+            Grids::Twinned => 2,
+        };
+        let gap_between_twins = dots(GAP_BETWEEN_TWINS_MM);
+        let gaps = (twins - 1) * gap_between_twins;
+        let room_per_grid = grid_room.checked_sub(gaps).ok_or(NoRoom::InsideTheMargin)? / twins;
+
         let size = colouring.size();
-        let roomiest_side = (content_width / size.columns()).min(grid_room / size.rows());
+        let roomiest_side = (content_width / size.columns()).min(room_per_grid / size.rows());
         let line = (roomiest_side / LINES_PER_CELL_SIDE).max(1);
         let cell_side = (content_width.saturating_sub(line) / size.columns())
-            .min(grid_room.saturating_sub(line) / size.rows());
+            .min(room_per_grid.saturating_sub(line) / size.rows());
         let widest_number = colours.to_string();
         let inside_a_cell = cell_side.saturating_sub(line);
         let cell_number_scale = lettering::largest_scale_fitting(
@@ -167,11 +176,15 @@ impl Layout {
             page_width,
             page_height,
             bubbles,
-            grids: vec![GridPlace {
-                left: margin + (content_width - grid_width) / 2,
-                top: margin + (grid_room - grid_height) / 2,
-                cell_side,
-            }],
+            grids: (0..twins)
+                .map(|index| GridPlace {
+                    left: margin + (content_width - grid_width) / 2,
+                    top: margin
+                        + (grid_room - (twins * grid_height + gaps)) / 2
+                        + index * (grid_height + gap_between_twins),
+                    cell_side,
+                })
+                .collect(),
             line,
             cell_number_scale,
             bubble_number_scale,
