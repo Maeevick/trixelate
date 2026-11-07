@@ -1,5 +1,10 @@
 //! Reads a picture from JPEG bytes, as cameras and the web save photos.
 
+use zune_jpeg::JpegDecoder;
+use zune_jpeg::zune_core::bytestream::ZCursor;
+use zune_jpeg::zune_core::colorspace::ColorSpace;
+use zune_jpeg::zune_core::options::DecoderOptions;
+
 use crate::picture::Picture;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -7,8 +12,11 @@ pub struct NotAJpeg;
 
 /// The picture a JPEG holds, whatever its colour space, in red, green and blue.
 pub fn read(bytes: &[u8]) -> Result<Picture, NotAJpeg> {
-    let _ = bytes;
-    Err(NotAJpeg)
+    let options = DecoderOptions::default().jpeg_set_out_colorspace(ColorSpace::RGBA);
+    let mut decoder = JpegDecoder::new_with_options(ZCursor::new(bytes), options);
+    let rgba = decoder.decode().map_err(|_| NotAJpeg)?;
+    let size = decoder.info().ok_or(NotAJpeg)?;
+    Picture::from_rgba(u32::from(size.width), u32::from(size.height), &rgba).map_err(|_| NotAJpeg)
 }
 
 #[cfg(test)]
