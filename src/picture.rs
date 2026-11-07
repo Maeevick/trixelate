@@ -24,6 +24,13 @@ pub enum NotAPicture {
 impl Picture {
     /// Reads red, green, blue and alpha bytes, row after row, laid on white paper.
     pub fn from_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<Picture, NotAPicture> {
+        let pixel_count = width as usize * height as usize;
+        if pixel_count == 0 {
+            return Err(NotAPicture::NoPixel);
+        }
+        if rgba.len() != pixel_count * 4 {
+            return Err(NotAPicture::BytesNotFillingItsSize);
+        }
         let pixels = rgba
             .as_chunks::<4>()
             .0
