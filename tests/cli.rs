@@ -71,6 +71,34 @@ fn a_picture_becomes_an_a4_sheet_written_beside_it_and_the_command_says_where() 
 }
 
 #[test]
+fn a_full_model_is_written_beside_the_picture_apart_from_its_sheet() {
+    let folder = folder("model");
+    let picture = a_picture_in(&folder);
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "--height",
+        "3",
+        "--model",
+        "full",
+    ]);
+
+    let model_path = folder.join("sunset.model.png");
+    let model = fs::read(&model_path)
+        .ok()
+        .and_then(|bytes| png_file::read(&bytes).ok());
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert_eq!(
+        model.map(|model| (model.width(), model.height())),
+        Some((2480, 3508))
+    );
+    assert!(text(&run.stdout).contains(&model_path.display().to_string()));
+    assert!(!folder.join("sunset.sheet.png").exists());
+}
+
+#[test]
 fn a_landscape_sheet_lies_on_its_side() {
     let folder = folder("landscape");
     let picture = a_picture_in(&folder);
