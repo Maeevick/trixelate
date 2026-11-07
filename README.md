@@ -58,7 +58,7 @@ Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` t
 1. **The picture lies on white paper**: transparent parts become blank, half-transparent ones are washed out on white.
 2. **The grid keeps the picture's proportions**, its rows following from `--width`, and **each cell averages the pixels it covers**, so a detail too small for the grid still tints its cell; a grid finer than its picture repeats its pixels.
 3. **The palette is cut from the cells' colours**: the box of colours that spreads the most is cut through the middle of its widest channel until there are as many boxes as colours asked, and each box gives its weighted average. Far-apart colours are never merged, and colour 1 is the one used most.
-4. **Every cell takes the number of its nearest palette colour.**
+4. **Every cell takes the number of its nearest palette colour**, and a colour no cell takes is dropped, so every bubble has cells to colour.
 5. **The layout gives the cells the largest square side the page allows**, inside the margin and above the legend, and the largest digits each cell and bubble can hold. A twin shares that room between its two grids, 10 mm apart.
 6. **A model paints each cell in its colour**, its number in black or white, whichever reads better, as in the legend.
 
