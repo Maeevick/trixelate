@@ -270,27 +270,39 @@ mod tests {
     }
 
     #[test]
-    fn a_light_red_bubble_counts_its_red_and_writes_its_number_in_black() {
-        let picture =
-            Picture::from_rgba(2, 1, &[220, 30, 40, 255, 255, 110, 110, 255]).expect("a picture");
+    fn light_red_and_light_blue_bubbles_count_every_channel_and_write_their_numbers_in_black() {
+        let red_pink_light_blue = [220, 30, 40, 255, 255, 110, 110, 255, 100, 140, 255, 255];
+        let picture = Picture::from_rgba(3, 1, &red_pink_light_blue).expect("a picture");
         let colouring = Colouring::of(
             &picture,
-            GridSize::new(2, 1).expect("a grid"),
-            ColourCount::new(2).expect("a count"),
+            GridSize::new(3, 1).expect("a grid"),
+            ColourCount::new(3).expect("a count"),
         );
         let layout = Layout::of(&colouring, PageFormat::A5, Margin::AROUND_A_SHEET).expect("room");
 
         let sheet = draw(&colouring, &layout);
 
-        let pink = layout.bubbles()[1];
-        let (width, height) = lettering::size("2", layout.bubble_number_scale());
-        let (left, top) = (pink.centre_x - width / 2, pink.centre_y - height / 2);
-        let inks: std::collections::BTreeSet<Rgb> =
-            lettering::ink("2", layout.bubble_number_scale())
-                .into_iter()
-                .map(|(x, y)| sheet.pixel(left + x, top + y))
-                .collect();
-        assert_eq!(colouring.palette().colours()[1], Rgb(255, 110, 110));
-        assert_eq!(inks.into_iter().collect::<Vec<_>>(), [BLACK]);
+        let inks = layout
+            .bubbles()
+            .iter()
+            .zip(["1", "2", "3"])
+            .map(|(bubble, number)| {
+                let (width, height) = lettering::size(number, layout.bubble_number_scale());
+                let (left, top) = (bubble.centre_x - width / 2, bubble.centre_y - height / 2);
+                let colours: std::collections::BTreeSet<Rgb> =
+                    lettering::ink(number, layout.bubble_number_scale())
+                        .into_iter()
+                        .map(|(x, y)| sheet.pixel(left + x, top + y))
+                        .collect();
+                colours.into_iter().collect::<Vec<_>>()
+            });
+        assert_eq!(
+            colouring.palette().colours(),
+            [Rgb(100, 140, 255), Rgb(220, 30, 40), Rgb(255, 110, 110)]
+        );
+        assert_eq!(
+            inks.collect::<Vec<_>>(),
+            [vec![BLACK], vec![Rgb::WHITE], vec![BLACK]]
+        );
     }
 }
