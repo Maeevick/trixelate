@@ -274,7 +274,7 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
         (&["missing.png", "--width", "4"], "cannot read missing.png"),
         (
             &[not_a_png.to_str().unwrap_or_default(), "--width", "4"],
-            "is not a PNG picture",
+            "is not a PNG or JPEG picture",
         ),
         (
             &[picture, "--width", "4", "--margin", "105"],

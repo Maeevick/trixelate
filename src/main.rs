@@ -10,7 +10,7 @@ use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
-use trixelate::{Order, make_sheet, png_file};
+use trixelate::{Order, make_sheet, picture_file, png_file};
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
 #[derive(Parser)]
@@ -19,7 +19,7 @@ use trixelate::{Order, make_sheet, png_file};
     after_help = "Exit codes: 0 the sheet is written, 1 the picture or the sheet failed, 2 the arguments are wrong."
 )]
 struct Cli {
-    /// The PNG picture to turn into a sheet
+    /// The PNG or JPEG picture to turn into a sheet
     picture: PathBuf,
 
     /// Cells across the grid, the rows following from the picture's proportions
@@ -172,7 +172,8 @@ fn write_sheet(path: &Path, bytes: &[u8], force: bool) -> Result<(), String> {
 fn read_picture(path: &Path) -> Result<Picture, String> {
     let bytes =
         fs::read(path).map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-    png_file::read(&bytes).map_err(|_| format!("{} is not a PNG picture", path.display()))
+    picture_file::read(&bytes)
+        .map_err(|_| format!("{} is not a PNG or JPEG picture", path.display()))
 }
 
 /// Where a sheet goes when no output is given: beside its picture, as <picture>.<kind>.png.
