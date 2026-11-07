@@ -11,7 +11,7 @@ pub mod sheet;
 
 use colouring::Colouring;
 use grid::GridSize;
-use layout::{Layout, Margin, NoRoom, Orientation, PageFormat};
+use layout::{Grids, Layout, Margin, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
 use sheet::{Legend, Model};
@@ -29,7 +29,13 @@ pub struct Order {
 /// Turns a picture into the colour-by-number sheet ordered, or says what lacks room on the page.
 pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
     let colouring = Colouring::of(picture, order.grid, order.colours);
-    let layout = Layout::of(&colouring, order.format, order.orientation, order.margin)?;
+    let layout = Layout::of(
+        &colouring,
+        order.format,
+        order.orientation,
+        order.margin,
+        Grids::Alone,
+    )?;
     Ok(sheet::draw(
         &colouring,
         &layout,

@@ -51,6 +51,13 @@ pub enum NoRoom {
     ForTheNumbersInTheLegend,
 }
 
+/// How many grids share the page: the sheet alone, or a model twinned with its sheet.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Grids {
+    Alone,
+    Twinned,
+}
+
 /// A square on the page, from its top left corner, its side in dots.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Square {
@@ -108,6 +115,7 @@ impl Layout {
         format: PageFormat,
         orientation: Orientation,
         margin: Margin,
+        _grids: Grids,
     ) -> Result<Layout, NoRoom> {
         let (width, height) = match (orientation, format.millimetres()) {
             (Orientation::Portrait, (short, long)) => (short, long),
@@ -231,7 +239,23 @@ mod tests {
         format: PageFormat,
         margin: Margin,
     ) -> Result<Layout, NoRoom> {
-        Layout::of(colouring, format, Orientation::Portrait, margin)
+        Layout::of(
+            colouring,
+            format,
+            Orientation::Portrait,
+            margin,
+            Grids::Alone,
+        )
+    }
+
+    fn twinned(colouring: &Colouring, orientation: Orientation) -> Result<Layout, NoRoom> {
+        Layout::of(
+            colouring,
+            PageFormat::A4,
+            orientation,
+            Margin::AROUND_A_SHEET,
+            Grids::Twinned,
+        )
     }
 
     #[test]
@@ -257,12 +281,34 @@ mod tests {
             PageFormat::A4,
             Orientation::Landscape,
             Margin::AROUND_A_SHEET,
+            Grids::Alone,
         );
 
         assert_eq!(
             on_its_side.map(|layout| (layout.page_width(), layout.page_height())),
             Ok((3508, 2480))
         );
+    }
+
+    #[test]
+    fn on_an_upright_page_a_twinned_model_stands_above_its_sheet_a_gap_apart_and_alike()
+    -> Result<(), NoRoom> {
+        let wide = colouring(10, 5, 2);
+        let (margin, gap) = (236, 118);
+
+        let layout = twinned(&wide, Orientation::Portrait)?;
+
+        let grids = layout.grids();
+        assert_eq!(grids.len(), 2);
+        let (model, sheet) = (grids[0], grids[1]);
+        let model_bottom = model.cell(0, 5).top + layout.line();
+        let sheet_bottom = sheet.cell(0, 5).top + layout.line();
+        let legend_top = layout.bubbles()[0].centre_y - layout.bubbles()[0].diameter / 2;
+        assert_eq!(model.cell(0, 0).side, sheet.cell(0, 0).side);
+        assert_eq!(model.cell(0, 0).left, sheet.cell(0, 0).left);
+        assert_eq!(sheet.cell(0, 0).top - model_bottom, gap);
+        assert!(model.cell(0, 0).top >= margin && sheet_bottom < legend_top);
+        Ok(())
     }
 
     #[test]
