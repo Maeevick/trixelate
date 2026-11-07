@@ -22,11 +22,11 @@ trixelate reads a PNG, simplifies it into a grid of square cells, finds its domi
 
 ```sh
 cargo install --path .
-trixelate dragon.png --width 32 --colours 8
+trixelate goblin.png --width 24 --colours 4
 ```
 
 ```
-Sheet written to dragon.sheet.png
+Sheet written to goblin.sheet.png
 ```
 
 ## The command line
