@@ -1,6 +1,7 @@
 //! Where everything lies on the sheet's paper, in dots at 300 dots per inch.
 
 use crate::colouring::Colouring;
+use crate::lettering;
 
 /// The paper a sheet is drawn for, upright.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -67,7 +68,9 @@ pub struct Layout {
     grid_top: u32,
     cell_side: u32,
     line: u32,
+    cell_number_scale: u32,
     bubbles: Vec<Disc>,
+    bubble_number_scale: u32,
 }
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
@@ -94,6 +97,17 @@ impl Layout {
         let line = (roomiest_side / LINES_PER_CELL_SIDE).max(1);
         let cell_side = (content_width.saturating_sub(line) / size.columns())
             .min(grid_room.saturating_sub(line) / size.rows());
+        let widest_number = colours.to_string();
+        let inside_a_cell = cell_side.saturating_sub(line);
+        let cell_number_scale = lettering::largest_scale_fitting(
+            &widest_number,
+            inside_a_cell * 3 / 5,
+            inside_a_cell / 2,
+        )
+        .ok_or(NoRoom::ForTheNumbersInTheCells)?;
+        let bubble_number_scale =
+            lettering::largest_scale_fitting(&widest_number, bubble * 11 / 20, bubble * 9 / 20)
+                .ok_or(NoRoom::ForTheNumbersInTheLegend)?;
         let grid_width = cell_side * size.columns() + line;
         let grid_height = cell_side * size.rows() + line;
 
@@ -116,6 +130,8 @@ impl Layout {
             grid_top: margin + (grid_room - grid_height) / 2,
             cell_side,
             line,
+            cell_number_scale,
+            bubble_number_scale,
         })
     }
 
