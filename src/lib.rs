@@ -7,3 +7,51 @@ pub mod lettering;
 pub mod palette;
 pub mod picture;
 pub mod sheet;
+
+use grid::GridSize;
+use layout::{Margin, NoRoom, PageFormat};
+use palette::ColourCount;
+use picture::Picture;
+
+/// What a sheet is asked to be: its grid, its number of colours, its paper and its margin.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Order {
+    pub grid: GridSize,
+    pub colours: ColourCount,
+    pub format: PageFormat,
+    pub margin: Margin,
+}
+
+/// Turns a picture into the colour-by-number sheet ordered, or says what lacks room on the page.
+pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
+    let _ = order;
+    Ok(picture.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn order(columns: u32, format: PageFormat) -> Order {
+        Order {
+            grid: GridSize::new(columns, 2).expect("a grid"),
+            colours: ColourCount::new(2).expect("a count"),
+            format,
+            margin: Margin::AROUND_A_SHEET,
+        }
+    }
+
+    #[test]
+    fn a_picture_becomes_the_sheet_ordered_or_is_refused_when_the_page_lacks_room() {
+        let picture =
+            Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
+
+        let sheets = [order(4, PageFormat::A4), order(400, PageFormat::A5)]
+            .map(|order| make_sheet(&picture, order).map(|sheet| (sheet.width(), sheet.height())));
+
+        assert_eq!(
+            sheets,
+            [Ok((2480, 3508)), Err(NoRoom::ForTheNumbersInTheCells)]
+        );
+    }
+}
