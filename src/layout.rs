@@ -280,9 +280,10 @@ mod tests {
     }
 
     #[test]
-    fn numbers_too_big_for_their_cells_or_their_bubbles_are_refused() {
+    fn numbers_too_big_for_their_cells_or_their_bubbles_are_refused_even_on_a_sliver_of_paper() {
         let three_hundred_columns = colouring(300, 2, 2);
         let thirty_colours = colouring(10, 5, 30);
+        let one_column_of_thirty_colours = colouring(1, 30, 30);
 
         let layouts = [
             Layout::of(
@@ -291,12 +292,14 @@ mod tests {
                 Margin::AROUND_A_SHEET,
             ),
             Layout::of(&thirty_colours, PageFormat::A5, Margin(60)),
+            Layout::of(&one_column_of_thirty_colours, PageFormat::A5, Margin(73)),
         ];
 
         assert_eq!(
             layouts.map(|layout| layout.err()),
             [
                 Some(NoRoom::ForTheNumbersInTheCells),
+                Some(NoRoom::ForTheNumbersInTheLegend),
                 Some(NoRoom::ForTheNumbersInTheLegend)
             ]
         );
