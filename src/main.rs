@@ -5,7 +5,7 @@ use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use clap::{CommandFactory, Parser, ValueEnum};
+use clap::{Parser, ValueEnum};
 use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
@@ -44,15 +44,15 @@ struct Cli {
     margin: u32,
 
     /// Leave the bubbles blank with their numbers, so the child picks the colours
-    #[arg(long)]
+    #[arg(long, group = "look")]
     freedom: bool,
 
     /// Paint the sheet in its colours, a model to copy from
-    #[arg(long)]
+    #[arg(long, group = "look")]
     model: bool,
 
     /// Put the model and the sheet on one page: one above the other in portrait, side by side in landscape
-    #[arg(long)]
+    #[arg(long, group = "look")]
     twin: bool,
 
     /// Where to write the sheet [default: beside the picture, as <picture>.sheet.png, .model.png or .twin.png]
@@ -105,14 +105,13 @@ fn kind_of(legend: sheet::Legend) -> &'static str {
     }
 }
 
-/// The legend asked for, refused when free with a model, since a model shows the legend's colours.
-fn legend_with(freedom: bool, model: sheet::Model) -> Result<sheet::Legend, &'static str> {
-    match (freedom, model) {
-        (false, model) => Ok(sheet::Legend::Coloured(model)),
-        (true, sheet::Model::None) => Ok(sheet::Legend::Freedom),
-        (true, sheet::Model::Full | sheet::Model::Twin) => Err(
-            "a model paints the cells in the legend's colours, so --model cannot go with --freedom",
-        ),
+/// The legend asked for, coloured unless free, with the model asked for, if any; clap lets one through at most.
+fn legend_of(cli: &Cli) -> sheet::Legend {
+    match (cli.freedom, cli.model, cli.twin) {
+        (true, _, _) => sheet::Legend::Freedom,
+        (_, true, _) => sheet::Legend::Coloured(sheet::Model::Full),
+        (_, _, true) => sheet::Legend::Coloured(sheet::Model::Twin),
+        (false, false, false) => sheet::Legend::Coloured(sheet::Model::None),
     }
 }
 
@@ -128,18 +127,7 @@ fn colour_count(raw: &str) -> Result<ColourCount, String> {
 }
 
 fn main() -> ExitCode {
-    let cli = Cli::parse();
-    let model = match (cli.model, cli.twin) {
-        (_, true) => sheet::Model::Twin,
-        (true, false) => sheet::Model::Full,
-        (false, false) => sheet::Model::None,
-    };
-    let legend = legend_with(cli.freedom, model).unwrap_or_else(|conflict| {
-        Cli::command()
-            .error(clap::error::ErrorKind::ArgumentConflict, conflict)
-            .exit()
-    });
-    match run(cli, legend) {
+    match run(Cli::parse()) {
         Ok(written) => {
             println!("{written}");
             ExitCode::SUCCESS
@@ -151,7 +139,8 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(cli: Cli, legend: sheet::Legend) -> Result<String, String> {
+fn run(cli: Cli) -> Result<String, String> {
+    let legend = legend_of(&cli);
     let picture = read_picture(&cli.picture)?;
     let grid = GridSize::keeping_the_proportions_of(&picture, cli.width)
         .map_err(|_| "a grid needs at least one cell".to_string())?;
