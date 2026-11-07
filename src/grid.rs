@@ -13,7 +13,9 @@ pub struct GridSize {
 
 impl GridSize {
     pub fn new(columns: u32, rows: u32) -> Result<GridSize, NoCell> {
-        Ok(GridSize { columns, rows })
+        (columns > 0 && rows > 0)
+            .then_some(GridSize { columns, rows })
+            .ok_or(NoCell)
     }
 }
 
