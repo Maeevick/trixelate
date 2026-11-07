@@ -73,6 +73,28 @@ fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_c
 }
 
 #[test]
+fn a_jpeg_photo_becomes_a_sheet_beside_it_as_a_png() {
+    let folder = folder("jpeg");
+    let photo = folder.join("photo.jpg");
+    fs::copy(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/red-and-blue.jpg"),
+        &photo,
+    )
+    .expect("the photo on disk");
+
+    let run = trixelate(&[photo.to_str().unwrap_or_default(), "--width", "8"]);
+
+    let sheet = fs::read(folder.join("photo.sheet.png"))
+        .ok()
+        .and_then(|bytes| png_file::read(&bytes).ok());
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert_eq!(
+        sheet.map(|sheet| (sheet.width(), sheet.height())),
+        Some((2480, 3508))
+    );
+}
+
+#[test]
 fn a_full_model_is_written_beside_the_picture_apart_from_its_sheet() {
     let folder = folder("model");
     let picture = a_picture_in(&folder);
