@@ -77,7 +77,8 @@ fn a_jpeg_photo_becomes_a_sheet_beside_it_as_a_png() {
     let folder = folder("jpeg");
     let photo = folder.join("photo.jpg");
     fs::copy(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/red-and-blue.jpg"),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../trixelate/tests/fixtures/red-and-blue.jpg"),
         &photo,
     )
     .expect("the photo on disk");

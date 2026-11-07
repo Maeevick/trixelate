@@ -1,0 +1,15 @@
+[package]
+name = "trixelate"
+description = "Turns a picture into a colour-by-number pixel sheet, ready to print"
+readme = "../../README.md"
+keywords = ["pixel-art", "colouring", "paint-by-number", "png", "jpeg"]
+categories = ["multimedia::images"]
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+png = "0.18"
+zune-jpeg = "0.5.15"

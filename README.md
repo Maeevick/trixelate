@@ -8,7 +8,7 @@
 
 trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, finds its dominant colours and writes a page where every cell carries the number of its colour, with a legend of coloured bubbles at the bottom. The child colours each cell with the crayon its number points to, and the picture appears in pixel art.
 
-![A twelve-colour sheet on A5: a grid of numbered cells above a row of twelve coloured bubbles](tests/golden/twelve-a5.sheet.png)
+![A twelve-colour sheet on A5: a grid of numbered cells above a row of twelve coloured bubbles](crates/trixelate-cli/tests/golden/twelve-a5.sheet.png)
 
 ## Why
 
@@ -21,7 +21,7 @@ trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, find
 ## Getting started
 
 ```sh
-cargo install --path .
+cargo install --path crates/trixelate-cli
 trixelate sample/goblin.png
 ```
 
@@ -51,7 +51,7 @@ trixelate [OPTIONS] <PICTURE>
 
 Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` the arguments are wrong, two of `--freedom`, `--model` and `--twin` together included. Errors go to stderr and say what to try.
 
-![A twin on A5 landscape: the model painted in twelve colours on the left, the grid to colour on the right, the legend below](tests/golden/twelve-a5-landscape.twin.png)
+![A twin on A5 landscape: the model painted in twelve colours on the left, the grid to colour on the right, the legend below](crates/trixelate-cli/tests/golden/twelve-a5-landscape.twin.png)
 
 ## How a sheet is made
 
@@ -62,7 +62,7 @@ Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` t
 5. **The layout gives the cells the largest square side the page allows**, inside the margin and above the legend, and the largest digits each cell and bubble can hold. A twin shares that room between its two grids, 10 mm apart.
 6. **A model paints each cell in its colour**, its number in black or white, whichever reads better, as in the legend.
 
-The library behind the command line takes bytes and gives bytes, with no file or terminal in it, so it can later run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
+The workspace holds the library, `crates/trixelate`, and the command line, `crates/trixelate-cli`. The library takes bytes and gives bytes, with no file or terminal in it, so it can also run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
 
 ## Contributing
 
@@ -74,7 +74,7 @@ make mutants   # whether the tests bite, at the end of a slice
 make install   # the command line on this machine
 ```
 
-The sheet's drawing is pinned by a golden master in `tests/golden`. After a deliberate change to the drawing, look at the new sheet, then write it as the new master with `TRIXELATE_BLESS=1 cargo test --test cli`.
+The sheet's drawing is pinned by golden masters in `crates/trixelate-cli/tests/golden`. After a deliberate change to the drawing, look at the new sheet, then write it as the new master with `TRIXELATE_BLESS=1 cargo test -p trixelate-cli --test cli`.
 
 ## License
 

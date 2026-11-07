@@ -241,9 +241,16 @@ dependencies = [
 name = "trixelate"
 version = "0.1.0"
 dependencies = [
- "clap",
  "png",
  "zune-jpeg",
+]
+
+[[package]]
+name = "trixelate-cli"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "trixelate",
 ]
 
 [[package]]
