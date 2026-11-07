@@ -1,19 +1,28 @@
 //! The page printed for the child: the grid of numbered cells and its legend, drawn where the layout says.
 
 use crate::colouring::Colouring;
-use crate::layout::Layout;
+use crate::layout::{Disc, Layout};
 use crate::lettering;
 use crate::picture::{Picture, Rgb};
 
 const LINE_GREY: Rgb = Rgb(170, 170, 170);
 const NUMBER_GREY: Rgb = Rgb(90, 90, 90);
+const BLACK: Rgb = Rgb(0, 0, 0);
+const OUTLINES_PER_BUBBLE_DIAMETER: u32 = 24;
 
 /// Draws a colouring's sheet on white paper, as laid out.
 pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
     outline_the_cells(&mut paper, colouring, layout);
     number_the_cells(&mut paper, colouring, layout);
+    draw_the_legend(&mut paper, colouring, layout);
     paper.into_picture()
+}
+
+fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+    for (bubble, &colour) in layout.bubbles().iter().zip(colouring.palette().colours()) {
+        paper.disc(bubble, colour);
+    }
 }
 
 fn number_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
@@ -70,6 +79,26 @@ impl Paper {
         for y in top..(top + height).min(self.height) {
             for x in left..(left + width).min(self.width) {
                 self.dots[(y * self.width + x) as usize] = colour;
+            }
+        }
+    }
+
+    /// Fills a disc with a colour, outlined in black.
+    fn disc(&mut self, disc: &Disc, colour: Rgb) {
+        let radius = i64::from(disc.diameter / 2);
+        let outline = i64::from((disc.diameter / OUTLINES_PER_BUBBLE_DIAMETER).max(1));
+        let (centre_x, centre_y) = (i64::from(disc.centre_x), i64::from(disc.centre_y));
+        for dy in -radius..=radius {
+            for dx in -radius..=radius {
+                let distance = dx * dx + dy * dy;
+                if distance <= radius * radius {
+                    let ink = if distance > (radius - outline).pow(2) {
+                        BLACK
+                    } else {
+                        colour
+                    };
+                    self.fill((centre_x + dx) as u32, (centre_y + dy) as u32, 1, 1, ink);
+                }
             }
         }
     }
