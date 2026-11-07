@@ -1,7 +1,7 @@
 //! The command line, run as a child would see its parent run it: on real files, from the built binary.
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use trixelate::picture::Picture;
@@ -20,7 +20,7 @@ fn folder(test: &str) -> PathBuf {
 }
 
 /// A four by three picture: a red sky over a yellow sun and a blue sea.
-fn a_picture_in(folder: &PathBuf) -> PathBuf {
+fn a_picture_in(folder: &Path) -> PathBuf {
     let pixels = [
         RED, RED, RED, RED, //
         RED, YELLOW, YELLOW, RED, //

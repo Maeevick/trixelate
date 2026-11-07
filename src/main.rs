@@ -1,11 +1,15 @@
 //! The command line: reads a PNG picture, makes its colour-by-number sheet and writes it as a PNG.
 
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, ValueEnum};
-use trixelate::layout::PageFormat;
+use trixelate::grid::GridSize;
+use trixelate::layout::{Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
+use trixelate::picture::Picture;
+use trixelate::{Order, make_sheet, png_file};
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
 #[derive(Parser)]
@@ -75,6 +79,62 @@ fn colour_count(raw: &str) -> Result<ColourCount, String> {
 }
 
 fn main() -> ExitCode {
-    let _cli = Cli::parse();
-    ExitCode::SUCCESS
+    match run(Cli::parse()) {
+        Ok(written) => {
+            println!("{written}");
+            ExitCode::SUCCESS
+        }
+        Err(failure) => {
+            eprintln!("error: {failure}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn run(cli: Cli) -> Result<String, String> {
+    let picture = read_picture(&cli.picture)?;
+    let grid = GridSize::new(cli.width, cli.height)
+        .map_err(|_| "a grid needs at least one cell".to_string())?;
+    let order = Order {
+        grid,
+        colours: cli.colours,
+        format: cli.format.into(),
+        margin: Margin(cli.margin),
+    };
+    let sheet = make_sheet(&picture, order).map_err(explain)?;
+    let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture));
+    let bytes = png_file::write(&sheet)
+        .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
+    fs::write(&sheet_path, bytes).map_err(|error| {
+        format!(
+            "cannot write the sheet to {}: {error}",
+            sheet_path.display()
+        )
+    })?;
+    Ok(format!("Sheet written to {}", sheet_path.display()))
+}
+
+fn read_picture(path: &Path) -> Result<Picture, String> {
+    let bytes =
+        fs::read(path).map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+    png_file::read(&bytes).map_err(|_| format!("{} is not a PNG picture", path.display()))
+}
+
+/// Where a sheet goes when no output is given: beside its picture, as <picture>.sheet.png.
+fn beside(picture: &Path) -> PathBuf {
+    let stem = picture.file_stem().unwrap_or_default().to_string_lossy();
+    picture.with_file_name(format!("{stem}.sheet.png"))
+}
+
+fn explain(no_room: NoRoom) -> String {
+    match no_room {
+        NoRoom::InsideTheMargin => "the margin leaves no room for the grid and its legend: try a smaller --margin",
+        NoRoom::ForTheNumbersInTheCells => {
+            "the cells are too small for their numbers: try fewer cells with --width and --height, or a bigger --format"
+        }
+        NoRoom::ForTheNumbersInTheLegend => {
+            "the bubbles are too small for their numbers: try fewer --colours, or a smaller --margin"
+        }
+    }
+    .to_string()
 }
