@@ -49,16 +49,7 @@ impl Palette {
             let (low, high) = cut_through_its_middle(boxes.swap_remove(widest));
             boxes.extend([low, high]);
         }
-        let mut most_used_first: Vec<(Rgb, usize)> = boxes.iter().map(average).collect();
-        most_used_first.sort_by(|(colour, uses), (other, other_uses)| {
-            other_uses.cmp(uses).then(colour.cmp(other))
-        });
-        Palette(
-            most_used_first
-                .into_iter()
-                .map(|(colour, _)| colour)
-                .collect(),
-        )
+        most_used_first(boxes.iter().map(average).collect())
     }
 
     /// The number of the palette colour nearest to the given one.
@@ -83,17 +74,14 @@ impl Palette {
             uses[self.number_for(cell).0 - 1] += 1;
             uses
         });
-        let mut used: Vec<(Rgb, usize)> = self
-            .0
-            .iter()
-            .copied()
-            .zip(uses)
-            .filter(|&(_, uses)| uses > 0)
-            .collect();
-        used.sort_by(|(colour, uses), (other, other_uses)| {
-            other_uses.cmp(uses).then(colour.cmp(other))
-        });
-        Palette(used.into_iter().map(|(colour, _)| colour).collect())
+        most_used_first(
+            self.0
+                .iter()
+                .copied()
+                .zip(uses)
+                .filter(|&(_, uses)| uses > 0)
+                .collect(),
+        )
     }
 
     /// The colour a number stands for in this palette.
@@ -115,6 +103,14 @@ impl Palette {
 }
 
 type Tallied = Vec<(Rgb, usize)>;
+
+/// A palette of the given colours, the most used first, ties going to the smaller colour.
+fn most_used_first(mut colours: Tallied) -> Palette {
+    colours.sort_by(|(colour, uses), (other, other_uses)| {
+        other_uses.cmp(uses).then(colour.cmp(other))
+    });
+    Palette(colours.into_iter().map(|(colour, _)| colour).collect())
+}
 
 fn channels(Rgb(red, green, blue): Rgb) -> [u8; 3] {
     [red, green, blue]
