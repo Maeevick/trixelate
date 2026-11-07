@@ -79,3 +79,11 @@ The sheet's drawing is pinned by a golden master in `tests/golden`. After a deli
 ## License
 
 [MIT](LICENSE) © 2026 Aurel | Maeevick
+
+## Example
+
+A goblin turned into a sheet to colour with `trixelate sample/goblin.png`, and into its model with `trixelate sample/goblin.png --model`: 48 cells wide, 8 colours, on A4.
+
+| Picture | Sheet | Model |
+| --- | --- | --- |
+| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: a grid of numbered cells above a legend of eight coloured bubbles](sample/goblin.sheet.png) | ![The goblin's model: the same grid painted in its eight colours, the numbers still readable](sample/goblin.model.png) |
