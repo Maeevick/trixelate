@@ -172,9 +172,10 @@ impl Paper {
 mod tests {
     use super::*;
     use crate::grid::GridSize;
-    use crate::layout::{Margin, Orientation, PageFormat};
+    use crate::layout::{CREDIT, Margin, Orientation, PageFormat};
     use crate::lettering;
     use crate::palette::ColourCount;
+    use std::collections::BTreeSet;
 
     const RED: [u8; 4] = [220, 30, 40, 255];
     const YELLOW: [u8; 4] = [250, 220, 60, 255];
@@ -206,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_fills_its_page_with_its_margin_blank_and_every_cell_outlined() {
+    fn a_sheet_fills_its_page_its_margin_blank_but_for_its_grey_credit_and_every_cell_outlined() {
         let (colouring, layout) = red_red_yellow();
         let margin = 236;
 
@@ -214,16 +215,25 @@ mod tests {
 
         let (width, height) = (layout.page_width(), layout.page_height());
         assert_eq!((sheet.width(), sheet.height()), (width, height));
-        let in_the_margin = (0..height)
+        let inked_in_the_margin: BTreeSet<(u32, u32, Rgb)> = (0..height)
             .flat_map(|y| (0..width).map(move |x| (x, y)))
             .filter(|&(x, y)| {
                 x < margin || y < margin || x >= width - margin || y >= height - margin
-            });
-        assert!(
-            in_the_margin
-                .into_iter()
-                .all(|(x, y)| sheet.pixel(x, y) == Rgb::WHITE)
-        );
+            })
+            .map(|(x, y)| (x, y, sheet.pixel(x, y)))
+            .filter(|&(_, _, colour)| colour != Rgb::WHITE)
+            .collect();
+        let credit: BTreeSet<(u32, u32, Rgb)> = layout
+            .credit()
+            .map(|credit| {
+                lettering::ink(CREDIT, credit.scale)
+                    .into_iter()
+                    .map(|(x, y)| (credit.left + x, credit.top + y, NUMBER_GREY))
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert!(!credit.is_empty());
+        assert_eq!(inked_in_the_margin, credit);
         let corners = (0..3).map(|column| layout.grids()[0].cell(column, 0));
         assert!(
             corners
