@@ -2,6 +2,7 @@
 
 pub mod colouring;
 pub mod grid;
+pub mod jpeg_file;
 pub mod layout;
 pub mod lettering;
 pub mod palette;
