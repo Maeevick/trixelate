@@ -21,6 +21,10 @@ impl GridSize {
     pub fn columns(&self) -> u32 {
         self.columns
     }
+
+    pub fn rows(&self) -> u32 {
+        self.rows
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

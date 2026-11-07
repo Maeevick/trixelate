@@ -54,16 +54,43 @@ pub struct Square {
 pub struct Layout {
     page_width: u32,
     page_height: u32,
+    grid_left: u32,
+    grid_top: u32,
+    cell_side: u32,
+    line: u32,
 }
+
+const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
+const WIDEST_BUBBLE_MM: u32 = 15;
+const LINES_PER_CELL_SIDE: u32 = 16;
 
 impl Layout {
     /// Lays out a colouring's grid and legend on the page, inside its margin.
     pub fn of(colouring: &Colouring, format: PageFormat, margin: Margin) -> Result<Layout, NoRoom> {
-        let _ = (colouring, margin);
         let (width, height) = format.millimetres();
+        let (page_width, page_height) = (dots(width), dots(height));
+        let margin = dots(margin.0);
+        let content_width = page_width - 2 * margin;
+        let content_height = page_height - 2 * margin;
+        let colours = colouring.palette().colours().len() as u32;
+        let bubble = dots(WIDEST_BUBBLE_MM).min(4 * content_width / (5 * colours - 1));
+        let grid_room = content_height - dots(GAP_ABOVE_THE_LEGEND_MM) - bubble;
+
+        let size = colouring.size();
+        let roomiest_side = (content_width / size.columns()).min(grid_room / size.rows());
+        let line = (roomiest_side / LINES_PER_CELL_SIDE).max(1);
+        let cell_side =
+            ((content_width - line) / size.columns()).min((grid_room - line) / size.rows());
+        let grid_width = cell_side * size.columns() + line;
+        let grid_height = cell_side * size.rows() + line;
+
         Ok(Layout {
-            page_width: dots(width),
-            page_height: dots(height),
+            page_width,
+            page_height,
+            grid_left: margin + (content_width - grid_width) / 2,
+            grid_top: margin + (grid_room - grid_height) / 2,
+            cell_side,
+            line,
         })
     }
 
@@ -77,17 +104,16 @@ impl Layout {
 
     /// A cell's square, its outline's top and left lines included.
     pub fn cell(&self, column: u32, row: u32) -> Square {
-        let _ = (column, row);
         Square {
-            left: 0,
-            top: 0,
-            side: 0,
+            left: self.grid_left + column * self.cell_side,
+            top: self.grid_top + row * self.cell_side,
+            side: self.cell_side,
         }
     }
 
     /// How thick the lines outlining the cells are, in dots.
     pub fn line(&self) -> u32 {
-        0
+        self.line
     }
 }
 

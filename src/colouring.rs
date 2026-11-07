@@ -28,6 +28,14 @@ impl Colouring {
         }
     }
 
+    pub fn size(&self) -> GridSize {
+        self.size
+    }
+
+    pub fn palette(&self) -> &Palette {
+        &self.palette
+    }
+
     pub fn number_at(&self, column: u32, row: u32) -> Option<ColourNumber> {
         self.numbers
             .get((row * self.size.columns() + column) as usize)
