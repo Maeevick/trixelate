@@ -148,6 +148,30 @@ fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot() {
 }
 
 #[test]
+fn a_free_legend_sheet_matches_its_golden_master_its_bubbles_left_blank() {
+    let folder = folder("freedom");
+    let picture = a_twelve_colour_picture_in(&folder);
+    let sheet = folder.join("twelve.sheet.png");
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "--height",
+        "3",
+        "--colours",
+        "12",
+        "--format",
+        "a5",
+        "--legend",
+        "freedom",
+    ]);
+
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert!(matches_golden(&sheet, "twelve-a5-freedom.sheet.png"));
+}
+
+#[test]
 fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
     let folder = folder("overwrite");
     let picture = a_picture_in(&folder);
