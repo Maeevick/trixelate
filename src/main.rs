@@ -23,7 +23,7 @@ struct Cli {
     picture: PathBuf,
 
     /// Cells across the grid, the rows following from the picture's proportions
-    #[arg(long, value_parser = clap::value_parser!(u32).range(1..))]
+    #[arg(long, default_value_t = 48, value_parser = clap::value_parser!(u32).range(1..))]
     width: u32,
 
     /// Colours in the palette, from 2 to 12

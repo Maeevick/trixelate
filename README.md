@@ -22,7 +22,7 @@ trixelate reads a PNG, simplifies it into a grid of square cells, finds its domi
 
 ```sh
 cargo install --path .
-trixelate goblin.png --width 24 --colours 4
+trixelate goblin.png
 ```
 
 ```
@@ -32,13 +32,13 @@ Sheet written to goblin.sheet.png
 ## The command line
 
 ```
-trixelate [OPTIONS] --width <WIDTH> <PICTURE>
+trixelate [OPTIONS] <PICTURE>
 ```
 
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `<PICTURE>` | The PNG picture to turn into a sheet, of any colour type and depth | |
-| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched | |
+| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched | 48 |
 | `-c`, `--colours` | Colours in the palette, from 2 to 12 (`--colors` works too) | 8 |
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |
