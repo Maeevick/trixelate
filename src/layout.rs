@@ -42,6 +42,14 @@ pub enum NoRoom {
     ForTheNumbersInTheCells,
 }
 
+/// A square on the page, from its top left corner, its side in dots.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Square {
+    pub left: u32,
+    pub top: u32,
+    pub side: u32,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Layout {
     page_width: u32,
@@ -65,6 +73,21 @@ impl Layout {
 
     pub fn page_height(&self) -> u32 {
         self.page_height
+    }
+
+    /// A cell's square, its outline's top and left lines included.
+    pub fn cell(&self, column: u32, row: u32) -> Square {
+        let _ = (column, row);
+        Square {
+            left: 0,
+            top: 0,
+            side: 0,
+        }
+    }
+
+    /// How thick the lines outlining the cells are, in dots.
+    pub fn line(&self) -> u32 {
+        0
     }
 }
 
@@ -102,5 +125,29 @@ mod tests {
             pages,
             [Ok((3508, 4961)), Ok((2480, 3508)), Ok((1748, 2480))]
         );
+    }
+
+    #[test]
+    fn a_wide_grid_spans_the_page_inside_its_margin_with_square_cells_centred_across()
+    -> Result<(), NoRoom> {
+        let ten_by_five = colouring(10, 5, 2);
+        let margin = 236;
+
+        let layout = Layout::of(&ten_by_five, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+
+        let first = layout.cell(0, 0);
+        let next_across = layout.cell(1, 0);
+        let next_down = layout.cell(0, 1);
+        let last = layout.cell(9, 4);
+        let right_edge = last.left + last.side + layout.line();
+        assert!(first.side > 0 && layout.line() > 0);
+        assert_eq!(
+            (next_across.left - first.left, next_down.top - first.top),
+            (first.side, first.side)
+        );
+        assert!(first.left >= margin && first.top >= margin && right_edge <= 2480 - margin);
+        assert!((first.left - margin).abs_diff(2480 - margin - right_edge) <= 1);
+        assert!(2480 - 2 * margin - (right_edge - first.left) < 10);
+        Ok(())
     }
 }
