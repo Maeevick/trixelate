@@ -1,9 +1,58 @@
 //! The pixel digits colour numbers are written with, five dots wide and seven tall, one dot apart.
 
+const GLYPH_WIDTH: u32 = 5;
+const GLYPH_HEIGHT: u32 = 7;
+
+/// Each digit's rows from the top, the leftmost dot in the highest of five bits.
+const DIGITS: [[u8; GLYPH_HEIGHT as usize]; 10] = [
+    [
+        0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110,
+    ],
+    [
+        0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110,
+    ],
+    [
+        0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111,
+    ],
+    [
+        0b11111, 0b00010, 0b00100, 0b00010, 0b00001, 0b10001, 0b01110,
+    ],
+    [
+        0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010,
+    ],
+    [
+        0b11111, 0b10000, 0b11110, 0b00001, 0b00001, 0b10001, 0b01110,
+    ],
+    [
+        0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110,
+    ],
+    [
+        0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000,
+    ],
+    [
+        0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110,
+    ],
+    [
+        0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100,
+    ],
+];
+
 /// The dots a number's digits ink, from the top left corner of its first digit, each dot a square of `scale` by `scale`.
 pub fn ink(number: &str, scale: u32) -> Vec<(u32, u32)> {
-    let _ = (number, scale);
-    vec![]
+    let _ = scale;
+    number
+        .chars()
+        .filter_map(|digit| digit.to_digit(10))
+        .take(1)
+        .flat_map(|digit| {
+            let rows = DIGITS[digit as usize];
+            (0..GLYPH_HEIGHT).flat_map(move |y| {
+                (0..GLYPH_WIDTH)
+                    .filter(move |x| rows[y as usize] & (1 << (GLYPH_WIDTH - 1 - x)) != 0)
+                    .map(move |x| (x, y))
+            })
+        })
+        .collect()
 }
 
 #[cfg(test)]
