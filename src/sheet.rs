@@ -1,7 +1,7 @@
 //! The page printed for the child: the grid of numbered cells and its legend, drawn where the layout says.
 
 use crate::colouring::Colouring;
-use crate::layout::{Disc, GridPlace, Layout};
+use crate::layout::{Disc, GridPlace, Layout, Legend, Model};
 use crate::lettering;
 use crate::picture::{Picture, Rgb};
 
@@ -9,22 +9,6 @@ const LINE_GREY: Rgb = Rgb(170, 170, 170);
 const NUMBER_GREY: Rgb = Rgb(90, 90, 90);
 const BLACK: Rgb = Rgb(0, 0, 0);
 const OUTLINES_PER_BUBBLE_DIAMETER: u32 = 24;
-
-/// Whether the legend's bubbles show the picture's colours, with a model in those colours or none,
-/// or leave the child free to pick their own, which no model could show.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Legend {
-    Coloured(Model),
-    Freedom,
-}
-
-/// The coloured-in picture to copy from: none, the full sheet painted, or twinned with the sheet on one page.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Model {
-    None,
-    Full,
-    Twin,
-}
 
 /// Draws a colouring's sheet on white paper, as laid out.
 pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
@@ -192,7 +176,7 @@ impl Paper {
 mod tests {
     use super::*;
     use crate::grid::GridSize;
-    use crate::layout::{Grids, Margin, Orientation, PageFormat};
+    use crate::layout::{Margin, Orientation, PageFormat};
     use crate::lettering;
     use crate::palette::ColourCount;
 
@@ -203,10 +187,10 @@ mod tests {
     const BLACK: Rgb = Rgb(0, 0, 0);
 
     fn red_red_yellow() -> (Colouring, Layout) {
-        red_red_yellow_laid_out(Grids::Alone)
+        red_red_yellow_laid_out(Legend::Coloured(Model::None))
     }
 
-    fn red_red_yellow_laid_out(grids: Grids) -> (Colouring, Layout) {
+    fn red_red_yellow_laid_out(legend: Legend) -> (Colouring, Layout) {
         let picture =
             Picture::from_rgba(3, 1, [RED, RED, YELLOW].as_flattened()).expect("a picture");
         let colouring = Colouring::of(
@@ -219,7 +203,7 @@ mod tests {
             PageFormat::A5,
             Orientation::Portrait,
             Margin::AROUND_A_SHEET,
-            grids,
+            legend,
         )
         .expect("room");
         (colouring, layout)
@@ -343,7 +327,7 @@ mod tests {
 
     #[test]
     fn a_twin_model_paints_the_first_grid_and_leaves_the_second_for_the_child_to_colour_in() {
-        let (colouring, layout) = red_red_yellow_laid_out(Grids::Twinned);
+        let (colouring, layout) = red_red_yellow_laid_out(Legend::Coloured(Model::Twin));
         let [red, green, blue, _] = RED;
 
         let sheet = draw(&colouring, &layout, Legend::Coloured(Model::Twin));
@@ -423,7 +407,7 @@ mod tests {
             PageFormat::A5,
             Orientation::Portrait,
             Margin::AROUND_A_SHEET,
-            Grids::Alone,
+            Legend::Coloured(Model::None),
         )
         .expect("room");
 

@@ -51,11 +51,20 @@ pub enum NoRoom {
     ForTheNumbersInTheLegend,
 }
 
-/// How many grids share the page: the sheet alone, or a model twinned with its sheet.
+/// Whether the legend's bubbles show the picture's colours, with a model in those colours or none,
+/// or leave the child free to pick their own, which no model could show.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Grids {
-    Alone,
-    Twinned,
+pub enum Legend {
+    Coloured(Model),
+    Freedom,
+}
+
+/// The coloured-in picture to copy from: none, the full sheet painted, or twinned with the sheet on one page.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Model {
+    None,
+    Full,
+    Twin,
 }
 
 /// A square on the page, from its top left corner, its side in dots.
@@ -116,7 +125,7 @@ impl Layout {
         format: PageFormat,
         orientation: Orientation,
         margin: Margin,
-        grids: Grids,
+        legend: Legend,
     ) -> Result<Layout, NoRoom> {
         let (width, height) = match (orientation, format.millimetres()) {
             (Orientation::Portrait, (short, long)) => (short, long),
@@ -134,10 +143,10 @@ impl Layout {
             .checked_sub(dots(GAP_ABOVE_THE_LEGEND_MM) + bubble)
             .ok_or(NoRoom::InsideTheMargin)?;
 
-        let (grids_across, grids_down) = match (grids, orientation) {
-            (Grids::Alone, _) => (1, 1),
-            (Grids::Twinned, Orientation::Portrait) => (1, 2),
-            (Grids::Twinned, Orientation::Landscape) => (2, 1),
+        let (grids_across, grids_down) = match (legend, orientation) {
+            (Legend::Coloured(Model::Twin), Orientation::Portrait) => (1, 2),
+            (Legend::Coloured(Model::Twin), Orientation::Landscape) => (2, 1),
+            (Legend::Coloured(Model::None | Model::Full) | Legend::Freedom, _) => (1, 1),
         };
         let gap_between_twins = dots(GAP_BETWEEN_TWINS_MM);
         let room_shared = |room: u32, grids: u32| {
@@ -265,7 +274,7 @@ mod tests {
             format,
             Orientation::Portrait,
             margin,
-            Grids::Alone,
+            Legend::Coloured(Model::None),
         )
     }
 
@@ -275,7 +284,7 @@ mod tests {
             PageFormat::A4,
             orientation,
             Margin::AROUND_A_SHEET,
-            Grids::Twinned,
+            Legend::Coloured(Model::Twin),
         )
     }
 
@@ -302,7 +311,7 @@ mod tests {
             PageFormat::A4,
             Orientation::Landscape,
             Margin::AROUND_A_SHEET,
-            Grids::Alone,
+            Legend::Coloured(Model::None),
         );
 
         assert_eq!(

@@ -10,7 +10,6 @@ use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
-use trixelate::sheet;
 use trixelate::{Order, make_sheet, png_file};
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -97,21 +96,21 @@ impl From<Orientation> for layout::Orientation {
 }
 
 /// What the written file is called after, beside its picture.
-fn kind_of(legend: sheet::Legend) -> &'static str {
+fn kind_of(legend: layout::Legend) -> &'static str {
     match legend {
-        sheet::Legend::Coloured(sheet::Model::None) | sheet::Legend::Freedom => "sheet",
-        sheet::Legend::Coloured(sheet::Model::Full) => "model",
-        sheet::Legend::Coloured(sheet::Model::Twin) => "twin",
+        layout::Legend::Coloured(layout::Model::None) | layout::Legend::Freedom => "sheet",
+        layout::Legend::Coloured(layout::Model::Full) => "model",
+        layout::Legend::Coloured(layout::Model::Twin) => "twin",
     }
 }
 
 /// The legend asked for, coloured unless free, with the model asked for, if any; clap lets one through at most.
-fn legend_of(cli: &Cli) -> sheet::Legend {
+fn legend_of(cli: &Cli) -> layout::Legend {
     match (cli.freedom, cli.model, cli.twin) {
-        (true, _, _) => sheet::Legend::Freedom,
-        (_, true, _) => sheet::Legend::Coloured(sheet::Model::Full),
-        (_, _, true) => sheet::Legend::Coloured(sheet::Model::Twin),
-        (false, false, false) => sheet::Legend::Coloured(sheet::Model::None),
+        (true, _, _) => layout::Legend::Freedom,
+        (_, true, _) => layout::Legend::Coloured(layout::Model::Full),
+        (_, _, true) => layout::Legend::Coloured(layout::Model::Twin),
+        (false, false, false) => layout::Legend::Coloured(layout::Model::None),
     }
 }
 
