@@ -63,4 +63,22 @@ mod tests {
         assert_eq!(grid.cell(0, 0), Rgb(220, 30, 40));
         assert_eq!(grid.cell(1, 0), Rgb(20, 60, 200));
     }
+
+    #[test]
+    fn a_cell_averages_every_pixel_it_covers_rounded_to_the_nearest() {
+        let red_shades = picture(
+            2,
+            2,
+            &[
+                [200, 0, 0, 255],
+                [101, 0, 0, 255],
+                [200, 0, 0, 255],
+                [101, 0, 0, 255],
+            ],
+        );
+
+        let grid = Grid::averaging(&red_shades, GridSize::new(1, 1));
+
+        assert_eq!(grid.cell(0, 0), Rgb(151, 0, 0));
+    }
 }
