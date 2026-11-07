@@ -354,6 +354,7 @@ mod tests {
             ]
         );
         assert_eq!(unknown, ink("1 1", 1));
+        assert_eq!(size("Ma(c)", 2), (58, 14));
     }
 
     #[test]
