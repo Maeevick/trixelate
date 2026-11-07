@@ -22,12 +22,25 @@ pub fn read(bytes: &[u8]) -> Result<Picture, NotAPng> {
     let mut buffer = vec![0; reader.output_buffer_size().ok_or(NotAPng)?];
     let frame = reader.next_frame(&mut buffer).map_err(|_| NotAPng)?;
     let samples = &buffer[..frame.buffer_size()];
-    let rgba: Vec<u8> = samples
-        .as_chunks::<3>()
-        .0
-        .iter()
-        .flat_map(|&[red, green, blue]| [red, green, blue, 255])
-        .collect();
+    let rgba: Vec<u8> = match frame.color_type {
+        ColorType::Grayscale => samples
+            .iter()
+            .flat_map(|&grey| [grey, grey, grey, 255])
+            .collect(),
+        ColorType::GrayscaleAlpha => samples
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .flat_map(|&[grey, alpha]| [grey, grey, grey, alpha])
+            .collect(),
+        ColorType::Rgba => samples.to_vec(),
+        ColorType::Rgb | ColorType::Indexed => samples
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .flat_map(|&[red, green, blue]| [red, green, blue, 255])
+            .collect(),
+    };
     Picture::from_rgba(frame.width, frame.height, &rgba).map_err(|_| NotAPng)
 }
 
