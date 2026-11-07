@@ -120,6 +120,26 @@ mod tests {
     }
 
     #[test]
+    fn letters_and_signs_are_inked_like_digits_and_a_character_without_a_glyph_leaves_a_blank() {
+        let word = ink("Ma(c)", 1);
+        let unknown = ink("1€1", 1);
+
+        assert_eq!(
+            drawn(&word, 29, 7),
+            [
+                "#...#..........#.........#...",
+                "##.##.........#...........#..",
+                "#.#.#..###...#.....###.....#.",
+                "#.#.#.....#..#....#........#.",
+                "#...#..####..#....#........#.",
+                "#...#.#...#...#...#...#...#..",
+                "#...#..####....#...###...#...",
+            ]
+        );
+        assert_eq!(unknown, ink("1 1", 1));
+    }
+
+    #[test]
     fn a_number_takes_the_largest_scale_that_fits_its_box_and_none_when_even_the_smallest_does_not()
     {
         let scales = [
