@@ -34,9 +34,9 @@ struct Cli {
     #[arg(short, long, value_enum, default_value_t = Format::A4)]
     format: Format,
 
-    /// Which way up the paper lies
-    #[arg(long, value_enum, default_value_t = Orientation::Portrait)]
-    orientation: Orientation,
+    /// Lay the paper on its side, for wide pictures [default: upright]
+    #[arg(long)]
+    landscape: bool,
 
     /// The blank paper around the sheet, in millimetres
     #[arg(short, long, default_value_t = 20)]
@@ -76,21 +76,6 @@ impl From<Format> for PageFormat {
             Format::A3 => PageFormat::A3,
             Format::A4 => PageFormat::A4,
             Format::A5 => PageFormat::A5,
-        }
-    }
-}
-
-#[derive(Clone, Copy, ValueEnum)]
-enum Orientation {
-    Portrait,
-    Landscape,
-}
-
-impl From<Orientation> for layout::Orientation {
-    fn from(orientation: Orientation) -> layout::Orientation {
-        match orientation {
-            Orientation::Portrait => layout::Orientation::Portrait,
-            Orientation::Landscape => layout::Orientation::Landscape,
         }
     }
 }
@@ -147,7 +132,11 @@ fn run(cli: Cli) -> Result<String, String> {
         grid,
         colours: cli.colours,
         format: cli.format.into(),
-        orientation: cli.orientation.into(),
+        orientation: if cli.landscape {
+            layout::Orientation::Landscape
+        } else {
+            layout::Orientation::Portrait
+        },
         margin: Margin(cli.margin),
         legend,
     };

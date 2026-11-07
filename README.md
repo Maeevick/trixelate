@@ -41,7 +41,7 @@ trixelate [OPTIONS] --width <WIDTH> <PICTURE>
 | `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched | |
 | `-c`, `--colours` | Colours in the palette, from 2 to 12 (`--colors` works too) | 8 |
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
-| `--orientation` | `portrait`, or `landscape` for wide pictures | `portrait` |
+| `--landscape` | Lay the paper on its side, for wide pictures | upright |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres | 20 |
 | `--freedom` | No legend: the numbers only group the cells, and the child picks the colours | |
 | `--model` | The sheet painted in its colours, a model to copy from | |

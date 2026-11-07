@@ -199,8 +199,7 @@ fn a_landscape_twin_beside_its_picture_matches_its_golden_master_model_left_shee
         "12",
         "--format",
         "a5",
-        "--orientation",
-        "landscape",
+        "--landscape",
         "--twin",
     ]);
 
