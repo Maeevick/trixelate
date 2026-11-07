@@ -21,8 +21,9 @@ impl GridSize {
     /// As many columns as asked, and as many rows as keep the picture's proportions with square cells:
     /// the nearest count, and at least one.
     pub fn keeping_the_proportions_of(picture: &Picture, columns: u32) -> Result<GridSize, NoCell> {
-        let _ = picture;
-        GridSize::new(columns, columns)
+        let (width, height) = (u64::from(picture.width()), u64::from(picture.height()));
+        let rows = (u64::from(columns) * height + width / 2) / width;
+        GridSize::new(columns, u32::try_from(rows.max(1)).unwrap_or(u32::MAX))
     }
 
     pub fn columns(&self) -> u32 {
