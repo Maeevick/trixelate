@@ -70,6 +70,32 @@ fn a_picture_becomes_an_a4_sheet_written_beside_it_and_the_command_says_where() 
     assert!(text(&run.stdout).contains(&sheet_path.display().to_string()));
 }
 
+#[test]
+fn a_landscape_sheet_lies_on_its_side() {
+    let folder = folder("landscape");
+    let picture = a_picture_in(&folder);
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "--height",
+        "3",
+        "--orientation",
+        "landscape",
+    ]);
+
+    let sheet = fs::read(folder.join("sunset.sheet.png"))
+        .ok()
+        .and_then(|bytes| png_file::read(&bytes).ok());
+    assert_eq!(
+        sheet.map(|sheet| (sheet.width(), sheet.height())),
+        Some((3508, 2480)),
+        "{}",
+        text(&run.stderr)
+    );
+}
+
 /// Twelve colours in a four by three picture, so the sheet writes every digit from 0 to 9.
 fn a_twelve_colour_picture_in(folder: &Path) -> PathBuf {
     let pixels: Vec<u8> = (0..12u8)
