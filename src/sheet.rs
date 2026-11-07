@@ -108,6 +108,7 @@ mod tests {
     const YELLOW: [u8; 4] = [250, 220, 60, 255];
     const LINE_GREY: Rgb = Rgb(170, 170, 170);
     const NUMBER_GREY: Rgb = Rgb(90, 90, 90);
+    const BLACK: Rgb = Rgb(0, 0, 0);
 
     fn red_red_yellow() -> (Colouring, Layout) {
         let picture =
@@ -178,6 +179,22 @@ mod tests {
             inked.sort();
 
             assert_eq!(inked, expected, "the number in cell {column}");
+        }
+    }
+
+    #[test]
+    fn each_bubble_is_filled_with_its_palette_colour_and_outlined_in_black() {
+        let (colouring, layout) = red_red_yellow();
+
+        let sheet = draw(&colouring, &layout);
+
+        let bubbles = layout.bubbles().iter().zip(colouring.palette().colours());
+        for (bubble, &colour) in bubbles {
+            let radius = bubble.diameter / 2;
+            let (x, y) = (bubble.centre_x, bubble.centre_y);
+            assert_eq!(sheet.pixel(x, y + radius * 3 / 4), colour);
+            assert_eq!(sheet.pixel(x - radius + 1, y), BLACK);
+            assert_eq!(sheet.pixel(x - radius - 2, y), Rgb::WHITE);
         }
     }
 }
