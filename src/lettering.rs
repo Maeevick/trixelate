@@ -58,8 +58,15 @@ pub fn ink(number: &str, scale: u32) -> Vec<(u32, u32)> {
 
 /// The largest scale at which a number fits in a box, none when it does not fit even at one dot per dot.
 pub fn largest_scale_fitting(number: &str, width: u32, height: u32) -> Option<u32> {
-    let _ = (number, width, height);
-    None
+    let (width_at_one, height_at_one) = size(number, 1);
+    Some((width / width_at_one).min(height / height_at_one)).filter(|&scale| scale > 0)
+}
+
+/// A number's width and height in dots at a scale, from the left of its first digit to the right of its last.
+pub fn size(number: &str, scale: u32) -> (u32, u32) {
+    let digits = number.chars().count() as u32;
+    let width = digits * (GLYPH_WIDTH + SPACE_BETWEEN_DIGITS) - SPACE_BETWEEN_DIGITS;
+    (width * scale, GLYPH_HEIGHT * scale)
 }
 
 fn glyph_dots(digit: u32) -> impl Iterator<Item = (u32, u32)> {
