@@ -1,0 +1,8 @@
+[build]
+target = "index.html"
+dist = "dist"
+# Relative links, so the page works from any folder, a GitHub Pages project site included.
+public_url = "./"
+
+[tools]
+tailwindcss = "4.3.5"
