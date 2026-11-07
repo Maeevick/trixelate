@@ -5,7 +5,7 @@ The words trixelate's code and docs use, read before naming anything.
 | Word | Meaning |
 | --- | --- |
 | **Picture** | The image a sheet is made from, opaque: its transparent parts read as white paper. |
-| **Grid** | The columns and rows of cells a picture is simplified into. |
+| **Grid** | The columns and rows of cells a picture is simplified into, as many columns as asked and the rows that keep the picture's proportions. |
 | **Cell** | One square the child colours in: a pixel for the children, not for the screen. |
 | **Palette** | The dominant colours of a grid, as many as asked or fewer, the most used first. |
 | **Colour number** | A colour's place in the palette, from 1, written in every cell to paint with it. |

@@ -13,7 +13,7 @@ trixelate reads a PNG, simplifies it into a grid of square cells, finds its domi
 ## Why
 
 - **Made for children**: big square cells outlined in light grey, numbers in dark grey rather than black, and a legend whose numbers stay readable on dark and light bubbles.
-- **A model when it helps**: `--model full` paints the sheet in its colours for the youngest to copy, `--model twin` puts that model and the grid to colour on one page, and `--legend freedom` gives only the numbers, leaving the colours to the child.
+- **A model when it helps**: `--model` paints the sheet in its colours for the youngest to copy, `--twin` puts that model and the grid to colour on one page, and `--freedom` gives only the numbers, leaving the colours to the child.
 - **Ready to print**: A3, A4 or A5, portrait or landscape, at 300 dots per inch, the resolution written in the PNG so the printer keeps the paper's size.
 - **Safe by default**: a sheet that would not fit, cells too small for their numbers or a margin too wide is refused with what to try instead; an existing sheet is never overwritten without `--force`.
 - **Small**: two dependencies, `clap` and `png`; the digits are drawn from a five-by-seven pixel font, with no font file.
@@ -22,7 +22,7 @@ trixelate reads a PNG, simplifies it into a grid of square cells, finds its domi
 
 ```sh
 cargo install --path .
-trixelate dragon.png --width 32 --height 24 --colours 8
+trixelate dragon.png --width 32 --colours 8
 ```
 
 ```
@@ -32,31 +32,31 @@ Sheet written to dragon.sheet.png
 ## The command line
 
 ```
-trixelate [OPTIONS] --width <WIDTH> --height <HEIGHT> <PICTURE>
+trixelate [OPTIONS] --width <WIDTH> <PICTURE>
 ```
 
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `<PICTURE>` | The PNG picture to turn into a sheet, of any colour type and depth | |
-| `--width` | Cells across the grid | |
-| `--height` | Cells down the grid | |
+| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched | |
 | `-c`, `--colours` | Colours in the palette, from 2 to 30 (`--colors` works too) | 8 |
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
 | `--orientation` | `portrait`, or `landscape` for wide pictures | `portrait` |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres | 20 |
-| `--legend` | `coloured` bubbles (`colored` works too), or `freedom`: blank bubbles with their numbers, the child picks the colours | `coloured` |
-| `--model` | `none`; `full`, the sheet painted in its colours to copy from; or `twin`, the model and the sheet on one page, one above the other in portrait, side by side in landscape. Not with `--legend freedom` | `none` |
+| `--freedom` | Blank bubbles with their numbers: the child picks the colours | |
+| `--model` | The sheet painted in its colours, a model to copy from | |
+| `--twin` | The model and the sheet on one page, one above the other in portrait, side by side in landscape | |
 | `-o`, `--output` | Where to write the sheet | beside the picture, as `<picture>.sheet.png`, `.model.png` or `.twin.png` |
 | `--force` | Overwrite the sheet if it already exists | |
 
-Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` the arguments are wrong, a model with a free legend included. Errors go to stderr and say what to try.
+Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` the arguments are wrong, two of `--freedom`, `--model` and `--twin` together included. Errors go to stderr and say what to try.
 
 ![A twin on A5 landscape: the model painted in twelve colours on the left, the grid to colour on the right, the legend below](tests/golden/twelve-a5-landscape.twin.png)
 
 ## How a sheet is made
 
 1. **The picture lies on white paper**: transparent parts become blank, half-transparent ones are washed out on white.
-2. **Each cell averages the pixels it covers**, so a detail too small for the grid still tints its cell; a grid finer than its picture repeats its pixels.
+2. **The grid keeps the picture's proportions**, its rows following from `--width`, and **each cell averages the pixels it covers**, so a detail too small for the grid still tints its cell; a grid finer than its picture repeats its pixels.
 3. **The palette is cut from the cells' colours**: the box of colours that spreads the most is cut through the middle of its widest channel until there are as many boxes as colours asked, and each box gives its weighted average. Far-apart colours are never merged, and colour 1 is the one used most.
 4. **Every cell takes the number of its nearest palette colour.**
 5. **The layout gives the cells the largest square side the page allows**, inside the margin and above the legend, and the largest digits each cell and bubble can hold. A twin shares that room between its two grids, 10 mm apart.
