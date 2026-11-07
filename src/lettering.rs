@@ -56,6 +56,12 @@ pub fn ink(number: &str, scale: u32) -> Vec<(u32, u32)> {
         .collect()
 }
 
+/// The largest scale at which a number fits in a box, none when it does not fit even at one dot per dot.
+pub fn largest_scale_fitting(number: &str, width: u32, height: u32) -> Option<u32> {
+    let _ = (number, width, height);
+    None
+}
+
 fn glyph_dots(digit: u32) -> impl Iterator<Item = (u32, u32)> {
     let rows = DIGITS[digit as usize];
     (0..GLYPH_HEIGHT).flat_map(move |y| {
@@ -104,5 +110,18 @@ mod tests {
                 "..####..............##",
             ]
         );
+    }
+
+    #[test]
+    fn a_number_takes_the_largest_scale_that_fits_its_box_and_none_when_even_the_smallest_does_not()
+    {
+        let scales = [
+            largest_scale_fitting("12", 25, 20),
+            largest_scale_fitting("7", 25, 20),
+            largest_scale_fitting("12", 10, 20),
+            largest_scale_fitting("7", 5, 6),
+        ];
+
+        assert_eq!(scales, [Some(2), Some(2), None, None]);
     }
 }
