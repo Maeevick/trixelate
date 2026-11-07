@@ -1,0 +1,2 @@
+# The page is wiring around the library, checked in a browser rather than by mutants.
+exclude_globs = ["crates/trixelate-web/**"]
