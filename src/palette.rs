@@ -1,6 +1,7 @@
 //! The dominant colours of a grid, numbered from 1, the most used first.
 
 use std::collections::BTreeMap;
+use std::fmt;
 
 use crate::picture::Rgb;
 
@@ -26,6 +27,16 @@ impl ColourCount {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Palette(Vec<Rgb>);
 
+/// A colour's place in its palette, from 1, as written in the cells to paint with it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ColourNumber(usize);
+
+impl fmt::Display for ColourNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl Palette {
     /// The colours that best stand for all the given ones, at most `count` of them, and no palette without a colour.
     pub fn dominant(colours: &[Rgb], count: ColourCount) -> Option<Palette> {
@@ -50,6 +61,12 @@ impl Palette {
                 .map(|(colour, _)| colour)
                 .collect(),
         ))
+    }
+
+    /// The number of the palette colour nearest to the given one.
+    pub fn number_for(&self, colour: Rgb) -> ColourNumber {
+        let _ = colour;
+        ColourNumber(0)
     }
 
     pub fn colours(&self) -> &[Rgb] {
@@ -181,5 +198,19 @@ mod tests {
         let counts = [1, 2, 30, 31].map(|count| ColourCount::new(count).is_ok());
 
         assert_eq!(counts, [false, true, true, false]);
+    }
+
+    #[test]
+    fn a_colour_takes_the_number_of_the_nearest_palette_colour_counted_from_one()
+    -> Result<(), ColourCountOutOfRange> {
+        let palette = Palette::dominant(&[RED, RED, BLUE], ColourCount::new(2)?);
+
+        let numbers = palette.map(|palette| {
+            [Rgb(200, 20, 30), Rgb(10, 10, 180)]
+                .map(|colour| palette.number_for(colour).to_string())
+        });
+
+        assert_eq!(numbers, Some(["1".to_string(), "2".to_string()]));
+        Ok(())
     }
 }
