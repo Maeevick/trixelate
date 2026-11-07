@@ -2,5 +2,6 @@
 
 pub mod colouring;
 pub mod grid;
+pub mod layout;
 pub mod palette;
 pub mod picture;
