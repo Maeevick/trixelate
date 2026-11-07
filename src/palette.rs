@@ -27,14 +27,12 @@ impl ColourCount {
 pub struct Palette(Vec<Rgb>);
 
 impl Palette {
-    /// The colours that best stand for all the given ones, at most `count` of them.
-    pub fn dominant(colours: &[Rgb], count: ColourCount) -> Palette {
-        let every_colour: Tallied = tally(colours).into_iter().collect();
-        let mut boxes = if every_colour.is_empty() {
-            vec![]
-        } else {
-            vec![every_colour]
-        };
+    /// The colours that best stand for all the given ones, at most `count` of them, and no palette without a colour.
+    pub fn dominant(colours: &[Rgb], count: ColourCount) -> Option<Palette> {
+        if colours.is_empty() {
+            return None;
+        }
+        let mut boxes: Vec<Tallied> = vec![tally(colours).into_iter().collect()];
         while boxes.len() < count.0 {
             let Some(widest) = index_of_the_widest(&boxes) else {
                 break;
@@ -46,12 +44,12 @@ impl Palette {
         most_used_first.sort_by(|(colour, uses), (other, other_uses)| {
             other_uses.cmp(uses).then(colour.cmp(other))
         });
-        Palette(
+        Some(Palette(
             most_used_first
                 .into_iter()
                 .map(|(colour, _)| colour)
                 .collect(),
-        )
+        ))
     }
 
     pub fn colours(&self) -> &[Rgb] {
@@ -142,7 +140,10 @@ mod tests {
 
         let palette = Palette::dominant(&cells, ColourCount::new(4)?);
 
-        assert_eq!(palette.colours(), [RED, BLUE]);
+        assert_eq!(
+            palette.as_ref().map(Palette::colours),
+            Some([RED, BLUE].as_slice())
+        );
         Ok(())
     }
 
@@ -161,17 +162,17 @@ mod tests {
         let palette = Palette::dominant(&cells, ColourCount::new(3)?);
 
         assert_eq!(
-            palette.colours(),
-            [Rgb(247, 0, 0), Rgb(0, 245, 0), Rgb(0, 0, 250)]
+            palette.as_ref().map(Palette::colours),
+            Some([Rgb(247, 0, 0), Rgb(0, 245, 0), Rgb(0, 0, 250)].as_slice())
         );
         Ok(())
     }
 
     #[test]
-    fn no_colour_gives_an_empty_palette() -> Result<(), ColourCountOutOfRange> {
+    fn no_colour_gives_no_palette() -> Result<(), ColourCountOutOfRange> {
         let palette = Palette::dominant(&[], ColourCount::new(8)?);
 
-        assert_eq!(palette.colours(), []);
+        assert_eq!(palette, None);
         Ok(())
     }
 
