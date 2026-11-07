@@ -6,3 +6,4 @@ pub mod layout;
 pub mod lettering;
 pub mod palette;
 pub mod picture;
+pub mod sheet;

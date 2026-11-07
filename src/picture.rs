@@ -44,6 +44,15 @@ impl Picture {
         })
     }
 
+    /// A picture painted dot by dot, row after row, its pixels filling its size.
+    pub(crate) fn painted(width: u32, height: u32, pixels: Vec<Rgb>) -> Picture {
+        Picture {
+            width,
+            height,
+            pixels,
+        }
+    }
+
     pub fn width(&self) -> u32 {
         self.width
     }
