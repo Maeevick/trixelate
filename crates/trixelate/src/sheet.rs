@@ -1,7 +1,7 @@
 //! The page printed for the child: the grid of numbered cells and its legend, drawn where the layout says.
 
 use crate::colouring::Colouring;
-use crate::layout::{Disc, GridPlace, Layout, Legend, Model};
+use crate::layout::{CREDIT, Disc, GridPlace, Layout, Legend, Model};
 use crate::lettering;
 use crate::picture::{Picture, Rgb};
 
@@ -23,7 +23,19 @@ pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
         fill_in_the_cells(&mut paper, colouring, layout, place, cells);
     }
     draw_the_legend(&mut paper, colouring, layout);
+    write_the_credit(&mut paper, layout);
     paper.into_picture()
+}
+
+fn write_the_credit(paper: &mut Paper, layout: &Layout) {
+    let dots = layout.credit().into_iter().flat_map(|credit| {
+        lettering::ink(CREDIT, credit.scale)
+            .into_iter()
+            .map(move |(x, y)| (credit.left + x, credit.top + y))
+    });
+    for (x, y) in dots {
+        paper.fill(x, y, 1, 1, NUMBER_GREY);
+    }
 }
 
 fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
