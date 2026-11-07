@@ -4,13 +4,19 @@ use std::collections::BTreeMap;
 
 use crate::picture::Rgb;
 
-/// How many colours a palette may hold at most.
+/// How many colours a palette may hold at most, from 2 to 30: one colour is no colouring, and thirty is more than a box of crayons.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ColourCount(usize);
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ColourCountOutOfRange;
+
 impl ColourCount {
-    pub fn new(count: usize) -> ColourCount {
-        ColourCount(count)
+    pub const FEWEST: usize = 2;
+    pub const MOST: usize = 30;
+
+    pub fn new(count: usize) -> Result<ColourCount, ColourCountOutOfRange> {
+        Ok(ColourCount(count))
     }
 }
 
@@ -127,16 +133,19 @@ mod tests {
     const BLUE: Rgb = Rgb(20, 60, 200);
 
     #[test]
-    fn fewer_colours_than_asked_are_each_kept_once_the_most_used_first() {
+    fn fewer_colours_than_asked_are_each_kept_once_the_most_used_first()
+    -> Result<(), ColourCountOutOfRange> {
         let cells = [BLUE, RED, RED, BLUE, RED];
 
-        let palette = Palette::dominant(&cells, ColourCount::new(4));
+        let palette = Palette::dominant(&cells, ColourCount::new(4)?);
 
         assert_eq!(palette.colours(), [RED, BLUE]);
+        Ok(())
     }
 
     #[test]
-    fn more_colours_than_asked_merge_the_closest_into_their_weighted_average() {
+    fn more_colours_than_asked_merge_the_closest_into_their_weighted_average()
+    -> Result<(), ColourCountOutOfRange> {
         let cells = [
             Rgb(250, 0, 0),
             Rgb(0, 250, 0),
@@ -146,18 +155,27 @@ mod tests {
             Rgb(0, 0, 250),
         ];
 
-        let palette = Palette::dominant(&cells, ColourCount::new(3));
+        let palette = Palette::dominant(&cells, ColourCount::new(3)?);
 
         assert_eq!(
             palette.colours(),
             [Rgb(247, 0, 0), Rgb(0, 245, 0), Rgb(0, 0, 250)]
         );
+        Ok(())
     }
 
     #[test]
-    fn no_colour_gives_an_empty_palette() {
-        let palette = Palette::dominant(&[], ColourCount::new(8));
+    fn no_colour_gives_an_empty_palette() -> Result<(), ColourCountOutOfRange> {
+        let palette = Palette::dominant(&[], ColourCount::new(8)?);
 
         assert_eq!(palette.colours(), []);
+        Ok(())
+    }
+
+    #[test]
+    fn a_palette_holds_from_two_to_thirty_colours() {
+        let counts = [1, 2, 30, 31].map(|count| ColourCount::new(count).is_ok());
+
+        assert_eq!(counts, [false, true, true, false]);
     }
 }
