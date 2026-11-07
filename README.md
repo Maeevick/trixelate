@@ -43,7 +43,7 @@ trixelate [OPTIONS] --width <WIDTH> <PICTURE>
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
 | `--orientation` | `portrait`, or `landscape` for wide pictures | `portrait` |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres | 20 |
-| `--freedom` | Blank bubbles with their numbers: the child picks the colours | |
+| `--freedom` | No legend: the numbers only group the cells, and the child picks the colours | |
 | `--model` | The sheet painted in its colours, a model to copy from | |
 | `--twin` | The model and the sheet on one page, one above the other in portrait, side by side in landscape | |
 | `-o`, `--output` | Where to write the sheet | beside the picture, as `<picture>.sheet.png`, `.model.png` or `.twin.png` |

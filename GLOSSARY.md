@@ -16,5 +16,6 @@ The words trixelate's code and docs use, read before naming anything.
 | **Page format** | The paper the sheet is drawn for, A3, A4 or A5, at 300 dots per inch. |
 | **Orientation** | Which way up the paper lies: portrait, upright, or landscape, on its side. |
 | **Margin** | The blank paper around the sheet's content, 20 mm unless asked otherwise. |
-| **Legend** | The row of bubbles at the bottom of a sheet, coloured, or free: blank, the child picking the colours, with no model. |
-| **Bubble** | A disc filled with one palette colour, or blank in a free legend, its colour number written inside. |
+| **Legend** | The row of bubbles at the bottom of a sheet, left out in freedom. |
+| **Freedom** | A sheet with no legend: the numbers only group the cells, and the child picks the colours; it has no model. |
+| **Bubble** | A disc filled with one palette colour, its colour number written inside. |

@@ -51,8 +51,8 @@ pub enum NoRoom {
     ForTheNumbersInTheLegend,
 }
 
-/// Whether the legend's bubbles show the picture's colours, with a model in those colours or none,
-/// or leave the child free to pick their own, which no model could show.
+/// Whether the sheet has a legend of the picture's colours, with a model in those colours or none,
+/// or none at all, leaving the child free to pick their own, which no model could show.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Legend {
     Coloured(Model),

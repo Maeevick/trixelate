@@ -42,7 +42,7 @@ struct Cli {
     #[arg(short, long, default_value_t = 20)]
     margin: u32,
 
-    /// Leave the bubbles blank with their numbers, so the child picks the colours
+    /// No legend: the numbers only group the cells, and the child picks the colours
     #[arg(long, group = "look")]
     freedom: bool,
 
