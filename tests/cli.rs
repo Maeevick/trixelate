@@ -120,3 +120,35 @@ fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot() {
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert!(matches_golden(&sheet, "twelve-a5.sheet.png"));
 }
+
+#[test]
+fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
+    let folder = folder("overwrite");
+    let picture = a_picture_in(&folder);
+    let sheet = folder.join("sunset.sheet.png");
+    fs::write(&sheet, "a sheet already coloured in").expect("an existing sheet");
+    let arguments = [
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "--height",
+        "3",
+    ];
+
+    let kept = trixelate(&arguments);
+    let kept_sheet = fs::read_to_string(&sheet).ok();
+    let overwritten = trixelate(&[arguments.as_slice(), &["--force"]].concat());
+
+    assert_eq!(
+        (kept.status.code(), kept_sheet.as_deref()),
+        (Some(1), Some("a sheet already coloured in"))
+    );
+    assert!(text(&kept.stderr).contains("--force"));
+    assert!(overwritten.status.success());
+    assert!(
+        fs::read(&sheet)
+            .ok()
+            .and_then(|bytes| png_file::read(&bytes).ok())
+            .is_some()
+    );
+}
