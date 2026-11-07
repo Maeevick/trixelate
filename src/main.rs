@@ -10,7 +10,7 @@ use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
-use trixelate::sheet::{self, Model};
+use trixelate::sheet;
 use trixelate::{Order, make_sheet, png_file};
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -51,7 +51,11 @@ struct Cli {
     #[arg(long, value_enum, default_value_t = Legend::Coloured)]
     legend: Legend,
 
-    /// Where to write the sheet [default: beside the picture, as <picture>.sheet.png]
+    /// The picture coloured in, to copy from: none, or the full sheet painted
+    #[arg(long, value_enum, default_value_t = Model::None)]
+    model: Model,
+
+    /// Where to write the sheet [default: beside the picture, as <picture>.sheet.png, or .model.png]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -99,12 +103,30 @@ enum Legend {
     Freedom,
 }
 
-impl From<Legend> for sheet::Legend {
-    fn from(legend: Legend) -> sheet::Legend {
-        match legend {
-            Legend::Coloured => sheet::Legend::Coloured(Model::None),
-            Legend::Freedom => sheet::Legend::Freedom,
+#[derive(Clone, Copy, ValueEnum)]
+enum Model {
+    None,
+    Full,
+}
+
+impl Model {
+    /// What the written file is called after, beside its picture.
+    fn kind(self) -> &'static str {
+        match self {
+            Model::None => "sheet",
+            Model::Full => "model",
         }
+    }
+}
+
+fn legend_with(legend: Legend, model: Model) -> sheet::Legend {
+    let model = match model {
+        Model::None => sheet::Model::None,
+        Model::Full => sheet::Model::Full,
+    };
+    match legend {
+        Legend::Coloured => sheet::Legend::Coloured(model),
+        Legend::Freedom => sheet::Legend::Freedom,
     }
 }
 
@@ -142,10 +164,12 @@ fn run(cli: Cli) -> Result<String, String> {
         format: cli.format.into(),
         orientation: cli.orientation.into(),
         margin: Margin(cli.margin),
-        legend: cli.legend.into(),
+        legend: legend_with(cli.legend, cli.model),
     };
     let sheet = make_sheet(&picture, order).map_err(explain)?;
-    let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture));
+    let sheet_path = cli
+        .output
+        .unwrap_or_else(|| beside(&cli.picture, cli.model.kind()));
     let bytes = png_file::write(&sheet)
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
@@ -177,10 +201,10 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
     png_file::read(&bytes).map_err(|_| format!("{} is not a PNG picture", path.display()))
 }
 
-/// Where a sheet goes when no output is given: beside its picture, as <picture>.sheet.png.
-fn beside(picture: &Path) -> PathBuf {
+/// Where a sheet goes when no output is given: beside its picture, as <picture>.<kind>.png.
+fn beside(picture: &Path, kind: &str) -> PathBuf {
     let stem = picture.file_stem().unwrap_or_default().to_string_lossy();
-    picture.with_file_name(format!("{stem}.sheet.png"))
+    picture.with_file_name(format!("{stem}.{kind}.png"))
 }
 
 fn explain(no_room: NoRoom) -> String {
