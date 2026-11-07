@@ -1,14 +1,17 @@
 //! A picture read from a file's bytes, whether a PNG or a JPEG.
 
 use crate::picture::Picture;
-use crate::png_file;
+use crate::{jpeg_file, png_file};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NeitherPngNorJpeg;
 
 /// The picture a PNG or a JPEG holds.
 pub fn read(bytes: &[u8]) -> Result<Picture, NeitherPngNorJpeg> {
-    png_file::read(bytes).map_err(|_| NeitherPngNorJpeg)
+    png_file::read(bytes)
+        .ok()
+        .or_else(|| jpeg_file::read(bytes).ok())
+        .ok_or(NeitherPngNorJpeg)
 }
 
 #[cfg(test)]
