@@ -26,9 +26,9 @@ impl Grid {
         let cells = (0..size.rows)
             .flat_map(|row| (0..size.columns).map(move |column| (column, row)))
             .map(|(column, row)| {
-                let first_x = first_pixel_of(column, size.columns, picture.width());
-                let first_y = first_pixel_of(row, size.rows, picture.height());
-                picture.pixel(first_x, first_y)
+                let xs = pixels_under(column, size.columns, picture.width());
+                let ys = pixels_under(row, size.rows, picture.height());
+                average(ys.flat_map(|y| xs.clone().map(move |x| picture.pixel(x, y))))
             })
             .collect();
         Grid { size, cells }
@@ -37,6 +37,24 @@ impl Grid {
     pub fn cell(&self, column: u32, row: u32) -> Rgb {
         self.cells[(row * self.size.columns + column) as usize]
     }
+}
+
+fn pixels_under(cell: u32, cells: u32, pixels: u32) -> std::ops::Range<u32> {
+    first_pixel_of(cell, cells, pixels)..first_pixel_of(cell + 1, cells, pixels)
+}
+
+fn average(colours: impl Iterator<Item = Rgb>) -> Rgb {
+    let (count, red, green, blue) =
+        colours.fold((0, 0, 0, 0), |(count, red, green, blue), Rgb(r, g, b)| {
+            (
+                count + 1,
+                red + u64::from(r),
+                green + u64::from(g),
+                blue + u64::from(b),
+            )
+        });
+    let mean = |sum: u64| ((sum + count / 2) / count) as u8;
+    Rgb(mean(red), mean(green), mean(blue))
 }
 
 fn first_pixel_of(cell: u32, cells: u32, pixels: u32) -> u32 {
