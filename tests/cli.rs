@@ -102,8 +102,7 @@ fn a_landscape_sheet_lies_on_its_side() {
         picture.to_str().unwrap_or_default(),
         "--width",
         "4",
-        "--orientation",
-        "landscape",
+        "--landscape",
     ]);
 
     let sheet = fs::read(folder.join("sunset.sheet.png"))
