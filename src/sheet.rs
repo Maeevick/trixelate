@@ -103,19 +103,19 @@ impl Paper {
 
     /// Fills a disc with a colour, outlined in black.
     fn disc(&mut self, disc: &Disc, colour: Rgb) {
-        let radius = i64::from(disc.diameter / 2);
-        let outline = i64::from((disc.diameter / OUTLINES_PER_BUBBLE_DIAMETER).max(1));
-        let (centre_x, centre_y) = (i64::from(disc.centre_x), i64::from(disc.centre_y));
-        for dy in -radius..=radius {
-            for dx in -radius..=radius {
-                let distance = dx * dx + dy * dy;
-                if distance <= radius * radius {
-                    let ink = if distance > (radius - outline).pow(2) {
+        let radius = disc.diameter / 2;
+        let outline = (disc.diameter / OUTLINES_PER_BUBBLE_DIAMETER).max(1);
+        let (centre_x, centre_y) = (disc.centre_x, disc.centre_y);
+        for y in centre_y - radius..=centre_y + radius {
+            for x in centre_x - radius..=centre_x + radius {
+                let distance = x.abs_diff(centre_x).pow(2) + y.abs_diff(centre_y).pow(2);
+                if distance <= radius.pow(2) {
+                    let ink = if distance > radius.saturating_sub(outline).pow(2) {
                         BLACK
                     } else {
                         colour
                     };
-                    self.fill((centre_x + dx) as u32, (centre_y + dy) as u32, 1, 1, ink);
+                    self.fill(x, y, 1, 1, ink);
                 }
             }
         }
