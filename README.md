@@ -16,7 +16,7 @@ trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, find
 - **A model when it helps**: `--model` paints the sheet in its colours for the youngest to copy, `--twin` puts that model and the grid to colour on one page, and `--freedom` gives only the numbers, leaving the colours to the child.
 - **Ready to print**: A3, A4 or A5, portrait or landscape, at 300 dots per inch, the resolution written in the PNG so the printer keeps the paper's size.
 - **Safe by default**: a sheet that would not fit, cells too small for their numbers or a margin too wide is refused with what to try instead; an existing sheet is never overwritten without `--force`.
-- **Small**: three dependencies, `clap`, `png` and `zune-jpeg`; the digits are drawn from a five-by-seven pixel font, with no font file.
+- **Small**: the library needs only `png` and `zune-jpeg`, the command line adds `clap`, the page adds Leptos; the digits and letters are drawn from a five-by-seven pixel font, with no font file.
 
 ## Getting started
 
@@ -26,8 +26,21 @@ trixelate sample/goblin.png
 ```
 
 ```
-Sheet written to goblin.sheet.png
+Sheet written to sample/goblin.sheet.png
 ```
+
+## In the browser
+
+The same sheets without a command line or a server: drop a picture in, set the sheet up, look at its model or its sheet beside your picture, then download the sheet, the model or the twin. The picture never leaves the browser.
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install trunk
+make web        # served at http://127.0.0.1:8080, rebuilt on every change
+make web-build  # a static site in crates/trixelate-web/dist, for any host
+```
+
+![The page: the goblin dropped in on the left, its model coloured in on the right, the settings and the download buttons above](docs/web.png)
 
 ## The command line
 
@@ -61,8 +74,9 @@ Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` t
 4. **Every cell takes the number of its nearest palette colour**, and a colour no cell takes is dropped, so every bubble has cells to colour.
 5. **The layout gives the cells the largest square side the page allows**, inside the margin and above the legend, and the largest digits each cell and bubble can hold. A twin shares that room between its two grids, 10 mm apart.
 6. **A model paints each cell in its colour**, its number in black or white, whichever reads better, as in the legend.
+7. **A small credit is written at the bottom right**, in the margin: trixelate, its licence and its author.
 
-The workspace holds the library, `crates/trixelate`, and the command line, `crates/trixelate-cli`. The library takes bytes and gives bytes, with no file or terminal in it, so it can also run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
+The workspace holds the library, `crates/trixelate`, the command line, `crates/trixelate-cli`, and the page, `crates/trixelate-web`. The library takes bytes and gives bytes, with no file or terminal in it, so it can also run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
 
 ## Contributing
 
@@ -72,6 +86,7 @@ Issues and pull requests are welcome. Every change comes with its test, and the 
 make check     # formatting, lints, tests and no uncovered line but the command line's wiring
 make mutants   # whether the tests bite, at the end of a slice
 make install   # the command line on this machine
+make web       # the page, rebuilt on every change
 ```
 
 The sheet's drawing is pinned by golden masters in `crates/trixelate-cli/tests/golden`. After a deliberate change to the drawing, look at the new sheet, then write it as the new master with `TRIXELATE_BLESS=1 cargo test -p trixelate-cli --test cli`.
