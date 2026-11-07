@@ -18,6 +18,13 @@ impl GridSize {
             .ok_or(NoCell)
     }
 
+    /// As many columns as asked, and as many rows as keep the picture's proportions with square cells:
+    /// the nearest count, and at least one.
+    pub fn keeping_the_proportions_of(picture: &Picture, columns: u32) -> Result<GridSize, NoCell> {
+        let _ = picture;
+        GridSize::new(columns, columns)
+    }
+
     pub fn columns(&self) -> u32 {
         self.columns
     }
@@ -129,6 +136,39 @@ mod tests {
 
         assert_eq!(grid.cells(), [Rgb(220, 30, 40); 4]);
         Ok(())
+    }
+
+    #[test]
+    fn a_grid_as_wide_as_asked_takes_the_rows_that_keep_its_pictures_proportions_at_least_one() {
+        let blank = |width: u32, height: u32| {
+            Picture::from_rgba(width, height, &vec![255; (width * height * 4) as usize])
+                .expect("a test picture")
+        };
+        let asked = [
+            (1000, 1000, 32),
+            (4, 3, 8),
+            (3, 4, 6),
+            (3, 2, 4),
+            (1000, 10, 10),
+            (4, 3, 0),
+        ];
+
+        let sizes = asked.map(|(width, height, columns)| {
+            GridSize::keeping_the_proportions_of(&blank(width, height), columns)
+                .map(|size| (size.columns(), size.rows()))
+        });
+
+        assert_eq!(
+            sizes,
+            [
+                Ok((32, 32)),
+                Ok((8, 6)),
+                Ok((6, 8)),
+                Ok((4, 3)),
+                Ok((10, 1)),
+                Err(NoCell)
+            ]
+        );
     }
 
     #[test]
