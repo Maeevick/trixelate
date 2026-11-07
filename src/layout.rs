@@ -67,13 +67,30 @@ pub struct Disc {
     pub diameter: u32,
 }
 
+/// Where one grid lies on the page: its top left corner and its cells' side, in dots.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct GridPlace {
+    left: u32,
+    top: u32,
+    cell_side: u32,
+}
+
+impl GridPlace {
+    /// A cell's square, its outline's top and left lines included.
+    pub fn cell(&self, column: u32, row: u32) -> Square {
+        Square {
+            left: self.left + column * self.cell_side,
+            top: self.top + row * self.cell_side,
+            side: self.cell_side,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Layout {
     page_width: u32,
     page_height: u32,
-    grid_left: u32,
-    grid_top: u32,
-    cell_side: u32,
+    grids: Vec<GridPlace>,
     line: u32,
     cell_number_scale: u32,
     bubbles: Vec<Disc>,
@@ -142,9 +159,11 @@ impl Layout {
             page_width,
             page_height,
             bubbles,
-            grid_left: margin + (content_width - grid_width) / 2,
-            grid_top: margin + (grid_room - grid_height) / 2,
-            cell_side,
+            grids: vec![GridPlace {
+                left: margin + (content_width - grid_width) / 2,
+                top: margin + (grid_room - grid_height) / 2,
+                cell_side,
+            }],
             line,
             cell_number_scale,
             bubble_number_scale,
@@ -159,13 +178,9 @@ impl Layout {
         self.page_height
     }
 
-    /// A cell's square, its outline's top and left lines included.
-    pub fn cell(&self, column: u32, row: u32) -> Square {
-        Square {
-            left: self.grid_left + column * self.cell_side,
-            top: self.grid_top + row * self.cell_side,
-            side: self.cell_side,
-        }
+    /// Where each grid lies, in the order they are drawn.
+    pub fn grids(&self) -> &[GridPlace] {
+        &self.grids
     }
 
     /// The legend's bubbles, in the order of their colour numbers.
@@ -258,10 +273,10 @@ mod tests {
 
         let layout = upright(&ten_by_five, PageFormat::A4, Margin::AROUND_A_SHEET)?;
 
-        let first = layout.cell(0, 0);
-        let next_across = layout.cell(1, 0);
-        let next_down = layout.cell(0, 1);
-        let last = layout.cell(9, 4);
+        let first = layout.grids()[0].cell(0, 0);
+        let next_across = layout.grids()[0].cell(1, 0);
+        let next_down = layout.grids()[0].cell(0, 1);
+        let last = layout.grids()[0].cell(9, 4);
         let right_edge = last.left + last.side + layout.line();
         assert!(first.side > 0 && layout.line() > 0);
         assert_eq!(
@@ -284,7 +299,7 @@ mod tests {
 
         let bubbles = layout.bubbles();
         assert_eq!(bubbles.len(), 12);
-        let last_cell = layout.cell(4, 9);
+        let last_cell = layout.grids()[0].cell(4, 9);
         let grid_bottom = last_cell.top + last_cell.side + layout.line();
         let first = bubbles[0];
         let last = bubbles[bubbles.len() - 1];
@@ -374,7 +389,7 @@ mod tests {
 
         let layout = upright(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
 
-        assert_eq!(layout.line(), layout.cell(0, 0).side / 16);
+        assert_eq!(layout.line(), layout.grids()[0].cell(0, 0).side / 16);
         Ok(())
     }
 
@@ -385,7 +400,7 @@ mod tests {
 
         let layout = upright(&few_colours, PageFormat::A4, Margin::AROUND_A_SHEET)?;
 
-        let half_inside = (layout.cell(0, 0).side - layout.line()) / 2;
+        let half_inside = (layout.grids()[0].cell(0, 0).side - layout.line()) / 2;
         let (_, height) = lettering::size("2", layout.cell_number_scale());
         assert!(height <= half_inside && height + 7 > half_inside);
         Ok(())

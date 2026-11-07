@@ -1,7 +1,7 @@
 //! The page printed for the child: the grid of numbered cells and its legend, drawn where the layout says.
 
 use crate::colouring::Colouring;
-use crate::layout::{Disc, Layout};
+use crate::layout::{Disc, GridPlace, Layout};
 use crate::lettering;
 use crate::picture::{Picture, Rgb};
 
@@ -32,8 +32,10 @@ pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
         Legend::Coloured(Model::Full) => Cells::ColouredIn,
         Legend::Coloured(Model::None) | Legend::Freedom => Cells::ToColourIn,
     };
-    outline_the_cells(&mut paper, colouring, layout);
-    fill_in_the_cells(&mut paper, colouring, layout, cells);
+    for place in layout.grids() {
+        outline_the_cells(&mut paper, colouring, layout, place);
+        fill_in_the_cells(&mut paper, colouring, layout, place, cells);
+    }
     draw_the_legend(&mut paper, colouring, layout, legend);
     paper.into_picture()
 }
@@ -74,9 +76,15 @@ enum Cells {
 }
 
 /// Writes each cell's number, in grey on blank cells, or readable on the cell's colour once coloured in.
-fn fill_in_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout, cells: Cells) {
+fn fill_in_the_cells(
+    paper: &mut Paper,
+    colouring: &Colouring,
+    layout: &Layout,
+    place: &GridPlace,
+    cells: Cells,
+) {
     for (column, row, number) in colouring.numbered_cells() {
-        let cell = layout.cell(column, row);
+        let cell = place.cell(column, row);
         let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
         let inside = cell.side - layout.line();
         let ink = match cells {
@@ -97,18 +105,18 @@ fn fill_in_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout, 
     }
 }
 
-fn outline_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+fn outline_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout, place: &GridPlace) {
     let (columns, rows) = (colouring.size().columns(), colouring.size().rows());
-    let top_left = layout.cell(0, 0);
-    let bottom_right = layout.cell(columns, rows);
+    let top_left = place.cell(0, 0);
+    let bottom_right = place.cell(columns, rows);
     let grid_width = bottom_right.left - top_left.left + layout.line();
     let grid_height = bottom_right.top - top_left.top + layout.line();
     for column in 0..=columns {
-        let left = layout.cell(column, 0).left;
+        let left = place.cell(column, 0).left;
         paper.fill(left, top_left.top, layout.line(), grid_height, LINE_GREY);
     }
     for row in 0..=rows {
-        let top = layout.cell(0, row).top;
+        let top = place.cell(0, row).top;
         paper.fill(top_left.left, top, grid_width, layout.line(), LINE_GREY);
     }
 }
@@ -229,7 +237,7 @@ mod tests {
                 .into_iter()
                 .all(|(x, y)| sheet.pixel(x, y) == Rgb::WHITE)
         );
-        let corners = (0..3).map(|column| layout.cell(column, 0));
+        let corners = (0..3).map(|column| layout.grids()[0].cell(column, 0));
         assert!(
             corners
                 .into_iter()
@@ -245,7 +253,7 @@ mod tests {
         let sheet = draw(&colouring, &layout, Legend::Coloured(Model::None));
 
         for column in 0..3 {
-            let cell = layout.cell(column, 0);
+            let cell = layout.grids()[0].cell(column, 0);
             let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
             let inside = cell.side - layout.line();
             let number = colouring
@@ -299,7 +307,7 @@ mod tests {
             (1, red, Rgb::WHITE),
             (2, yellow, BLACK),
         ] {
-            let cell = layout.cell(column, 0);
+            let cell = layout.grids()[0].cell(column, 0);
             let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
             let inside = cell.side - layout.line();
             let number = colouring
