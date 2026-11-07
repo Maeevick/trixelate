@@ -25,8 +25,10 @@ impl Picture {
     /// Reads red, green, blue and alpha bytes, row after row, laid on white paper.
     pub fn from_rgba(width: u32, height: u32, rgba: &[u8]) -> Result<Picture, NotAPicture> {
         let pixels = rgba
-            .chunks_exact(4)
-            .map(|pixel| Rgb(pixel[0], pixel[1], pixel[2]))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|&[red, green, blue, alpha]| laid_on_white_paper(red, green, blue, alpha))
             .collect();
         Ok(Picture {
             width,
@@ -35,17 +37,17 @@ impl Picture {
         })
     }
 
-    pub fn width(&self) -> u32 {
-        self.width
-    }
-
-    pub fn height(&self) -> u32 {
-        self.height
-    }
-
     pub fn pixel(&self, x: u32, y: u32) -> Rgb {
         self.pixels[(y * self.width + x) as usize]
     }
+}
+
+fn laid_on_white_paper(red: u8, green: u8, blue: u8, alpha: u8) -> Rgb {
+    let over_white = |channel: u8| {
+        let blended = u32::from(channel) * u32::from(alpha) + 255 * (255 - u32::from(alpha));
+        ((blended + 127) / 255) as u8
+    };
+    Rgb(over_white(red), over_white(green), over_white(blue))
 }
 
 #[cfg(test)]
