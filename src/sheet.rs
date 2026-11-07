@@ -29,11 +29,12 @@ pub enum Model {
 /// Draws a colouring's sheet on white paper, as laid out.
 pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
-    let cells = match legend {
-        Legend::Coloured(Model::Full) => Cells::ColouredIn,
-        Legend::Coloured(Model::None | Model::Twin) | Legend::Freedom => Cells::ToColourIn,
+    let grids: &[Cells] = match legend {
+        Legend::Coloured(Model::None) | Legend::Freedom => &[Cells::ToColourIn],
+        Legend::Coloured(Model::Full) => &[Cells::ColouredIn],
+        Legend::Coloured(Model::Twin) => &[Cells::ColouredIn, Cells::ToColourIn],
     };
-    for place in layout.grids() {
+    for (place, &cells) in layout.grids().iter().zip(grids) {
         outline_the_cells(&mut paper, colouring, layout, place);
         fill_in_the_cells(&mut paper, colouring, layout, place, cells);
     }
