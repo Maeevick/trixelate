@@ -229,15 +229,15 @@ mod tests {
     }
 
     #[test]
-    fn the_legend_lines_up_one_bubble_per_colour_along_the_bottom_margin_below_a_tall_grid()
+    fn the_legend_lines_up_one_bubble_per_colour_on_the_bottom_margins_edge_below_a_tall_grid()
     -> Result<(), NoRoom> {
-        let tall = colouring(5, 10, 8);
+        let tall = colouring(5, 10, 12);
         let margin = 236;
 
         let layout = Layout::of(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
 
         let bubbles = layout.bubbles();
-        assert_eq!(bubbles.len(), 8);
+        assert_eq!(bubbles.len(), 12);
         let last_cell = layout.cell(4, 9);
         let grid_bottom = last_cell.top + last_cell.side + layout.line();
         let first = bubbles[0];
@@ -246,7 +246,7 @@ mod tests {
             first.centre_x - first.diameter / 2,
             last.centre_x + last.diameter / 2,
         );
-        assert_eq!(bubbles.len(), 8);
+        assert_eq!(bubbles.len(), 12);
         assert!(
             bubbles.iter().all(
                 |bubble| bubble.diameter == first.diameter && bubble.centre_y == first.centre_y
@@ -257,9 +257,10 @@ mod tests {
                 .windows(2)
                 .all(|pair| pair[1].centre_x - pair[0].centre_x > first.diameter)
         );
-        assert!(row_left >= margin && row_right <= 2480 - margin);
-        assert!((row_left - margin).abs_diff(2480 - margin - row_right) <= 1);
-        assert_eq!(first.centre_y + first.diameter / 2, 3508 - margin);
+        assert!(row_left >= margin && row_right < 2480 - margin);
+        assert!((row_left - margin).abs_diff(2480 - margin - 1 - row_right) <= 1);
+        assert_eq!(first.diameter % 2, 1, "a bubble has a centre dot");
+        assert_eq!(first.centre_y + first.diameter / 2, 3508 - margin - 1);
         assert!(grid_bottom < first.centre_y - first.diameter / 2);
         Ok(())
     }
