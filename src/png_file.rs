@@ -1,6 +1,12 @@
 //! Pictures read from PNG bytes and sheets written as PNG bytes, at 300 dots per inch.
 
-use crate::picture::Picture;
+use std::io::Cursor;
+
+use png::{BitDepth, ColorType, Decoder, Encoder, PixelDimensions, Transformations, Unit};
+
+use crate::picture::{Picture, Rgb};
+
+const DOTS_PER_METRE_AT_300_DOTS_PER_INCH: u32 = 11_811;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NotAPng;
@@ -10,14 +16,40 @@ pub struct CannotWritePng;
 
 /// Reads a picture from a PNG of any colour type and depth.
 pub fn read(bytes: &[u8]) -> Result<Picture, NotAPng> {
-    let _ = bytes;
-    Err(NotAPng)
+    let mut decoder = Decoder::new(Cursor::new(bytes));
+    decoder.set_transformations(Transformations::normalize_to_color8());
+    let mut reader = decoder.read_info().map_err(|_| NotAPng)?;
+    let mut buffer = vec![0; reader.output_buffer_size().ok_or(NotAPng)?];
+    let frame = reader.next_frame(&mut buffer).map_err(|_| NotAPng)?;
+    let samples = &buffer[..frame.buffer_size()];
+    let rgba: Vec<u8> = samples
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .flat_map(|&[red, green, blue]| [red, green, blue, 255])
+        .collect();
+    Picture::from_rgba(frame.width, frame.height, &rgba).map_err(|_| NotAPng)
 }
 
 /// Writes a sheet as an RGB PNG that tells printers its 300 dots per inch.
 pub fn write(sheet: &Picture) -> Result<Vec<u8>, CannotWritePng> {
-    let _ = sheet;
-    Ok(vec![])
+    let rgb: Vec<u8> = (0..sheet.height())
+        .flat_map(|y| (0..sheet.width()).map(move |x| sheet.pixel(x, y)))
+        .flat_map(|Rgb(red, green, blue)| [red, green, blue])
+        .collect();
+    let mut bytes = Vec::new();
+    let mut encoder = Encoder::new(&mut bytes, sheet.width(), sheet.height());
+    encoder.set_color(ColorType::Rgb);
+    encoder.set_depth(BitDepth::Eight);
+    encoder.set_pixel_dims(Some(PixelDimensions {
+        xppu: DOTS_PER_METRE_AT_300_DOTS_PER_INCH,
+        yppu: DOTS_PER_METRE_AT_300_DOTS_PER_INCH,
+        unit: Unit::Meter,
+    }));
+    let mut writer = encoder.write_header().map_err(|_| CannotWritePng)?;
+    writer.write_image_data(&rgb).map_err(|_| CannotWritePng)?;
+    writer.finish().map_err(|_| CannotWritePng)?;
+    Ok(bytes)
 }
 
 #[cfg(test)]
