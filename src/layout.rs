@@ -333,6 +333,25 @@ mod tests {
     }
 
     #[test]
+    fn on_an_upright_page_twins_stand_together_halfway_between_the_top_margin_and_the_legend()
+    -> Result<(), NoRoom> {
+        let wide = colouring(10, 5, 2);
+        let (margin, gap) = (236, 118);
+
+        let layout = twinned(&wide, Orientation::Portrait)?;
+
+        let (model, sheet) = (layout.grids()[0], layout.grids()[1]);
+        let above = model.cell(0, 0).top - margin;
+        let legend_top = layout.bubbles()[0].centre_y - layout.bubbles()[0].diameter / 2;
+        let below = legend_top - gap - (sheet.cell(0, 5).top + layout.line());
+        assert!(
+            above > gap && above.abs_diff(below) <= 1,
+            "{above} above, {below} below"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn on_a_landscape_page_a_twinned_model_stands_left_of_its_sheet_a_gap_apart_and_alike()
     -> Result<(), NoRoom> {
         let square = colouring(5, 5, 2);
