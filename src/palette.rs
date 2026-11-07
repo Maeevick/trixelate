@@ -227,4 +227,18 @@ mod tests {
         assert_eq!(numbers, ["1", "2"]);
         Ok(())
     }
+
+    #[test]
+    fn the_box_of_colours_that_spreads_the_most_is_cut_first() -> Result<(), ColourCountOutOfRange>
+    {
+        let cells = grid_of(&[Rgb(0, 0, 0), Rgb(20, 0, 0), Rgb(200, 0, 0), Rgb(255, 0, 0)]);
+
+        let palette = Palette::dominant(&cells, ColourCount::new(3)?);
+
+        assert_eq!(
+            palette.colours(),
+            [Rgb(10, 0, 0), Rgb(200, 0, 0), Rgb(255, 0, 0)]
+        );
+        Ok(())
+    }
 }
