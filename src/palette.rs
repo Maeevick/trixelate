@@ -103,13 +103,8 @@ fn widest_channel(tallied: &Tallied) -> (usize, u8) {
             let spread = values.clone().max().unwrap_or(0) - values.min().unwrap_or(0);
             (channel, spread)
         })
-        .fold((0, 0), |widest, candidate| {
-            if candidate.1 > widest.1 {
-                candidate
-            } else {
-                widest
-            }
-        })
+        .max_by_key(|&(_, spread)| spread)
+        .unwrap_or((0, 0))
 }
 
 fn index_of_the_widest(boxes: &[Tallied]) -> Option<usize> {
@@ -118,13 +113,7 @@ fn index_of_the_widest(boxes: &[Tallied]) -> Option<usize> {
         .enumerate()
         .map(|(index, tallied)| (index, widest_channel(tallied).1))
         .filter(|&(_, spread)| spread > 0)
-        .fold(
-            None,
-            |widest: Option<(usize, u8)>, candidate| match widest {
-                Some(found) if found.1 >= candidate.1 => Some(found),
-                _ => Some(candidate),
-            },
-        )
+        .max_by_key(|&(_, spread)| spread)
         .map(|(index, _)| index)
 }
 
