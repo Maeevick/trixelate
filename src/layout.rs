@@ -448,8 +448,8 @@ mod tests {
     #[test]
     fn numbers_too_big_for_their_cells_or_their_bubbles_are_refused_even_on_a_sliver_of_paper() {
         let three_hundred_columns = colouring(300, 2, 2);
-        let thirty_colours = colouring(10, 5, 30);
-        let one_column_of_thirty_colours = colouring(1, 30, 30);
+        let twelve_colours = colouring(10, 5, 12);
+        let one_column_of_twelve_colours = colouring(1, 12, 12);
 
         let layouts = [
             upright(
@@ -457,8 +457,8 @@ mod tests {
                 PageFormat::A5,
                 Margin::AROUND_A_SHEET,
             ),
-            upright(&thirty_colours, PageFormat::A5, Margin(60)),
-            upright(&one_column_of_thirty_colours, PageFormat::A5, Margin(73)),
+            upright(&twelve_colours, PageFormat::A5, Margin(63)),
+            upright(&one_column_of_twelve_colours, PageFormat::A5, Margin(73)),
         ];
 
         assert_eq!(

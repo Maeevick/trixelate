@@ -39,7 +39,7 @@ trixelate [OPTIONS] --width <WIDTH> <PICTURE>
 | --- | --- | --- |
 | `<PICTURE>` | The PNG picture to turn into a sheet, of any colour type and depth | |
 | `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched | |
-| `-c`, `--colours` | Colours in the palette, from 2 to 30 (`--colors` works too) | 8 |
+| `-c`, `--colours` | Colours in the palette, from 2 to 12 (`--colors` works too) | 8 |
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
 | `--orientation` | `portrait`, or `landscape` for wide pictures | `portrait` |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres | 20 |

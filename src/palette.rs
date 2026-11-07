@@ -6,7 +6,7 @@ use std::fmt;
 use crate::grid::Grid;
 use crate::picture::Rgb;
 
-/// How many colours a palette may hold at most, from 2 to 30: one colour is no colouring, and thirty is more than a box of crayons.
+/// How many colours a palette may hold at most, from 2 to 12: one colour is no colouring, and twelve is a box of crayons.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ColourCount(usize);
 
@@ -15,7 +15,7 @@ pub struct ColourCountOutOfRange;
 
 impl ColourCount {
     pub const FEWEST: usize = 2;
-    pub const MOST: usize = 30;
+    pub const MOST: usize = 12;
 
     pub fn new(count: usize) -> Result<ColourCount, ColourCountOutOfRange> {
         (Self::FEWEST..=Self::MOST)

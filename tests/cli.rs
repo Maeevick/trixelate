@@ -290,7 +290,7 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
 fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
     let cases: [&[&str]; 7] = [
         &["missing.png", "--width", "0"],
-        &["missing.png", "--width", "4", "--colours", "31"],
+        &["missing.png", "--width", "4", "--colours", "13"],
         &["missing.png"],
         &["missing.png", "--width", "4", "--height", "3"],
         &["missing.png", "--width", "4", "--freedom", "--model"],
