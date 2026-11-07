@@ -2,15 +2,37 @@
 
 use crate::colouring::Colouring;
 use crate::layout::Layout;
+use crate::lettering;
 use crate::picture::{Picture, Rgb};
 
 const LINE_GREY: Rgb = Rgb(170, 170, 170);
+const NUMBER_GREY: Rgb = Rgb(90, 90, 90);
 
 /// Draws a colouring's sheet on white paper, as laid out.
 pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
     outline_the_cells(&mut paper, colouring, layout);
+    number_the_cells(&mut paper, colouring, layout);
     paper.into_picture()
+}
+
+fn number_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+    let size = colouring.size();
+    let cells =
+        (0..size.rows()).flat_map(|row| (0..size.columns()).map(move |column| (column, row)));
+    for (column, row) in cells {
+        let cell = layout.cell(column, row);
+        let inside = cell.side - layout.line();
+        if let Some(number) = colouring.number_at(column, row) {
+            paper.write(
+                &number.to_string(),
+                layout.cell_number_scale(),
+                (cell.left + layout.line(), cell.top + layout.line()),
+                (inside, inside),
+                NUMBER_GREY,
+            );
+        }
+    }
 }
 
 fn outline_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
@@ -49,6 +71,23 @@ impl Paper {
             for x in left..(left + width).min(self.width) {
                 self.dots[(y * self.width + x) as usize] = colour;
             }
+        }
+    }
+
+    /// Writes a number centred in a box given by its top left corner and its size.
+    fn write(
+        &mut self,
+        number: &str,
+        scale: u32,
+        (left, top): (u32, u32),
+        (width, height): (u32, u32),
+        colour: Rgb,
+    ) {
+        let (number_width, number_height) = lettering::size(number, scale);
+        let number_left = left + width.saturating_sub(number_width) / 2;
+        let number_top = top + height.saturating_sub(number_height) / 2;
+        for (x, y) in lettering::ink(number, scale) {
+            self.fill(number_left + x, number_top + y, 1, 1, colour);
         }
     }
 
