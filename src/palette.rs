@@ -16,7 +16,10 @@ impl ColourCount {
     pub const MOST: usize = 30;
 
     pub fn new(count: usize) -> Result<ColourCount, ColourCountOutOfRange> {
-        Ok(ColourCount(count))
+        (Self::FEWEST..=Self::MOST)
+            .contains(&count)
+            .then_some(ColourCount(count))
+            .ok_or(ColourCountOutOfRange)
     }
 }
 
