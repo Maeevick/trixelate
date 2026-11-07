@@ -78,7 +78,6 @@ fn a_full_model_is_written_beside_the_picture_apart_from_its_sheet() {
         "--width",
         "4",
         "--model",
-        "full",
     ]);
 
     let model_path = folder.join("sunset.model.png");
