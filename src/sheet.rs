@@ -226,4 +226,28 @@ mod tests {
             assert_eq!(sheet.pixel(x - radius - 2, y), Rgb::WHITE);
         }
     }
+
+    #[test]
+    fn a_bubbles_number_is_written_in_white_on_a_dark_colour_and_in_black_on_a_light_one() {
+        let (colouring, layout) = red_red_yellow();
+
+        let sheet = draw(&colouring, &layout);
+
+        let inks = layout
+            .bubbles()
+            .iter()
+            .zip(["1", "2"])
+            .map(|(bubble, number)| {
+                let (width, height) = lettering::size(number, layout.bubble_number_scale());
+                let (left, top) = (bubble.centre_x - width / 2, bubble.centre_y - height / 2);
+                let dots = lettering::ink(number, layout.bubble_number_scale());
+                let colours: std::collections::BTreeSet<Rgb> = dots
+                    .into_iter()
+                    .map(|(x, y)| sheet.pixel(left + x, top + y))
+                    .collect();
+                colours.into_iter().collect::<Vec<_>>()
+            });
+
+        assert_eq!(inks.collect::<Vec<_>>(), [vec![Rgb::WHITE], vec![BLACK]]);
+    }
 }
