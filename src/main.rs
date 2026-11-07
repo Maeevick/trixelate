@@ -5,7 +5,7 @@ use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use clap::{Parser, ValueEnum};
+use clap::{CommandFactory, Parser, ValueEnum};
 use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
@@ -119,14 +119,15 @@ impl Model {
     }
 }
 
-fn legend_with(legend: Legend, model: Model) -> sheet::Legend {
-    let model = match model {
-        Model::None => sheet::Model::None,
-        Model::Full => sheet::Model::Full,
-    };
-    match legend {
-        Legend::Coloured => sheet::Legend::Coloured(model),
-        Legend::Freedom => sheet::Legend::Freedom,
+/// The legend asked for, refused when free with a model, since a model shows the legend's colours.
+fn legend_with(legend: Legend, model: Model) -> Result<sheet::Legend, &'static str> {
+    match (legend, model) {
+        (Legend::Coloured, Model::None) => Ok(sheet::Legend::Coloured(sheet::Model::None)),
+        (Legend::Coloured, Model::Full) => Ok(sheet::Legend::Coloured(sheet::Model::Full)),
+        (Legend::Freedom, Model::None) => Ok(sheet::Legend::Freedom),
+        (Legend::Freedom, Model::Full) => Err(
+            "a model paints the cells in the legend's colours, so --model cannot go with --legend freedom",
+        ),
     }
 }
 
@@ -142,7 +143,13 @@ fn colour_count(raw: &str) -> Result<ColourCount, String> {
 }
 
 fn main() -> ExitCode {
-    match run(Cli::parse()) {
+    let cli = Cli::parse();
+    let legend = legend_with(cli.legend, cli.model).unwrap_or_else(|conflict| {
+        Cli::command()
+            .error(clap::error::ErrorKind::ArgumentConflict, conflict)
+            .exit()
+    });
+    match run(cli, legend) {
         Ok(written) => {
             println!("{written}");
             ExitCode::SUCCESS
@@ -154,7 +161,7 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(cli: Cli) -> Result<String, String> {
+fn run(cli: Cli, legend: sheet::Legend) -> Result<String, String> {
     let picture = read_picture(&cli.picture)?;
     let grid = GridSize::new(cli.width, cli.height)
         .map_err(|_| "a grid needs at least one cell".to_string())?;
@@ -164,7 +171,7 @@ fn run(cli: Cli) -> Result<String, String> {
         format: cli.format.into(),
         orientation: cli.orientation.into(),
         margin: Margin(cli.margin),
-        legend: legend_with(cli.legend, cli.model),
+        legend,
     };
     let sheet = make_sheet(&picture, order).map_err(explain)?;
     let sheet_path = cli
