@@ -87,7 +87,8 @@ impl Layout {
         let content_width = room_inside(page_width).ok_or(NoRoom::InsideTheMargin)?;
         let content_height = room_inside(page_height).ok_or(NoRoom::InsideTheMargin)?;
         let colours = colouring.palette().colours().len() as u32;
-        let bubble = dots(WIDEST_BUBBLE_MM).min(4 * content_width / (5 * colours - 1));
+        let widest_bubble = dots(WIDEST_BUBBLE_MM).min(4 * content_width / (5 * colours - 1));
+        let bubble = widest_bubble - (1 - widest_bubble % 2);
         let grid_room = content_height
             .checked_sub(dots(GAP_ABOVE_THE_LEGEND_MM) + bubble)
             .ok_or(NoRoom::InsideTheMargin)?;
@@ -117,7 +118,7 @@ impl Layout {
         let bubbles = (0..colours)
             .map(|index| Disc {
                 centre_x: row_left + index * (bubble + spacing) + bubble / 2,
-                centre_y: page_height - margin - bubble / 2,
+                centre_y: page_height - margin - 1 - bubble / 2,
                 diameter: bubble,
             })
             .collect();
