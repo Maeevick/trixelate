@@ -47,9 +47,9 @@ struct Cli {
     #[arg(long)]
     freedom: bool,
 
-    /// The picture coloured in, to copy from: none, or the full sheet painted
-    #[arg(long, value_enum, default_value_t = Model::None)]
-    model: Model,
+    /// Paint the sheet in its colours, a model to copy from
+    #[arg(long)]
+    model: bool,
 
     /// Put the model and the sheet on one page: one above the other in portrait, side by side in landscape
     #[arg(long)]
@@ -96,24 +96,6 @@ impl From<Orientation> for layout::Orientation {
     }
 }
 
-#[derive(Clone, Copy, ValueEnum)]
-enum Model {
-    None,
-    Full,
-    #[value(skip)]
-    Twin,
-}
-
-impl From<Model> for sheet::Model {
-    fn from(model: Model) -> sheet::Model {
-        match model {
-            Model::None => sheet::Model::None,
-            Model::Full => sheet::Model::Full,
-            Model::Twin => sheet::Model::Twin,
-        }
-    }
-}
-
 /// What the written file is called after, beside its picture.
 fn kind_of(legend: sheet::Legend) -> &'static str {
     match legend {
@@ -124,11 +106,11 @@ fn kind_of(legend: sheet::Legend) -> &'static str {
 }
 
 /// The legend asked for, refused when free with a model, since a model shows the legend's colours.
-fn legend_with(freedom: bool, model: Model) -> Result<sheet::Legend, &'static str> {
+fn legend_with(freedom: bool, model: sheet::Model) -> Result<sheet::Legend, &'static str> {
     match (freedom, model) {
-        (false, model) => Ok(sheet::Legend::Coloured(model.into())),
-        (true, Model::None) => Ok(sheet::Legend::Freedom),
-        (true, Model::Full | Model::Twin) => Err(
+        (false, model) => Ok(sheet::Legend::Coloured(model)),
+        (true, sheet::Model::None) => Ok(sheet::Legend::Freedom),
+        (true, sheet::Model::Full | sheet::Model::Twin) => Err(
             "a model paints the cells in the legend's colours, so --model cannot go with --freedom",
         ),
     }
@@ -147,7 +129,11 @@ fn colour_count(raw: &str) -> Result<ColourCount, String> {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    let model = if cli.twin { Model::Twin } else { cli.model };
+    let model = match (cli.model, cli.twin) {
+        (_, true) => sheet::Model::Twin,
+        (true, false) => sheet::Model::Full,
+        (false, false) => sheet::Model::None,
+    };
     let legend = legend_with(cli.freedom, model).unwrap_or_else(|conflict| {
         Cli::command()
             .error(clap::error::ErrorKind::ArgumentConflict, conflict)
