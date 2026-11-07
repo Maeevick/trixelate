@@ -60,4 +60,23 @@ mod tests {
 
         assert_eq!(palette.colours(), [RED, BLUE]);
     }
+
+    #[test]
+    fn more_colours_than_asked_merge_the_closest_into_their_weighted_average() {
+        let cells = [
+            Rgb(250, 0, 0),
+            Rgb(0, 250, 0),
+            Rgb(250, 0, 0),
+            Rgb(240, 0, 0),
+            Rgb(0, 240, 0),
+            Rgb(0, 0, 250),
+        ];
+
+        let palette = Palette::dominant(&cells, ColourCount::new(3));
+
+        assert_eq!(
+            palette.colours(),
+            [Rgb(247, 0, 0), Rgb(0, 245, 0), Rgb(0, 0, 250)]
+        );
+    }
 }
