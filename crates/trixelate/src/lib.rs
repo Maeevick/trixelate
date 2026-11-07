@@ -13,7 +13,7 @@ pub mod sheet;
 
 use colouring::Colouring;
 use grid::GridSize;
-use layout::{Layout, Legend, Margin, NoRoom, Orientation, PageFormat};
+use layout::{Layout, Legend, Margin, Model, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
 
@@ -44,14 +44,20 @@ pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
 
 /// What a sheet made from a picture file is called: the picture's name, without its extension, then what the sheet is.
 pub fn sheet_file_name(picture_file_name: &str, legend: Legend) -> String {
-    let _ = legend;
-    picture_file_name.to_string()
+    let stem = std::path::Path::new(picture_file_name)
+        .file_stem()
+        .map_or(picture_file_name.into(), |stem| stem.to_string_lossy());
+    let kind = match legend {
+        Legend::Coloured(Model::None) | Legend::Freedom => "sheet",
+        Legend::Coloured(Model::Full) => "model",
+        Legend::Coloured(Model::Twin) => "twin",
+    };
+    format!("{stem}.{kind}.png")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use layout::Model;
 
     fn order(columns: u32, format: PageFormat) -> Order {
         Order {
