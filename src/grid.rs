@@ -99,4 +99,13 @@ mod tests {
 
         assert_eq!(grid.cell(0, 0), Rgb(151, 0, 0));
     }
+
+    #[test]
+    fn a_grid_finer_than_its_picture_repeats_the_pixels_over_several_cells() {
+        let one_red_pixel = picture(1, 1, &[RED]);
+
+        let grid = Grid::averaging(&one_red_pixel, GridSize::new(2, 2));
+
+        assert_eq!(grid.cell(1, 1), Rgb(220, 30, 40));
+    }
 }
