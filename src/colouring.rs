@@ -16,25 +16,22 @@ impl Colouring {
     pub fn of(picture: &Picture, size: GridSize, colours: ColourCount) -> Colouring {
         let grid = Grid::averaging(picture, size);
         let palette = Palette::dominant(&grid, colours);
+        let numbers = grid
+            .cells()
+            .iter()
+            .map(|&cell| palette.number_for(cell))
+            .collect();
         Colouring {
             size: grid.size(),
-            numbers: vec![],
+            numbers,
             palette,
         }
-    }
-
-    pub fn size(&self) -> GridSize {
-        self.size
     }
 
     pub fn number_at(&self, column: u32, row: u32) -> Option<ColourNumber> {
         self.numbers
             .get((row * self.size.columns() + column) as usize)
             .copied()
-    }
-
-    pub fn palette(&self) -> &Palette {
-        &self.palette
     }
 }
 
