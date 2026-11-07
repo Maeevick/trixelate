@@ -70,4 +70,22 @@ mod tests {
         assert_eq!(picture.pixel(2, 0), Rgb(227, 127, 177));
         Ok(())
     }
+
+    #[test]
+    fn bytes_that_do_not_fill_the_pictures_size_or_a_picture_without_pixel_are_no_picture() {
+        let short_by_one_byte = [255, 0, 0, 255, 0, 0, 255];
+
+        let refusals = [
+            Picture::from_rgba(2, 1, &short_by_one_byte),
+            Picture::from_rgba(0, 0, &[]),
+        ];
+
+        assert_eq!(
+            refusals,
+            [
+                Err(NotAPicture::BytesNotFillingItsSize),
+                Err(NotAPicture::NoPixel)
+            ]
+        );
+    }
 }
