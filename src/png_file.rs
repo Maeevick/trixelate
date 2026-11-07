@@ -76,4 +76,52 @@ mod tests {
             Some((11811, 11811, png::Unit::Meter))
         );
     }
+
+    fn one_pixel_png(
+        colour: ColorType,
+        depth: BitDepth,
+        samples: &[u8],
+        palette: Option<&[u8]>,
+    ) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        let mut encoder = Encoder::new(&mut bytes, 1, 1);
+        encoder.set_color(colour);
+        encoder.set_depth(depth);
+        if let Some(palette) = palette {
+            encoder.set_palette(palette.to_vec());
+        }
+        let mut writer = encoder.write_header().expect("a header");
+        writer.write_image_data(samples).expect("the pixel");
+        writer.finish().expect("a PNG");
+        bytes
+    }
+
+    #[test]
+    fn a_png_of_any_colour_type_and_depth_reads_as_colours_laid_on_white_paper() {
+        let pngs = [
+            one_pixel_png(ColorType::Grayscale, BitDepth::Eight, &[100], None),
+            one_pixel_png(ColorType::GrayscaleAlpha, BitDepth::Eight, &[100, 0], None),
+            one_pixel_png(ColorType::Rgba, BitDepth::Eight, &[10, 20, 30, 255], None),
+            one_pixel_png(ColorType::Indexed, BitDepth::Eight, &[0], Some(&[9, 8, 7])),
+            one_pixel_png(
+                ColorType::Rgb,
+                BitDepth::Sixteen,
+                &[0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc],
+                None,
+            ),
+        ];
+
+        let pixels = pngs.map(|png| read(&png).map(|picture| picture.pixel(0, 0)));
+
+        assert_eq!(
+            pixels,
+            [
+                Ok(Rgb(100, 100, 100)),
+                Ok(Rgb::WHITE),
+                Ok(Rgb(10, 20, 30)),
+                Ok(Rgb(9, 8, 7)),
+                Ok(Rgb(0x12, 0x56, 0x9a)),
+            ]
+        );
+    }
 }
