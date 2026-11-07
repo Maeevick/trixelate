@@ -49,6 +49,8 @@ impl Colouring {
 mod tests {
     use super::*;
 
+    use crate::picture::Rgb;
+
     const RED: [u8; 4] = [220, 30, 40, 255];
     const BLUE: [u8; 4] = [20, 60, 200, 255];
 
@@ -73,5 +75,31 @@ mod tests {
                 (1, 1, "1".into())
             ]
         );
+    }
+
+    #[test]
+    fn every_palette_colour_numbers_at_least_one_cell_the_most_used_first() {
+        let cells = [
+            [30, 120, 30, 255],
+            [120, 255, 60, 255],
+            [120, 0, 90, 255],
+            [160, 30, 30, 255],
+            [120, 255, 120, 255],
+            [0, 160, 0, 255],
+        ];
+        let picture = Picture::from_rgba(6, 1, cells.as_flattened()).expect("a picture");
+        let six_columns = GridSize::new(6, 1).expect("a grid");
+        let four_colours = ColourCount::new(4).expect("a count");
+
+        let colouring = Colouring::of(&picture, six_columns, four_colours);
+
+        let numbers = colouring
+            .numbered_cells()
+            .map(|(_, _, number)| number.to_string());
+        assert_eq!(
+            colouring.palette().colours(),
+            [Rgb(30, 120, 30), Rgb(120, 255, 120), Rgb(140, 15, 60)]
+        );
+        assert_eq!(numbers.collect::<Vec<_>>(), ["1", "2", "3", "3", "2", "1"]);
     }
 }
