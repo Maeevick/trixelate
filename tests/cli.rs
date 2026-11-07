@@ -44,16 +44,19 @@ fn text(bytes: &[u8]) -> String {
 }
 
 #[test]
-fn a_picture_becomes_an_a4_sheet_written_beside_it_and_the_command_says_where() {
+fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_command_says_where()
+{
     let folder = folder("beside");
     let picture = a_picture_in(&folder);
+    let forty_eight_wide = folder.join("forty-eight.png");
 
-    let run = trixelate(&[
+    let run = trixelate(&[picture.to_str().unwrap_or_default()]);
+    trixelate(&[
         picture.to_str().unwrap_or_default(),
         "--width",
-        "4",
-        "--colours",
-        "3",
+        "48",
+        "--output",
+        forty_eight_wide.to_str().unwrap_or_default(),
     ]);
 
     let sheet_path = folder.join("sunset.sheet.png");
@@ -66,6 +69,7 @@ fn a_picture_becomes_an_a4_sheet_written_beside_it_and_the_command_says_where() 
         Some((2480, 3508))
     );
     assert!(text(&run.stdout).contains(&sheet_path.display().to_string()));
+    assert_eq!(fs::read(&sheet_path).ok(), fs::read(&forty_eight_wide).ok());
 }
 
 #[test]
