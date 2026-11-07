@@ -15,7 +15,7 @@ impl Colouring {
     /// Simplifies a picture into a grid, finds its dominant colours and numbers every cell after the nearest.
     pub fn of(picture: &Picture, size: GridSize, colours: ColourCount) -> Colouring {
         let grid = Grid::averaging(picture, size);
-        let palette = Palette::dominant(&grid, colours);
+        let palette = Palette::dominant(&grid, colours).used_by(grid.cells());
         let numbers = grid
             .cells()
             .iter()

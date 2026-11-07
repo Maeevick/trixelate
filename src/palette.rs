@@ -76,6 +76,26 @@ impl Palette {
         ColourNumber(nearest + 1)
     }
 
+    /// The colours some of the given cells are nearest to, ranked by those cells, the most used first:
+    /// a box's average can lie nearer to none of its own colours than other boxes' averages do.
+    pub fn used_by(&self, cells: &[Rgb]) -> Palette {
+        let uses = cells.iter().fold(vec![0; self.0.len()], |mut uses, &cell| {
+            uses[self.number_for(cell).0 - 1] += 1;
+            uses
+        });
+        let mut used: Vec<(Rgb, usize)> = self
+            .0
+            .iter()
+            .copied()
+            .zip(uses)
+            .filter(|&(_, uses)| uses > 0)
+            .collect();
+        used.sort_by(|(colour, uses), (other, other_uses)| {
+            other_uses.cmp(uses).then(colour.cmp(other))
+        });
+        Palette(used.into_iter().map(|(colour, _)| colour).collect())
+    }
+
     /// The colour a number stands for in this palette.
     pub fn colour_of(&self, number: ColourNumber) -> Rgb {
         self.0[number.0 - 1]
