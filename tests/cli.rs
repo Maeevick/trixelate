@@ -181,8 +181,7 @@ fn a_free_legend_sheet_matches_its_golden_master_its_bubbles_left_blank() {
         "12",
         "--format",
         "a5",
-        "--legend",
-        "freedom",
+        "--freedom",
     ]);
 
     assert!(run.status.success(), "{}", text(&run.stderr));
