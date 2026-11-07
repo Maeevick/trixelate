@@ -10,8 +10,15 @@ const NUMBER_GREY: Rgb = Rgb(90, 90, 90);
 const BLACK: Rgb = Rgb(0, 0, 0);
 const OUTLINES_PER_BUBBLE_DIAMETER: u32 = 24;
 
+/// Whether the legend's bubbles show the picture's colours, or leave the child free to pick their own.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Legend {
+    Coloured,
+    Freedom,
+}
+
 /// Draws a colouring's sheet on white paper, as laid out.
-pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
+pub fn draw(colouring: &Colouring, layout: &Layout, _legend: Legend) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
     outline_the_cells(&mut paper, colouring, layout);
     number_the_cells(&mut paper, colouring, layout);
@@ -180,7 +187,7 @@ mod tests {
         let (colouring, layout) = red_red_yellow();
         let margin = 236;
 
-        let sheet = draw(&colouring, &layout);
+        let sheet = draw(&colouring, &layout, Legend::Coloured);
 
         let (width, height) = (layout.page_width(), layout.page_height());
         assert_eq!((sheet.width(), sheet.height()), (width, height));
@@ -207,7 +214,7 @@ mod tests {
     fn each_cell_shows_its_colour_number_in_dark_grey_centred_inside_its_outline() {
         let (colouring, layout) = red_red_yellow();
 
-        let sheet = draw(&colouring, &layout);
+        let sheet = draw(&colouring, &layout, Legend::Coloured);
 
         for column in 0..3 {
             let cell = layout.cell(column, 0);
@@ -239,7 +246,7 @@ mod tests {
     fn each_bubble_is_filled_with_its_palette_colour_and_outlined_in_black() {
         let (colouring, layout) = red_red_yellow();
 
-        let sheet = draw(&colouring, &layout);
+        let sheet = draw(&colouring, &layout, Legend::Coloured);
 
         let bubbles = layout.bubbles().iter().zip(colouring.palette().colours());
         for (bubble, &colour) in bubbles {
@@ -252,10 +259,37 @@ mod tests {
     }
 
     #[test]
+    fn a_free_legend_leaves_its_bubbles_white_outlined_in_black_with_their_numbers_in_black() {
+        let (colouring, layout) = red_red_yellow();
+
+        let sheet = draw(&colouring, &layout, Legend::Freedom);
+
+        let bubbles = layout.bubbles().iter().zip(["1", "2"]);
+        for (bubble, number) in bubbles {
+            let radius = bubble.diameter / 2;
+            let (x, y) = (bubble.centre_x, bubble.centre_y);
+            let (width, height) = lettering::size(number, layout.bubble_number_scale());
+            let (left, top) = (x - width / 2, y - height / 2);
+            let inks: std::collections::BTreeSet<Rgb> =
+                lettering::ink(number, layout.bubble_number_scale())
+                    .into_iter()
+                    .map(|(dx, dy)| sheet.pixel(left + dx, top + dy))
+                    .collect();
+            assert_eq!(sheet.pixel(x, y + radius * 3 / 4), Rgb::WHITE);
+            assert_eq!(sheet.pixel(x - radius + 1, y), BLACK);
+            assert_eq!(
+                inks.into_iter().collect::<Vec<_>>(),
+                [BLACK],
+                "bubble {number}"
+            );
+        }
+    }
+
+    #[test]
     fn a_bubbles_number_is_written_in_white_on_a_dark_colour_and_in_black_on_a_light_one() {
         let (colouring, layout) = red_red_yellow();
 
-        let sheet = draw(&colouring, &layout);
+        let sheet = draw(&colouring, &layout, Legend::Coloured);
 
         let inks = layout
             .bubbles()
@@ -292,7 +326,7 @@ mod tests {
         )
         .expect("room");
 
-        let sheet = draw(&colouring, &layout);
+        let sheet = draw(&colouring, &layout, Legend::Coloured);
 
         let inks = layout
             .bubbles()

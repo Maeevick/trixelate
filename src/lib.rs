@@ -14,6 +14,7 @@ use grid::GridSize;
 use layout::{Layout, Margin, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
+use sheet::Legend;
 
 /// What a sheet is asked to be: its grid, its number of colours, its paper, which way up it lies and its margin.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -29,7 +30,7 @@ pub struct Order {
 pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
     let colouring = Colouring::of(picture, order.grid, order.colours);
     let layout = Layout::of(&colouring, order.format, order.orientation, order.margin)?;
-    Ok(sheet::draw(&colouring, &layout))
+    Ok(sheet::draw(&colouring, &layout, Legend::Coloured))
 }
 
 #[cfg(test)]
