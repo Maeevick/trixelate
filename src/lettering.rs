@@ -80,4 +80,19 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn two_digits_sit_side_by_side_one_dot_apart_and_a_scale_inks_each_dot_as_a_square() {
+        let dots = ink("17", 2);
+
+        assert_eq!(
+            drawn(&dots, 22, 4),
+            [
+                "....##......##########",
+                "....##......##########",
+                "..####..............##",
+                "..####..............##",
+            ]
+        );
+    }
 }
