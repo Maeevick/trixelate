@@ -10,7 +10,7 @@ use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
-use trixelate::{Order, make_sheet, picture_file, png_file};
+use trixelate::{Order, make_sheet, picture_file, png_file, sheet_file_name};
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
 #[derive(Parser)]
@@ -80,15 +80,6 @@ impl From<Format> for PageFormat {
     }
 }
 
-/// What the written file is called after, beside its picture.
-fn kind_of(legend: layout::Legend) -> &'static str {
-    match legend {
-        layout::Legend::Coloured(layout::Model::None) | layout::Legend::Freedom => "sheet",
-        layout::Legend::Coloured(layout::Model::Full) => "model",
-        layout::Legend::Coloured(layout::Model::Twin) => "twin",
-    }
-}
-
 /// The legend asked for, coloured unless free, with the model asked for, if any; clap lets one through at most.
 fn legend_of(cli: &Cli) -> layout::Legend {
     match (cli.freedom, cli.model, cli.twin) {
@@ -141,9 +132,7 @@ fn run(cli: Cli) -> Result<String, String> {
         legend,
     };
     let sheet = make_sheet(&picture, order).map_err(explain)?;
-    let sheet_path = cli
-        .output
-        .unwrap_or_else(|| beside(&cli.picture, kind_of(legend)));
+    let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture, legend));
     let bytes = png_file::write(&sheet)
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
@@ -176,10 +165,10 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
         .map_err(|_| format!("{} is not a PNG or JPEG picture", path.display()))
 }
 
-/// Where a sheet goes when no output is given: beside its picture, as <picture>.<kind>.png.
-fn beside(picture: &Path, kind: &str) -> PathBuf {
-    let stem = picture.file_stem().unwrap_or_default().to_string_lossy();
-    picture.with_file_name(format!("{stem}.{kind}.png"))
+/// Where a sheet goes when no output is given: beside its picture, named after it.
+fn beside(picture: &Path, legend: layout::Legend) -> PathBuf {
+    let name = picture.file_name().unwrap_or_default().to_string_lossy();
+    picture.with_file_name(sheet_file_name(&name, legend))
 }
 
 fn explain(no_room: NoRoom) -> String {
