@@ -20,8 +20,15 @@ pub struct Palette(Vec<Rgb>);
 impl Palette {
     /// The colours that best stand for all the given ones, at most `count` of them.
     pub fn dominant(colours: &[Rgb], count: ColourCount) -> Palette {
-        let _ = count;
-        let mut most_used_first: Vec<(Rgb, usize)> = tally(colours).into_iter().collect();
+        let mut boxes = vec![tally(colours).into_iter().collect::<Vec<_>>()];
+        while boxes.len() < count.0 {
+            let Some(widest) = index_of_the_widest(&boxes) else {
+                break;
+            };
+            let (low, high) = cut_through_its_middle(boxes.swap_remove(widest));
+            boxes.extend([low, high]);
+        }
+        let mut most_used_first: Vec<(Rgb, usize)> = boxes.iter().map(average).collect();
         most_used_first.sort_by(|(colour, uses), (other, other_uses)| {
             other_uses.cmp(uses).then(colour.cmp(other))
         });
@@ -36,6 +43,68 @@ impl Palette {
     pub fn colours(&self) -> &[Rgb] {
         &self.0
     }
+}
+
+type Tallied = Vec<(Rgb, usize)>;
+
+fn channels(Rgb(red, green, blue): Rgb) -> [u8; 3] {
+    [red, green, blue]
+}
+
+/// The channel whose values spread the most in a box, and how far they spread.
+fn widest_channel(tallied: &Tallied) -> (usize, u8) {
+    (0..3)
+        .map(|channel| {
+            let values = tallied.iter().map(|&(colour, _)| channels(colour)[channel]);
+            let spread = values.clone().max().unwrap_or(0) - values.min().unwrap_or(0);
+            (channel, spread)
+        })
+        .fold((0, 0), |widest, candidate| {
+            if candidate.1 > widest.1 {
+                candidate
+            } else {
+                widest
+            }
+        })
+}
+
+fn index_of_the_widest(boxes: &[Tallied]) -> Option<usize> {
+    boxes
+        .iter()
+        .enumerate()
+        .map(|(index, tallied)| (index, widest_channel(tallied).1))
+        .filter(|&(_, spread)| spread > 0)
+        .fold(
+            None,
+            |widest: Option<(usize, u8)>, candidate| match widest {
+                Some(found) if found.1 >= candidate.1 => Some(found),
+                _ => Some(candidate),
+            },
+        )
+        .map(|(index, _)| index)
+}
+
+fn cut_through_its_middle(tallied: Tallied) -> (Tallied, Tallied) {
+    let (channel, _) = widest_channel(&tallied);
+    let values = tallied
+        .iter()
+        .map(|&(colour, _)| u16::from(channels(colour)[channel]));
+    let middle = (values.clone().min().unwrap_or(0) + values.max().unwrap_or(0)) / 2;
+    tallied
+        .into_iter()
+        .partition(|&(colour, _)| u16::from(channels(colour)[channel]) <= middle)
+}
+
+fn average(tallied: &Tallied) -> (Rgb, usize) {
+    let uses: usize = tallied.iter().map(|&(_, uses)| uses).sum();
+    let mean = |channel: usize| {
+        let sum: usize = tallied
+            .iter()
+            .map(|&(colour, uses)| usize::from(channels(colour)[channel]) * uses)
+            .sum();
+        ((sum + uses / 2) / uses) as u8
+    };
+    (Rgb(mean(0), mean(1), mean(2)), uses)
 }
 
 fn tally(colours: &[Rgb]) -> BTreeMap<Rgb, usize> {
