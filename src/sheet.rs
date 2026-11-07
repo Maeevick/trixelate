@@ -20,8 +20,27 @@ pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
 }
 
 fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
-    for (bubble, &colour) in layout.bubbles().iter().zip(colouring.palette().colours()) {
+    let colours = colouring.palette().colours().iter().zip(1..);
+    for (bubble, (&colour, number)) in layout.bubbles().iter().zip(colours) {
         paper.disc(bubble, colour);
+        let radius = bubble.diameter / 2;
+        paper.write(
+            &number.to_string(),
+            layout.bubble_number_scale(),
+            (bubble.centre_x - radius, bubble.centre_y - radius),
+            (bubble.diameter, bubble.diameter),
+            readable_on(colour),
+        );
+    }
+}
+
+/// Black on a light colour, white on a dark one, light meaning a luma of half or more, after ITU-R BT.709.
+fn readable_on(Rgb(red, green, blue): Rgb) -> Rgb {
+    let luma = 2126 * u32::from(red) + 7152 * u32::from(green) + 722 * u32::from(blue);
+    if luma >= 10_000 * 128 {
+        BLACK
+    } else {
+        Rgb::WHITE
     }
 }
 
