@@ -309,4 +309,45 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn bubbles_are_fifteen_millimetres_wide_when_the_row_has_room_and_shrink_to_share_a_long_row()
+    -> Result<(), NoRoom> {
+        let (few, many) = (colouring(4, 4, 2), colouring(4, 4, 12));
+        let content_width = 2480 - 2 * 236;
+
+        let roomy = Layout::of(&few, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let crowded = Layout::of(&many, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+
+        let bubbles = crowded.bubbles();
+        let (first, last) = (bubbles[0], bubbles[bubbles.len() - 1]);
+        let row_width =
+            last.centre_x + last.diameter / 2 + 1 - (first.centre_x - first.diameter / 2);
+        assert_eq!(roomy.bubbles()[0].diameter, 177);
+        assert!(content_width - row_width < first.diameter / 4);
+        Ok(())
+    }
+
+    #[test]
+    fn cell_outlines_are_a_sixteenth_of_a_cells_side_thick() -> Result<(), NoRoom> {
+        let tall = colouring(5, 10, 2);
+
+        let layout = Layout::of(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+
+        assert_eq!(layout.line(), layout.cell(0, 0).side / 16);
+        Ok(())
+    }
+
+    #[test]
+    fn a_cells_single_digit_number_stands_as_tall_as_half_the_cells_inside_allows()
+    -> Result<(), NoRoom> {
+        let few_colours = colouring(10, 5, 2);
+
+        let layout = Layout::of(&few_colours, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+
+        let half_inside = (layout.cell(0, 0).side - layout.line()) / 2;
+        let (_, height) = lettering::size("2", layout.cell_number_scale());
+        assert!(height <= half_inside && height + 7 > half_inside);
+        Ok(())
+    }
 }
