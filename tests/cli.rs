@@ -152,3 +152,88 @@ fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
             .is_some()
     );
 }
+
+#[test]
+fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
+    let folder = folder("failures");
+    let picture = a_picture_in(&folder);
+    let not_a_png = folder.join("drawing.txt");
+    fs::write(&not_a_png, "a drawing described in words").expect("a text file");
+    let picture = picture.to_str().unwrap_or_default();
+    let cases: [(&[&str], &str); 5] = [
+        (
+            &["missing.png", "--width", "4", "--height", "3"],
+            "cannot read missing.png",
+        ),
+        (
+            &[
+                not_a_png.to_str().unwrap_or_default(),
+                "--width",
+                "4",
+                "--height",
+                "3",
+            ],
+            "is not a PNG picture",
+        ),
+        (
+            &[picture, "--width", "4", "--height", "3", "--margin", "105"],
+            "try a smaller --margin",
+        ),
+        (
+            &[picture, "--width", "900", "--height", "3"],
+            "try fewer cells with --width and --height",
+        ),
+        (
+            &[
+                picture,
+                "--width",
+                "1",
+                "--height",
+                "30",
+                "--colours",
+                "30",
+                "--margin",
+                "73",
+                "--format",
+                "a5",
+            ],
+            "try fewer --colours",
+        ),
+    ];
+
+    for (arguments, hint) in cases {
+        let run = trixelate(arguments);
+
+        assert_eq!(run.status.code(), Some(1), "{arguments:?}");
+        assert!(text(&run.stderr).starts_with("error: "), "{arguments:?}");
+        assert!(
+            text(&run.stderr).contains(hint),
+            "{arguments:?}: {}",
+            text(&run.stderr)
+        );
+    }
+}
+
+#[test]
+fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
+    let cases: [&[&str]; 3] = [
+        &["missing.png", "--width", "0", "--height", "3"],
+        &[
+            "missing.png",
+            "--width",
+            "4",
+            "--height",
+            "3",
+            "--colours",
+            "31",
+        ],
+        &["missing.png", "--width", "4"],
+    ];
+
+    for arguments in cases {
+        let run = trixelate(arguments);
+
+        assert_eq!(run.status.code(), Some(2), "{arguments:?}");
+        assert!(!text(&run.stderr).contains("cannot read"), "{arguments:?}");
+    }
+}
