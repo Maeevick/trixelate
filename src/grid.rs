@@ -40,7 +40,8 @@ impl Grid {
 }
 
 fn pixels_under(cell: u32, cells: u32, pixels: u32) -> std::ops::Range<u32> {
-    first_pixel_of(cell, cells, pixels)..first_pixel_of(cell + 1, cells, pixels)
+    let first = first_pixel_of(cell, cells, pixels);
+    first..first_pixel_of(cell + 1, cells, pixels).max(first + 1)
 }
 
 fn average(colours: impl Iterator<Item = Rgb>) -> Rgb {
