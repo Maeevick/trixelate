@@ -79,17 +79,20 @@ impl Layout {
         let (width, height) = format.millimetres();
         let (page_width, page_height) = (dots(width), dots(height));
         let margin = dots(margin.0);
-        let content_width = page_width - 2 * margin;
-        let content_height = page_height - 2 * margin;
+        let room_inside = |side: u32| side.checked_sub(2 * margin).filter(|&room| room > 0);
+        let content_width = room_inside(page_width).ok_or(NoRoom::InsideTheMargin)?;
+        let content_height = room_inside(page_height).ok_or(NoRoom::InsideTheMargin)?;
         let colours = colouring.palette().colours().len() as u32;
         let bubble = dots(WIDEST_BUBBLE_MM).min(4 * content_width / (5 * colours - 1));
-        let grid_room = content_height - dots(GAP_ABOVE_THE_LEGEND_MM) - bubble;
+        let grid_room = content_height
+            .checked_sub(dots(GAP_ABOVE_THE_LEGEND_MM) + bubble)
+            .ok_or(NoRoom::InsideTheMargin)?;
 
         let size = colouring.size();
         let roomiest_side = (content_width / size.columns()).min(grid_room / size.rows());
         let line = (roomiest_side / LINES_PER_CELL_SIDE).max(1);
-        let cell_side =
-            ((content_width - line) / size.columns()).min((grid_room - line) / size.rows());
+        let cell_side = (content_width.saturating_sub(line) / size.columns())
+            .min(grid_room.saturating_sub(line) / size.rows());
         let grid_width = cell_side * size.columns() + line;
         let grid_height = cell_side * size.rows() + line;
 
