@@ -50,6 +50,14 @@ pub struct Square {
     pub side: u32,
 }
 
+/// A disc on the page, from its centre, its diameter in dots.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Disc {
+    pub centre_x: u32,
+    pub centre_y: u32,
+    pub diameter: u32,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Layout {
     page_width: u32,
@@ -109,6 +117,11 @@ impl Layout {
             top: self.grid_top + row * self.cell_side,
             side: self.cell_side,
         }
+    }
+
+    /// The legend's bubbles, in the order of their colour numbers.
+    pub fn bubbles(&self) -> Vec<Disc> {
+        vec![]
     }
 
     /// How thick the lines outlining the cells are, in dots.
@@ -174,6 +187,42 @@ mod tests {
         assert!(first.left >= margin && first.top >= margin && right_edge <= 2480 - margin);
         assert!((first.left - margin).abs_diff(2480 - margin - right_edge) <= 1);
         assert!(2480 - 2 * margin - (right_edge - first.left) < 10);
+        Ok(())
+    }
+
+    #[test]
+    fn the_legend_lines_up_one_bubble_per_colour_along_the_bottom_margin_below_a_tall_grid()
+    -> Result<(), NoRoom> {
+        let tall = colouring(5, 10, 8);
+        let margin = 236;
+
+        let layout = Layout::of(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+
+        let bubbles = layout.bubbles();
+        assert_eq!(bubbles.len(), 8);
+        let last_cell = layout.cell(4, 9);
+        let grid_bottom = last_cell.top + last_cell.side + layout.line();
+        let first = bubbles[0];
+        let last = bubbles[bubbles.len() - 1];
+        let (row_left, row_right) = (
+            first.centre_x - first.diameter / 2,
+            last.centre_x + last.diameter / 2,
+        );
+        assert_eq!(bubbles.len(), 8);
+        assert!(
+            bubbles.iter().all(
+                |bubble| bubble.diameter == first.diameter && bubble.centre_y == first.centre_y
+            )
+        );
+        assert!(
+            bubbles
+                .windows(2)
+                .all(|pair| pair[1].centre_x - pair[0].centre_x > first.diameter)
+        );
+        assert!(row_left >= margin && row_right <= 2480 - margin);
+        assert!((row_left - margin).abs_diff(2480 - margin - row_right) <= 1);
+        assert_eq!(first.centre_y + first.diameter / 2, 3508 - margin);
+        assert!(grid_bottom < first.centre_y - first.diameter / 2);
         Ok(())
     }
 }
