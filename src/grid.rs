@@ -23,16 +23,24 @@ pub struct Grid {
 impl Grid {
     /// Each cell takes the average colour of the pixels it covers.
     pub fn averaging(picture: &Picture, size: GridSize) -> Grid {
-        let _ = picture;
-        Grid {
-            size,
-            cells: vec![Rgb::WHITE; (size.columns * size.rows) as usize],
-        }
+        let cells = (0..size.rows)
+            .flat_map(|row| (0..size.columns).map(move |column| (column, row)))
+            .map(|(column, row)| {
+                let first_x = first_pixel_of(column, size.columns, picture.width());
+                let first_y = first_pixel_of(row, size.rows, picture.height());
+                picture.pixel(first_x, first_y)
+            })
+            .collect();
+        Grid { size, cells }
     }
 
     pub fn cell(&self, column: u32, row: u32) -> Rgb {
         self.cells[(row * self.size.columns + column) as usize]
     }
+}
+
+fn first_pixel_of(cell: u32, cells: u32, pixels: u32) -> u32 {
+    (u64::from(cell) * u64::from(pixels) / u64::from(cells)) as u32
 }
 
 #[cfg(test)]
