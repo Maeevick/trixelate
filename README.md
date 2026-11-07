@@ -6,7 +6,7 @@
 
 **Any picture, turned into a colour-by-number pixel sheet ready to print.**
 
-trixelate reads a PNG, simplifies it into a grid of square cells, finds its dominant colours and writes a page where every cell carries the number of its colour, with a legend of coloured bubbles at the bottom. The child colours each cell with the crayon its number points to, and the picture appears in pixel art.
+trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, finds its dominant colours and writes a page where every cell carries the number of its colour, with a legend of coloured bubbles at the bottom. The child colours each cell with the crayon its number points to, and the picture appears in pixel art.
 
 ![A twelve-colour sheet on A5: a grid of numbered cells above a row of twelve coloured bubbles](tests/golden/twelve-a5.sheet.png)
 
@@ -16,13 +16,13 @@ trixelate reads a PNG, simplifies it into a grid of square cells, finds its domi
 - **A model when it helps**: `--model` paints the sheet in its colours for the youngest to copy, `--twin` puts that model and the grid to colour on one page, and `--freedom` gives only the numbers, leaving the colours to the child.
 - **Ready to print**: A3, A4 or A5, portrait or landscape, at 300 dots per inch, the resolution written in the PNG so the printer keeps the paper's size.
 - **Safe by default**: a sheet that would not fit, cells too small for their numbers or a margin too wide is refused with what to try instead; an existing sheet is never overwritten without `--force`.
-- **Small**: two dependencies, `clap` and `png`; the digits are drawn from a five-by-seven pixel font, with no font file.
+- **Small**: three dependencies, `clap`, `png` and `zune-jpeg`; the digits are drawn from a five-by-seven pixel font, with no font file.
 
 ## Getting started
 
 ```sh
 cargo install --path .
-trixelate goblin.png
+trixelate sample/goblin.png
 ```
 
 ```
@@ -37,7 +37,7 @@ trixelate [OPTIONS] <PICTURE>
 
 | Option | Meaning | Default |
 | --- | --- | --- |
-| `<PICTURE>` | The PNG picture to turn into a sheet, of any colour type and depth | |
+| `<PICTURE>` | The PNG or JPEG picture to turn into a sheet, of any colour type and depth; the sheet is always a PNG | |
 | `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched | 48 |
 | `-c`, `--colours` | Colours in the palette, from 2 to 12 (`--colors` works too) | 8 |
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
