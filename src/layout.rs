@@ -325,6 +325,26 @@ mod tests {
     }
 
     #[test]
+    fn on_a_landscape_page_a_twinned_model_stands_left_of_its_sheet_a_gap_apart_and_alike()
+    -> Result<(), NoRoom> {
+        let square = colouring(5, 5, 2);
+        let (margin, gap) = (236, 118);
+
+        let layout = twinned(&square, Orientation::Landscape)?;
+
+        let grids = layout.grids();
+        assert_eq!(grids.len(), 2);
+        let (model, sheet) = (grids[0], grids[1]);
+        let model_right = model.cell(5, 0).left + layout.line();
+        let sheet_right = sheet.cell(5, 0).left + layout.line();
+        assert_eq!(model.cell(0, 0).side, sheet.cell(0, 0).side);
+        assert_eq!(model.cell(0, 0).top, sheet.cell(0, 0).top);
+        assert_eq!(sheet.cell(0, 0).left - model_right, gap);
+        assert!(model.cell(0, 0).left >= margin && sheet_right <= 3508 - margin);
+        Ok(())
+    }
+
+    #[test]
     fn a_wide_grid_spans_the_page_inside_its_margin_with_square_cells_centred_across()
     -> Result<(), NoRoom> {
         let ten_by_five = colouring(10, 5, 2);
