@@ -148,4 +148,11 @@ mod tests {
             [Rgb(247, 0, 0), Rgb(0, 245, 0), Rgb(0, 0, 250)]
         );
     }
+
+    #[test]
+    fn no_colour_gives_an_empty_palette() {
+        let palette = Palette::dominant(&[], ColourCount::new(8));
+
+        assert_eq!(palette.colours(), []);
+    }
 }
