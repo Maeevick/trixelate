@@ -23,13 +23,9 @@ struct Cli {
     /// The PNG picture to turn into a sheet
     picture: PathBuf,
 
-    /// Cells across the grid
+    /// Cells across the grid, the rows following from the picture's proportions
     #[arg(long, value_parser = clap::value_parser!(u32).range(1..))]
     width: u32,
-
-    /// Cells down the grid
-    #[arg(long, value_parser = clap::value_parser!(u32).range(1..))]
-    height: u32,
 
     /// Colours in the palette, from 2 to 30
     #[arg(short, long, visible_alias = "colors", default_value = "8", value_parser = colour_count)]
@@ -174,7 +170,7 @@ fn main() -> ExitCode {
 
 fn run(cli: Cli, legend: sheet::Legend) -> Result<String, String> {
     let picture = read_picture(&cli.picture)?;
-    let grid = GridSize::new(cli.width, cli.height)
+    let grid = GridSize::keeping_the_proportions_of(&picture, cli.width)
         .map_err(|_| "a grid needs at least one cell".to_string())?;
     let order = Order {
         grid,
@@ -229,7 +225,7 @@ fn explain(no_room: NoRoom) -> String {
     match no_room {
         NoRoom::InsideTheMargin => "the margin leaves no room for the grid and its legend: try a smaller --margin",
         NoRoom::ForTheNumbersInTheCells => {
-            "the cells are too small for their numbers: try fewer cells with --width and --height, or a bigger --format"
+            "the cells are too small for their numbers: try fewer cells with --width, or a bigger --format"
         }
         NoRoom::ForTheNumbersInTheLegend => {
             "the bubbles are too small for their numbers: try fewer --colours, or a smaller --margin"

@@ -52,8 +52,6 @@ fn a_picture_becomes_an_a4_sheet_written_beside_it_and_the_command_says_where() 
         picture.to_str().unwrap_or_default(),
         "--width",
         "4",
-        "--height",
-        "3",
         "--colours",
         "3",
     ]);
@@ -79,8 +77,6 @@ fn a_full_model_is_written_beside_the_picture_apart_from_its_sheet() {
         picture.to_str().unwrap_or_default(),
         "--width",
         "4",
-        "--height",
-        "3",
         "--model",
         "full",
     ]);
@@ -107,8 +103,6 @@ fn a_landscape_sheet_lies_on_its_side() {
         picture.to_str().unwrap_or_default(),
         "--width",
         "4",
-        "--height",
-        "3",
         "--orientation",
         "landscape",
     ]);
@@ -161,8 +155,6 @@ fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot() {
         picture.to_str().unwrap_or_default(),
         "--width",
         "4",
-        "--height",
-        "3",
         "--colours",
         "12",
         "--format",
@@ -185,8 +177,6 @@ fn a_free_legend_sheet_matches_its_golden_master_its_bubbles_left_blank() {
         picture.to_str().unwrap_or_default(),
         "--width",
         "4",
-        "--height",
-        "3",
         "--colours",
         "12",
         "--format",
@@ -208,8 +198,6 @@ fn a_landscape_twin_beside_its_picture_matches_its_golden_master_model_left_shee
         picture.to_str().unwrap_or_default(),
         "--width",
         "4",
-        "--height",
-        "3",
         "--colours",
         "12",
         "--format",
@@ -233,13 +221,7 @@ fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
     let picture = a_picture_in(&folder);
     let sheet = folder.join("sunset.sheet.png");
     fs::write(&sheet, "a sheet already coloured in").expect("an existing sheet");
-    let arguments = [
-        picture.to_str().unwrap_or_default(),
-        "--width",
-        "4",
-        "--height",
-        "3",
-    ];
+    let arguments = [picture.to_str().unwrap_or_default(), "--width", "4"];
 
     let kept = trixelate(&arguments);
     let kept_sheet = fs::read_to_string(&sheet).ok();
@@ -263,43 +245,30 @@ fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
 fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
     let folder = folder("failures");
     let picture = a_picture_in(&folder);
+    let twelve_colours = a_twelve_colour_picture_in(&folder);
     let not_a_png = folder.join("drawing.txt");
     fs::write(&not_a_png, "a drawing described in words").expect("a text file");
     let picture = picture.to_str().unwrap_or_default();
     let cases: [(&[&str], &str); 5] = [
+        (&["missing.png", "--width", "4"], "cannot read missing.png"),
         (
-            &["missing.png", "--width", "4", "--height", "3"],
-            "cannot read missing.png",
-        ),
-        (
-            &[
-                not_a_png.to_str().unwrap_or_default(),
-                "--width",
-                "4",
-                "--height",
-                "3",
-            ],
+            &[not_a_png.to_str().unwrap_or_default(), "--width", "4"],
             "is not a PNG picture",
         ),
         (
-            &[picture, "--width", "4", "--height", "3", "--margin", "105"],
+            &[picture, "--width", "4", "--margin", "105"],
             "try a smaller --margin",
         ),
-        (
-            &[picture, "--width", "900", "--height", "3"],
-            "try fewer cells with --width and --height",
-        ),
+        (&[picture, "--width", "900"], "try fewer cells with --width"),
         (
             &[
-                picture,
+                twelve_colours.to_str().unwrap_or_default(),
                 "--width",
-                "1",
-                "--height",
-                "30",
+                "4",
                 "--colours",
-                "30",
+                "12",
                 "--margin",
-                "73",
+                "65",
                 "--format",
                 "a5",
             ],
@@ -323,24 +292,14 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
 #[test]
 fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
     let cases: [&[&str]; 5] = [
-        &["missing.png", "--width", "0", "--height", "3"],
-        &[
-            "missing.png",
-            "--width",
-            "4",
-            "--height",
-            "3",
-            "--colours",
-            "31",
-        ],
-        &["missing.png", "--width", "4"],
+        &["missing.png", "--width", "0"],
+        &["missing.png", "--width", "4", "--colours", "31"],
+        &["missing.png"],
         &["missing.png", "--width", "4", "--height", "3"],
         &[
             "missing.png",
             "--width",
             "4",
-            "--height",
-            "3",
             "--legend",
             "freedom",
             "--model",
