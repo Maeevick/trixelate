@@ -137,10 +137,16 @@ impl Layout {
         let content_width = room_inside(page_width).ok_or(NoRoom::InsideTheMargin)?;
         let content_height = room_inside(page_height).ok_or(NoRoom::InsideTheMargin)?;
         let colours = colouring.palette().colours().len() as u32;
-        let widest_bubble = dots(WIDEST_BUBBLE_MM).min(4 * content_width / (5 * colours - 1));
-        let bubble = widest_bubble.saturating_sub(1 - widest_bubble % 2);
+        let bubble = match legend {
+            Legend::Coloured(_) => {
+                let widest = dots(WIDEST_BUBBLE_MM).min(4 * content_width / (5 * colours - 1));
+                Some(widest.saturating_sub(1 - widest % 2))
+            }
+            Legend::Freedom => None,
+        };
+        let legend_height = bubble.map_or(0, |bubble| dots(GAP_ABOVE_THE_LEGEND_MM) + bubble);
         let grid_room = content_height
-            .checked_sub(dots(GAP_ABOVE_THE_LEGEND_MM) + bubble)
+            .checked_sub(legend_height)
             .ok_or(NoRoom::InsideTheMargin)?;
 
         let (grids_across, grids_down) = match (legend, orientation) {
@@ -170,9 +176,13 @@ impl Layout {
             inside_a_cell / 2,
         )
         .ok_or(NoRoom::ForTheNumbersInTheCells)?;
-        let bubble_number_scale =
-            lettering::largest_scale_fitting(&widest_number, bubble * 11 / 20, bubble * 9 / 20)
-                .ok_or(NoRoom::ForTheNumbersInTheLegend)?;
+        let bubble_number_scale = bubble
+            .map(|bubble| {
+                lettering::largest_scale_fitting(&widest_number, bubble * 11 / 20, bubble * 9 / 20)
+                    .ok_or(NoRoom::ForTheNumbersInTheLegend)
+            })
+            .transpose()?
+            .unwrap_or_default();
         let grid_width = cell_side * size.columns() + line;
         let grid_height = cell_side * size.rows() + line;
         let twins_width = grids_across * grid_width + (grids_across - 1) * gap_between_twins;
@@ -180,16 +190,18 @@ impl Layout {
         let twins_left = margin + (content_width - twins_width) / 2;
         let twins_top = margin + (grid_room - twins_height) / 2;
 
-        let spacing = bubble / 4;
-        let row_width = colours * bubble + (colours - 1) * spacing;
-        let row_left = margin + (content_width - row_width) / 2;
-        let bubbles = (0..colours)
-            .map(|index| Disc {
-                centre_x: row_left + index * (bubble + spacing) + bubble / 2,
-                centre_y: page_height - margin - 1 - bubble / 2,
-                diameter: bubble,
-            })
-            .collect();
+        let bubbles = bubble.map_or_else(Vec::new, |bubble| {
+            let spacing = bubble / 4;
+            let row_width = colours * bubble + (colours - 1) * spacing;
+            let row_left = margin + (content_width - row_width) / 2;
+            (0..colours)
+                .map(|index| Disc {
+                    centre_x: row_left + index * (bubble + spacing) + bubble / 2,
+                    centre_y: page_height - margin - 1 - bubble / 2,
+                    diameter: bubble,
+                })
+                .collect()
+        });
 
         Ok(Layout {
             page_width,

@@ -22,16 +22,12 @@ pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
         outline_the_cells(&mut paper, colouring, layout, place);
         fill_in_the_cells(&mut paper, colouring, layout, place, cells);
     }
-    draw_the_legend(&mut paper, colouring, layout, legend);
+    draw_the_legend(&mut paper, colouring, layout);
     paper.into_picture()
 }
 
-fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout, legend: Legend) {
+fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
     for (bubble, (number, colour)) in layout.bubbles().iter().zip(colouring.palette().numbered()) {
-        let colour = match legend {
-            Legend::Coloured(_) => colour,
-            Legend::Freedom => Rgb::WHITE,
-        };
         paper.disc(bubble, colour);
         let radius = bubble.diameter / 2;
         paper.write(
@@ -340,33 +336,6 @@ mod tests {
             insides.collect::<Vec<_>>(),
             [Rgb(red, green, blue), Rgb::WHITE]
         );
-    }
-
-    #[test]
-    fn a_free_legend_leaves_its_bubbles_white_outlined_in_black_with_their_numbers_in_black() {
-        let (colouring, layout) = red_red_yellow();
-
-        let sheet = draw(&colouring, &layout, Legend::Freedom);
-
-        let bubbles = layout.bubbles().iter().zip(["1", "2"]);
-        for (bubble, number) in bubbles {
-            let radius = bubble.diameter / 2;
-            let (x, y) = (bubble.centre_x, bubble.centre_y);
-            let (width, height) = lettering::size(number, layout.bubble_number_scale());
-            let (left, top) = (x - width / 2, y - height / 2);
-            let inks: std::collections::BTreeSet<Rgb> =
-                lettering::ink(number, layout.bubble_number_scale())
-                    .into_iter()
-                    .map(|(dx, dy)| sheet.pixel(left + dx, top + dy))
-                    .collect();
-            assert_eq!(sheet.pixel(x, y + radius * 3 / 4), Rgb::WHITE);
-            assert_eq!(sheet.pixel(x - radius + 1, y), BLACK);
-            assert_eq!(
-                inks.into_iter().collect::<Vec<_>>(),
-                [BLACK],
-                "bubble {number}"
-            );
-        }
     }
 
     #[test]
