@@ -1,5 +1,7 @@
 //! The dominant colours of a grid, numbered from 1, the most used first.
 
+use std::collections::BTreeMap;
+
 use crate::picture::Rgb;
 
 /// How many colours a palette may hold at most.
@@ -18,13 +20,29 @@ pub struct Palette(Vec<Rgb>);
 impl Palette {
     /// The colours that best stand for all the given ones, at most `count` of them.
     pub fn dominant(colours: &[Rgb], count: ColourCount) -> Palette {
-        let _ = (colours, count);
-        Palette(vec![])
+        let _ = count;
+        let mut most_used_first: Vec<(Rgb, usize)> = tally(colours).into_iter().collect();
+        most_used_first.sort_by(|(colour, uses), (other, other_uses)| {
+            other_uses.cmp(uses).then(colour.cmp(other))
+        });
+        Palette(
+            most_used_first
+                .into_iter()
+                .map(|(colour, _)| colour)
+                .collect(),
+        )
     }
 
     pub fn colours(&self) -> &[Rgb] {
         &self.0
     }
+}
+
+fn tally(colours: &[Rgb]) -> BTreeMap<Rgb, usize> {
+    colours.iter().fold(BTreeMap::new(), |mut uses, &colour| {
+        *uses.entry(colour).or_default() += 1;
+        uses
+    })
 }
 
 #[cfg(test)]
