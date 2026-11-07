@@ -249,8 +249,9 @@ mod tests {
             let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
             let inside = cell.side - layout.line();
             let number = colouring
-                .number_at(column, 0)
-                .map(|number| number.to_string())
+                .numbered_cells()
+                .nth(column as usize)
+                .map(|(_, _, number)| number.to_string())
                 .unwrap_or_default();
             let (width, height) = lettering::size(&number, layout.cell_number_scale());
             let (number_left, number_top) =
@@ -302,8 +303,9 @@ mod tests {
             let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
             let inside = cell.side - layout.line();
             let number = colouring
-                .number_at(column, 0)
-                .map(|number| number.to_string())
+                .numbered_cells()
+                .nth(column as usize)
+                .map(|(_, _, number)| number.to_string())
                 .unwrap_or_default();
             let (width, height) = lettering::size(&number, layout.cell_number_scale());
             let (number_left, number_top) =

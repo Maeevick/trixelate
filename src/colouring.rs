@@ -43,12 +43,6 @@ impl Colouring {
             .zip(&self.numbers)
             .map(move |(index, &number)| (index % columns, index / columns, number))
     }
-
-    pub fn number_at(&self, column: u32, row: u32) -> Option<ColourNumber> {
-        self.numbers
-            .get((row * self.size.columns() + column) as usize)
-            .copied()
-    }
 }
 
 #[cfg(test)]
@@ -60,21 +54,24 @@ mod tests {
 
     #[test]
     fn each_cell_carries_the_number_of_its_colour_in_the_pictures_palette() {
-        let red_red_blue =
-            Picture::from_rgba(3, 1, [RED, RED, BLUE].as_flattened()).expect("a picture");
-        let three_columns = GridSize::new(3, 1).expect("a grid");
+        let red_red_over_blue_red =
+            Picture::from_rgba(2, 2, [RED, RED, BLUE, RED].as_flattened()).expect("a picture");
+        let two_by_two = GridSize::new(2, 2).expect("a grid");
         let two_colours = ColourCount::new(2).expect("a count");
 
-        let colouring = Colouring::of(&red_red_blue, three_columns, two_colours);
+        let colouring = Colouring::of(&red_red_over_blue_red, two_by_two, two_colours);
 
-        let numbers = (0..3).map(|column| {
-            colouring
-                .number_at(column, 0)
-                .map(|number| number.to_string())
-        });
+        let numbers = colouring
+            .numbered_cells()
+            .map(|(column, row, number)| (column, row, number.to_string()));
         assert_eq!(
             numbers.collect::<Vec<_>>(),
-            [Some("1".into()), Some("1".into()), Some("2".into())]
+            [
+                (0, 0, "1".into()),
+                (1, 0, "1".into()),
+                (0, 1, "2".into()),
+                (1, 1, "1".into())
+            ]
         );
     }
 }
