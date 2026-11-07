@@ -66,6 +66,7 @@ pub struct Layout {
     grid_top: u32,
     cell_side: u32,
     line: u32,
+    bubbles: Vec<Disc>,
 }
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
@@ -92,9 +93,21 @@ impl Layout {
         let grid_width = cell_side * size.columns() + line;
         let grid_height = cell_side * size.rows() + line;
 
+        let spacing = bubble / 4;
+        let row_width = colours * bubble + (colours - 1) * spacing;
+        let row_left = margin + (content_width - row_width) / 2;
+        let bubbles = (0..colours)
+            .map(|index| Disc {
+                centre_x: row_left + index * (bubble + spacing) + bubble / 2,
+                centre_y: page_height - margin - bubble / 2,
+                diameter: bubble,
+            })
+            .collect();
+
         Ok(Layout {
             page_width,
             page_height,
+            bubbles,
             grid_left: margin + (content_width - grid_width) / 2,
             grid_top: margin + (grid_room - grid_height) / 2,
             cell_side,
@@ -120,8 +133,8 @@ impl Layout {
     }
 
     /// The legend's bubbles, in the order of their colour numbers.
-    pub fn bubbles(&self) -> Vec<Disc> {
-        vec![]
+    pub fn bubbles(&self) -> &[Disc] {
+        &self.bubbles
     }
 
     /// How thick the lines outlining the cells are, in dots.
