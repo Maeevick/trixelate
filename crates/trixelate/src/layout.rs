@@ -102,6 +102,17 @@ impl GridPlace {
     }
 }
 
+/// The line crediting trixelate, its licence and its author, written small at the bottom right of every sheet.
+pub const CREDIT: &str = "Made with trixelate (github.com/Maeevick/trixelate). MIT License - Copyright (c) 2026 Aurel | Maeevick";
+
+/// Where the credit is written: the top left corner of its first character, and its scale.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Credit {
+    pub left: u32,
+    pub top: u32,
+    pub scale: u32,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Layout {
     page_width: u32,
@@ -246,6 +257,11 @@ impl Layout {
     /// The scale every bubble's number is written at.
     pub fn bubble_number_scale(&self) -> u32 {
         self.bubble_number_scale
+    }
+
+    /// Where the credit is written, if the margin has room for it.
+    pub fn credit(&self) -> Option<Credit> {
+        None
     }
 
     /// How thick the lines outlining the cells are, in dots.
@@ -414,6 +430,30 @@ mod tests {
         assert!(without.bubbles().is_empty());
         assert!(without.grids()[0].cell(0, 0).side > with_a_legend.grids()[0].cell(0, 0).side);
         assert!(on_a_narrow_page.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn the_credit_sits_small_in_the_bottom_margin_flush_right_smaller_on_a_narrow_page_or_left_out()
+    -> Result<(), NoRoom> {
+        let small = colouring(4, 4, 2);
+
+        let a4 = upright(&small, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let a5 = upright(&small, PageFormat::A5, Margin::AROUND_A_SHEET)?;
+        let thin_margin = upright(&small, PageFormat::A4, Margin(1))?;
+
+        let edges = a4.credit().map(|credit| {
+            let (width, height) = lettering::size(CREDIT, credit.scale);
+            (
+                credit.scale,
+                credit.left + width,
+                credit.top,
+                credit.top + height,
+            )
+        });
+        assert_eq!(edges, Some((3, 2480 - 236, 3379, 3400)));
+        assert_eq!(a5.credit().map(|credit| credit.scale), Some(2));
+        assert_eq!(thin_margin.credit(), None);
         Ok(())
     }
 
