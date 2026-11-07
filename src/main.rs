@@ -7,7 +7,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, ValueEnum};
 use trixelate::grid::GridSize;
-use trixelate::layout::{Margin, NoRoom, PageFormat};
+use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::{Order, make_sheet, png_file};
@@ -100,6 +100,7 @@ fn run(cli: Cli) -> Result<String, String> {
         grid,
         colours: cli.colours,
         format: cli.format.into(),
+        orientation: Orientation::Portrait,
         margin: Margin(cli.margin),
     };
     let sheet = make_sheet(&picture, order).map_err(explain)?;

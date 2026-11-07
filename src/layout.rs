@@ -21,6 +21,13 @@ impl PageFormat {
     }
 }
 
+/// Which way up the paper lies: upright, or on its side.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Orientation {
+    Portrait,
+    Landscape,
+}
+
 const DOTS_PER_INCH: u32 = 300;
 const TENTHS_OF_MILLIMETRE_PER_INCH: u32 = 254;
 
@@ -79,7 +86,12 @@ const LINES_PER_CELL_SIDE: u32 = 16;
 
 impl Layout {
     /// Lays out a colouring's grid and legend on the page, inside its margin.
-    pub fn of(colouring: &Colouring, format: PageFormat, margin: Margin) -> Result<Layout, NoRoom> {
+    pub fn of(
+        colouring: &Colouring,
+        format: PageFormat,
+        _orientation: Orientation,
+        margin: Margin,
+    ) -> Result<Layout, NoRoom> {
         let (width, height) = format.millimetres();
         let (page_width, page_height) = (dots(width), dots(height));
         let margin = dots(margin.0);
@@ -201,7 +213,14 @@ mod tests {
         let small = colouring(4, 4, 2);
 
         let pages = [PageFormat::A3, PageFormat::A4, PageFormat::A5]
-            .map(|format| Layout::of(&small, format, Margin::AROUND_A_SHEET))
+            .map(|format| {
+                Layout::of(
+                    &small,
+                    format,
+                    Orientation::Portrait,
+                    Margin::AROUND_A_SHEET,
+                )
+            })
             .map(|layout| layout.map(|layout| (layout.page_width(), layout.page_height())));
 
         assert_eq!(
@@ -211,12 +230,32 @@ mod tests {
     }
 
     #[test]
+    fn a_landscape_page_lies_its_format_on_its_side() -> Result<(), NoRoom> {
+        let small = colouring(4, 4, 2);
+
+        let layout = Layout::of(
+            &small,
+            PageFormat::A4,
+            Orientation::Landscape,
+            Margin::AROUND_A_SHEET,
+        )?;
+
+        assert_eq!((layout.page_width(), layout.page_height()), (3508, 2480));
+        Ok(())
+    }
+
+    #[test]
     fn a_wide_grid_spans_the_page_inside_its_margin_with_square_cells_centred_across()
     -> Result<(), NoRoom> {
         let ten_by_five = colouring(10, 5, 2);
         let margin = 236;
 
-        let layout = Layout::of(&ten_by_five, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let layout = Layout::of(
+            &ten_by_five,
+            PageFormat::A4,
+            Orientation::Portrait,
+            Margin::AROUND_A_SHEET,
+        )?;
 
         let first = layout.cell(0, 0);
         let next_across = layout.cell(1, 0);
@@ -240,7 +279,12 @@ mod tests {
         let tall = colouring(5, 10, 12);
         let margin = 236;
 
-        let layout = Layout::of(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let layout = Layout::of(
+            &tall,
+            PageFormat::A4,
+            Orientation::Portrait,
+            Margin::AROUND_A_SHEET,
+        )?;
 
         let bubbles = layout.bubbles();
         assert_eq!(bubbles.len(), 12);
@@ -275,8 +319,8 @@ mod tests {
     fn a_margin_leaving_no_room_for_the_grid_and_its_legend_is_refused() {
         let small = colouring(4, 4, 2);
 
-        let layouts =
-            [Margin(74), Margin(75)].map(|margin| Layout::of(&small, PageFormat::A5, margin));
+        let layouts = [Margin(74), Margin(75)]
+            .map(|margin| Layout::of(&small, PageFormat::A5, Orientation::Portrait, margin));
 
         assert_eq!(
             layouts,
@@ -294,10 +338,21 @@ mod tests {
             Layout::of(
                 &three_hundred_columns,
                 PageFormat::A5,
+                Orientation::Portrait,
                 Margin::AROUND_A_SHEET,
             ),
-            Layout::of(&thirty_colours, PageFormat::A5, Margin(60)),
-            Layout::of(&one_column_of_thirty_colours, PageFormat::A5, Margin(73)),
+            Layout::of(
+                &thirty_colours,
+                PageFormat::A5,
+                Orientation::Portrait,
+                Margin(60),
+            ),
+            Layout::of(
+                &one_column_of_thirty_colours,
+                PageFormat::A5,
+                Orientation::Portrait,
+                Margin(73),
+            ),
         ];
 
         assert_eq!(
@@ -316,8 +371,18 @@ mod tests {
         let (few, many) = (colouring(4, 4, 2), colouring(4, 4, 12));
         let content_width = 2480 - 2 * 236;
 
-        let roomy = Layout::of(&few, PageFormat::A4, Margin::AROUND_A_SHEET)?;
-        let crowded = Layout::of(&many, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let roomy = Layout::of(
+            &few,
+            PageFormat::A4,
+            Orientation::Portrait,
+            Margin::AROUND_A_SHEET,
+        )?;
+        let crowded = Layout::of(
+            &many,
+            PageFormat::A4,
+            Orientation::Portrait,
+            Margin::AROUND_A_SHEET,
+        )?;
 
         let bubbles = crowded.bubbles();
         let (first, last) = (bubbles[0], bubbles[bubbles.len() - 1]);
@@ -332,7 +397,12 @@ mod tests {
     fn cell_outlines_are_a_sixteenth_of_a_cells_side_thick() -> Result<(), NoRoom> {
         let tall = colouring(5, 10, 2);
 
-        let layout = Layout::of(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let layout = Layout::of(
+            &tall,
+            PageFormat::A4,
+            Orientation::Portrait,
+            Margin::AROUND_A_SHEET,
+        )?;
 
         assert_eq!(layout.line(), layout.cell(0, 0).side / 16);
         Ok(())
@@ -343,7 +413,12 @@ mod tests {
     -> Result<(), NoRoom> {
         let few_colours = colouring(10, 5, 2);
 
-        let layout = Layout::of(&few_colours, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let layout = Layout::of(
+            &few_colours,
+            PageFormat::A4,
+            Orientation::Portrait,
+            Margin::AROUND_A_SHEET,
+        )?;
 
         let half_inside = (layout.cell(0, 0).side - layout.line()) / 2;
         let (_, height) = lettering::size("2", layout.cell_number_scale());

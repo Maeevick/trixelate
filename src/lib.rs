@@ -11,23 +11,24 @@ pub mod sheet;
 
 use colouring::Colouring;
 use grid::GridSize;
-use layout::{Layout, Margin, NoRoom, PageFormat};
+use layout::{Layout, Margin, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
 
-/// What a sheet is asked to be: its grid, its number of colours, its paper and its margin.
+/// What a sheet is asked to be: its grid, its number of colours, its paper, which way up it lies and its margin.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Order {
     pub grid: GridSize,
     pub colours: ColourCount,
     pub format: PageFormat,
+    pub orientation: Orientation,
     pub margin: Margin,
 }
 
 /// Turns a picture into the colour-by-number sheet ordered, or says what lacks room on the page.
 pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
     let colouring = Colouring::of(picture, order.grid, order.colours);
-    let layout = Layout::of(&colouring, order.format, order.margin)?;
+    let layout = Layout::of(&colouring, order.format, order.orientation, order.margin)?;
     Ok(sheet::draw(&colouring, &layout))
 }
 
@@ -40,6 +41,7 @@ mod tests {
             grid: GridSize::new(columns, 2).expect("a grid"),
             colours: ColourCount::new(2).expect("a count"),
             format,
+            orientation: Orientation::Portrait,
             margin: Margin::AROUND_A_SHEET,
         }
     }

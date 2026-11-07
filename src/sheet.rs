@@ -147,7 +147,7 @@ impl Paper {
 mod tests {
     use super::*;
     use crate::grid::GridSize;
-    use crate::layout::{Margin, PageFormat};
+    use crate::layout::{Margin, Orientation, PageFormat};
     use crate::lettering;
     use crate::palette::ColourCount;
 
@@ -165,7 +165,13 @@ mod tests {
             GridSize::new(3, 1).expect("a grid"),
             ColourCount::new(2).expect("a count"),
         );
-        let layout = Layout::of(&colouring, PageFormat::A5, Margin::AROUND_A_SHEET).expect("room");
+        let layout = Layout::of(
+            &colouring,
+            PageFormat::A5,
+            Orientation::Portrait,
+            Margin::AROUND_A_SHEET,
+        )
+        .expect("room");
         (colouring, layout)
     }
 
@@ -278,7 +284,13 @@ mod tests {
             GridSize::new(3, 1).expect("a grid"),
             ColourCount::new(3).expect("a count"),
         );
-        let layout = Layout::of(&colouring, PageFormat::A5, Margin::AROUND_A_SHEET).expect("room");
+        let layout = Layout::of(
+            &colouring,
+            PageFormat::A5,
+            Orientation::Portrait,
+            Margin::AROUND_A_SHEET,
+        )
+        .expect("room");
 
         let sheet = draw(&colouring, &layout);
 
