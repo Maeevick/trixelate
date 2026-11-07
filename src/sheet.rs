@@ -18,11 +18,12 @@ pub enum Legend {
     Freedom,
 }
 
-/// The coloured-in picture to copy from: none, or the full sheet painted.
+/// The coloured-in picture to copy from: none, the full sheet painted, or twinned with the sheet on one page.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Model {
     None,
     Full,
+    Twin,
 }
 
 /// Draws a colouring's sheet on white paper, as laid out.
@@ -30,7 +31,7 @@ pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
     let cells = match legend {
         Legend::Coloured(Model::Full) => Cells::ColouredIn,
-        Legend::Coloured(Model::None) | Legend::Freedom => Cells::ToColourIn,
+        Legend::Coloured(Model::None | Model::Twin) | Legend::Freedom => Cells::ToColourIn,
     };
     for place in layout.grids() {
         outline_the_cells(&mut paper, colouring, layout, place);
@@ -201,6 +202,10 @@ mod tests {
     const BLACK: Rgb = Rgb(0, 0, 0);
 
     fn red_red_yellow() -> (Colouring, Layout) {
+        red_red_yellow_laid_out(Grids::Alone)
+    }
+
+    fn red_red_yellow_laid_out(grids: Grids) -> (Colouring, Layout) {
         let picture =
             Picture::from_rgba(3, 1, [RED, RED, YELLOW].as_flattened()).expect("a picture");
         let colouring = Colouring::of(
@@ -213,7 +218,7 @@ mod tests {
             PageFormat::A5,
             Orientation::Portrait,
             Margin::AROUND_A_SHEET,
-            Grids::Alone,
+            grids,
         )
         .expect("room");
         (colouring, layout)
@@ -333,6 +338,23 @@ mod tests {
             );
             assert_eq!(inks.into_iter().collect::<Vec<_>>(), [ink], "cell {column}");
         }
+    }
+
+    #[test]
+    fn a_twin_model_paints_the_first_grid_and_leaves_the_second_for_the_child_to_colour_in() {
+        let (colouring, layout) = red_red_yellow_laid_out(Grids::Twinned);
+        let [red, green, blue, _] = RED;
+
+        let sheet = draw(&colouring, &layout, Legend::Coloured(Model::Twin));
+
+        let insides = layout.grids().iter().map(|place| {
+            let cell = place.cell(0, 0);
+            sheet.pixel(cell.left + layout.line(), cell.top + layout.line())
+        });
+        assert_eq!(
+            insides.collect::<Vec<_>>(),
+            [Rgb(red, green, blue), Rgb::WHITE]
+        );
     }
 
     #[test]
