@@ -42,6 +42,12 @@ pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
     Ok(sheet::draw(&colouring, &layout, order.legend))
 }
 
+/// What a sheet made from a picture file is called: the picture's name, without its extension, then what the sheet is.
+pub fn sheet_file_name(picture_file_name: &str, legend: Legend) -> String {
+    let _ = legend;
+    picture_file_name.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -69,6 +75,27 @@ mod tests {
         assert_eq!(
             sheets,
             [Ok((2480, 3508)), Err(NoRoom::ForTheNumbersInTheCells)]
+        );
+    }
+
+    #[test]
+    fn a_sheet_is_named_after_its_picture_without_its_extension_then_after_what_it_is() {
+        let names = [
+            ("goblin.png", Legend::Coloured(Model::None)),
+            ("goblin.jpg", Legend::Coloured(Model::Full)),
+            ("my.photo.jpeg", Legend::Coloured(Model::Twin)),
+            ("goblin", Legend::Freedom),
+        ]
+        .map(|(picture, legend)| sheet_file_name(picture, legend));
+
+        assert_eq!(
+            names,
+            [
+                "goblin.sheet.png",
+                "goblin.model.png",
+                "my.photo.twin.png",
+                "goblin.sheet.png"
+            ]
         );
     }
 }
