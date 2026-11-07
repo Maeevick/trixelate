@@ -268,4 +268,29 @@ mod tests {
 
         assert_eq!(inks.collect::<Vec<_>>(), [vec![Rgb::WHITE], vec![BLACK]]);
     }
+
+    #[test]
+    fn a_light_red_bubble_counts_its_red_and_writes_its_number_in_black() {
+        let picture =
+            Picture::from_rgba(2, 1, &[220, 30, 40, 255, 255, 110, 110, 255]).expect("a picture");
+        let colouring = Colouring::of(
+            &picture,
+            GridSize::new(2, 1).expect("a grid"),
+            ColourCount::new(2).expect("a count"),
+        );
+        let layout = Layout::of(&colouring, PageFormat::A5, Margin::AROUND_A_SHEET).expect("room");
+
+        let sheet = draw(&colouring, &layout);
+
+        let pink = layout.bubbles()[1];
+        let (width, height) = lettering::size("2", layout.bubble_number_scale());
+        let (left, top) = (pink.centre_x - width / 2, pink.centre_y - height / 2);
+        let inks: std::collections::BTreeSet<Rgb> =
+            lettering::ink("2", layout.bubble_number_scale())
+                .into_iter()
+                .map(|(x, y)| sheet.pixel(left + x, top + y))
+                .collect();
+        assert_eq!(colouring.palette().colours()[1], Rgb(255, 110, 110));
+        assert_eq!(inks.into_iter().collect::<Vec<_>>(), [BLACK]);
+    }
 }
