@@ -238,4 +238,17 @@ mod tests {
         assert!(grid_bottom < first.centre_y - first.diameter / 2);
         Ok(())
     }
+
+    #[test]
+    fn a_margin_leaving_no_room_for_the_grid_and_its_legend_is_refused() {
+        let small = colouring(4, 4, 2);
+
+        let layouts =
+            [Margin(74), Margin(75)].map(|margin| Layout::of(&small, PageFormat::A5, margin));
+
+        assert_eq!(
+            layouts,
+            [Err(NoRoom::InsideTheMargin), Err(NoRoom::InsideTheMargin)]
+        );
+    }
 }
