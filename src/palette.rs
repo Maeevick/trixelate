@@ -204,8 +204,8 @@ mod tests {
     }
 
     #[test]
-    fn a_palette_holds_from_two_to_thirty_colours() {
-        let counts = [1, 2, 30, 31].map(|count| ColourCount::new(count).is_ok());
+    fn a_palette_holds_from_two_to_twelve_colours() {
+        let counts = [1, 2, 12, 13].map(|count| ColourCount::new(count).is_ok());
 
         assert_eq!(counts, [false, true, true, false]);
     }
