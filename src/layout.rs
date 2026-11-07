@@ -278,6 +278,16 @@ mod tests {
         )
     }
 
+    fn free(colouring: &Colouring, format: PageFormat, margin: Margin) -> Result<Layout, NoRoom> {
+        Layout::of(
+            colouring,
+            format,
+            Orientation::Portrait,
+            margin,
+            Legend::Freedom,
+        )
+    }
+
     fn twinned(colouring: &Colouring, orientation: Orientation) -> Result<Layout, NoRoom> {
         Layout::of(
             colouring,
@@ -377,6 +387,21 @@ mod tests {
         assert_eq!(model.cell(0, 0).top, sheet.cell(0, 0).top);
         assert_eq!(sheet.cell(0, 0).left - model_right, gap);
         assert!(model.cell(0, 0).left >= margin && sheet_right <= 3508 - margin);
+        Ok(())
+    }
+
+    #[test]
+    fn a_free_sheet_has_no_legend_its_grid_taking_the_room_and_no_bubble_too_small_to_refuse()
+    -> Result<(), NoRoom> {
+        let (tall, twelve_colours) = (colouring(5, 10, 12), colouring(10, 5, 12));
+
+        let with_a_legend = upright(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let without = free(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let on_a_narrow_page = free(&twelve_colours, PageFormat::A5, Margin(63));
+
+        assert!(without.bubbles().is_empty());
+        assert!(without.grids()[0].cell(0, 0).side > with_a_legend.grids()[0].cell(0, 0).side);
+        assert!(on_a_narrow_page.is_ok());
         Ok(())
     }
 
