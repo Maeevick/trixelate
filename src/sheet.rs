@@ -4,10 +4,57 @@ use crate::colouring::Colouring;
 use crate::layout::Layout;
 use crate::picture::{Picture, Rgb};
 
+const LINE_GREY: Rgb = Rgb(170, 170, 170);
+
 /// Draws a colouring's sheet on white paper, as laid out.
 pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
-    let _ = (colouring, layout);
-    Picture::painted(1, 1, vec![Rgb::WHITE])
+    let mut paper = Paper::blank(layout.page_width(), layout.page_height());
+    outline_the_cells(&mut paper, colouring, layout);
+    paper.into_picture()
+}
+
+fn outline_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+    let (columns, rows) = (colouring.size().columns(), colouring.size().rows());
+    let top_left = layout.cell(0, 0);
+    let bottom_right = layout.cell(columns, rows);
+    let grid_width = bottom_right.left - top_left.left + layout.line();
+    let grid_height = bottom_right.top - top_left.top + layout.line();
+    for column in 0..=columns {
+        let left = layout.cell(column, 0).left;
+        paper.fill(left, top_left.top, layout.line(), grid_height, LINE_GREY);
+    }
+    for row in 0..=rows {
+        let top = layout.cell(0, row).top;
+        paper.fill(top_left.left, top, grid_width, layout.line(), LINE_GREY);
+    }
+}
+
+struct Paper {
+    width: u32,
+    height: u32,
+    dots: Vec<Rgb>,
+}
+
+impl Paper {
+    fn blank(width: u32, height: u32) -> Paper {
+        Paper {
+            width,
+            height,
+            dots: vec![Rgb::WHITE; width as usize * height as usize],
+        }
+    }
+
+    fn fill(&mut self, left: u32, top: u32, width: u32, height: u32, colour: Rgb) {
+        for y in top..(top + height).min(self.height) {
+            for x in left..(left + width).min(self.width) {
+                self.dots[(y * self.width + x) as usize] = colour;
+            }
+        }
+    }
+
+    fn into_picture(self) -> Picture {
+        Picture::painted(self.width, self.height, self.dots)
+    }
 }
 
 #[cfg(test)]
@@ -19,7 +66,6 @@ mod tests {
 
     const RED: [u8; 4] = [220, 30, 40, 255];
     const YELLOW: [u8; 4] = [250, 220, 60, 255];
-    const LINE_GREY: Rgb = Rgb(170, 170, 170);
 
     fn red_red_yellow() -> (Colouring, Layout) {
         let picture =
