@@ -88,7 +88,7 @@ impl Layout {
         let content_height = room_inside(page_height).ok_or(NoRoom::InsideTheMargin)?;
         let colours = colouring.palette().colours().len() as u32;
         let widest_bubble = dots(WIDEST_BUBBLE_MM).min(4 * content_width / (5 * colours - 1));
-        let bubble = widest_bubble - (1 - widest_bubble % 2);
+        let bubble = widest_bubble.saturating_sub(1 - widest_bubble % 2);
         let grid_room = content_height
             .checked_sub(dots(GAP_ABOVE_THE_LEGEND_MM) + bubble)
             .ok_or(NoRoom::InsideTheMargin)?;
