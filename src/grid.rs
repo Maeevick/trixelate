@@ -55,10 +55,6 @@ impl Grid {
     pub fn size(&self) -> GridSize {
         self.size
     }
-
-    pub fn cell(&self, column: u32, row: u32) -> Rgb {
-        self.cells[(row * self.size.columns + column) as usize]
-    }
 }
 
 fn pixels_under(cell: u32, cells: u32, pixels: u32) -> std::ops::Range<u32> {
@@ -102,8 +98,7 @@ mod tests {
 
         let grid = Grid::averaging(&half_red_half_blue, GridSize::new(2, 1)?);
 
-        assert_eq!(grid.cell(0, 0), Rgb(220, 30, 40));
-        assert_eq!(grid.cell(1, 0), Rgb(20, 60, 200));
+        assert_eq!(grid.cells(), [Rgb(220, 30, 40), Rgb(20, 60, 200)]);
         Ok(())
     }
 
@@ -122,7 +117,7 @@ mod tests {
 
         let grid = Grid::averaging(&red_shades, GridSize::new(1, 1)?);
 
-        assert_eq!(grid.cell(0, 0), Rgb(151, 0, 0));
+        assert_eq!(grid.cells(), [Rgb(151, 0, 0)]);
         Ok(())
     }
 
@@ -132,7 +127,7 @@ mod tests {
 
         let grid = Grid::averaging(&one_red_pixel, GridSize::new(2, 2)?);
 
-        assert_eq!(grid.cell(1, 1), Rgb(220, 30, 40));
+        assert_eq!(grid.cells(), [Rgb(220, 30, 40); 4]);
         Ok(())
     }
 
