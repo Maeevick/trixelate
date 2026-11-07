@@ -7,6 +7,7 @@ pub mod layout;
 pub mod lettering;
 pub mod palette;
 pub mod picture;
+pub mod picture_file;
 pub mod png_file;
 pub mod sheet;
 
