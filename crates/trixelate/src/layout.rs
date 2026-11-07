@@ -122,7 +122,11 @@ pub struct Layout {
     cell_number_scale: u32,
     bubbles: Vec<Disc>,
     bubble_number_scale: u32,
+    credit: Option<Credit>,
 }
+
+/// The credit stays small, under two millimetres tall, and at most half as tall as the margin it sits in.
+const CREDIT_SCALE_AT_MOST: u32 = 3;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
 const GAP_BETWEEN_TWINS_MM: u32 = 10;
@@ -214,6 +218,17 @@ impl Layout {
                 .collect()
         });
 
+        let credit =
+            lettering::largest_scale_fitting(CREDIT, content_width, margin / 2).map(|scale| {
+                let scale = scale.min(CREDIT_SCALE_AT_MOST);
+                let (width, height) = lettering::size(CREDIT, scale);
+                Credit {
+                    left: margin + content_width - width,
+                    top: page_height - margin + (margin - height) / 2,
+                    scale,
+                }
+            });
+
         Ok(Layout {
             page_width,
             page_height,
@@ -228,6 +243,7 @@ impl Layout {
             line,
             cell_number_scale,
             bubble_number_scale,
+            credit,
         })
     }
 
@@ -261,7 +277,7 @@ impl Layout {
 
     /// Where the credit is written, if the margin has room for it.
     pub fn credit(&self) -> Option<Credit> {
-        None
+        self.credit
     }
 
     /// How thick the lines outlining the cells are, in dots.
