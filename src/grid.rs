@@ -17,6 +17,14 @@ impl GridSize {
             .then_some(GridSize { columns, rows })
             .ok_or(NoCell)
     }
+
+    pub fn columns(&self) -> u32 {
+        self.columns
+    }
+
+    pub fn rows(&self) -> u32 {
+        self.rows
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -42,6 +50,10 @@ impl Grid {
     /// The cells' colours, row after row.
     pub fn cells(&self) -> &[Rgb] {
         &self.cells
+    }
+
+    pub fn size(&self) -> GridSize {
+        self.size
     }
 
     pub fn cell(&self, column: u32, row: u32) -> Rgb {
