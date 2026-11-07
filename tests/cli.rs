@@ -200,6 +200,34 @@ fn a_free_legend_sheet_matches_its_golden_master_its_bubbles_left_blank() {
 }
 
 #[test]
+fn a_landscape_twin_beside_its_picture_matches_its_golden_master_model_left_sheet_right() {
+    let folder = folder("twin");
+    let picture = a_twelve_colour_picture_in(&folder);
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "--height",
+        "3",
+        "--colours",
+        "12",
+        "--format",
+        "a5",
+        "--orientation",
+        "landscape",
+        "--model",
+        "twin",
+    ]);
+
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert!(matches_golden(
+        &folder.join("twelve.twin.png"),
+        "twelve-a5-landscape.twin.png"
+    ));
+}
+
+#[test]
 fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
     let folder = folder("overwrite");
     let picture = a_picture_in(&folder);
