@@ -18,16 +18,20 @@ pub enum Legend {
 }
 
 /// Draws a colouring's sheet on white paper, as laid out.
-pub fn draw(colouring: &Colouring, layout: &Layout, _legend: Legend) -> Picture {
+pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
     outline_the_cells(&mut paper, colouring, layout);
     number_the_cells(&mut paper, colouring, layout);
-    draw_the_legend(&mut paper, colouring, layout);
+    draw_the_legend(&mut paper, colouring, layout, legend);
     paper.into_picture()
 }
 
-fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout, legend: Legend) {
     for (bubble, (number, colour)) in layout.bubbles().iter().zip(colouring.palette().numbered()) {
+        let colour = match legend {
+            Legend::Coloured => colour,
+            Legend::Freedom => Rgb::WHITE,
+        };
         paper.disc(bubble, colour);
         let radius = bubble.diameter / 2;
         paper.write(
