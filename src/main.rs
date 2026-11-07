@@ -1,6 +1,7 @@
 //! The command line: reads a PNG picture, makes its colour-by-number sheet and writes it as a PNG.
 
 use std::fs;
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -105,13 +106,27 @@ fn run(cli: Cli) -> Result<String, String> {
     let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture));
     let bytes = png_file::write(&sheet)
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
-    fs::write(&sheet_path, bytes).map_err(|error| {
-        format!(
-            "cannot write the sheet to {}: {error}",
-            sheet_path.display()
-        )
-    })?;
+    write_sheet(&sheet_path, &bytes, cli.force)?;
     Ok(format!("Sheet written to {}", sheet_path.display()))
+}
+
+/// Writes the sheet, refusing to replace an existing file unless forced, even if one appears meanwhile.
+fn write_sheet(path: &Path, bytes: &[u8], force: bool) -> Result<(), String> {
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .create_new(!force)
+        .open(path)
+        .map_err(|error| match error.kind() {
+            ErrorKind::AlreadyExists => format!(
+                "{} already exists: pass --force to overwrite it",
+                path.display()
+            ),
+            _ => format!("cannot write the sheet to {}: {error}", path.display()),
+        })?;
+    file.write_all(bytes)
+        .map_err(|error| format!("cannot write the sheet to {}: {error}", path.display()))
 }
 
 fn read_picture(path: &Path) -> Result<Picture, String> {
