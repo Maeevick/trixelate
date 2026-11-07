@@ -157,6 +157,11 @@ impl Layout {
         &self.bubbles
     }
 
+    /// The scale every cell's number is written at.
+    pub fn cell_number_scale(&self) -> u32 {
+        self.cell_number_scale
+    }
+
     /// How thick the lines outlining the cells are, in dots.
     pub fn line(&self) -> u32 {
         self.line

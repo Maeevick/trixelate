@@ -62,10 +62,13 @@ mod tests {
     use super::*;
     use crate::grid::GridSize;
     use crate::layout::{Margin, PageFormat};
+    use crate::lettering;
     use crate::palette::ColourCount;
 
     const RED: [u8; 4] = [220, 30, 40, 255];
     const YELLOW: [u8; 4] = [250, 220, 60, 255];
+    const LINE_GREY: Rgb = Rgb(170, 170, 170);
+    const NUMBER_GREY: Rgb = Rgb(90, 90, 90);
 
     fn red_red_yellow() -> (Colouring, Layout) {
         let picture =
@@ -105,5 +108,37 @@ mod tests {
                 .all(|cell| sheet.pixel(cell.left, cell.top) == LINE_GREY
                     && sheet.pixel(cell.left + cell.side, cell.top + cell.side) == LINE_GREY)
         );
+    }
+
+    #[test]
+    fn each_cell_shows_its_colour_number_in_dark_grey_centred_inside_its_outline() {
+        let (colouring, layout) = red_red_yellow();
+
+        let sheet = draw(&colouring, &layout);
+
+        for column in 0..3 {
+            let cell = layout.cell(column, 0);
+            let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
+            let inside = cell.side - layout.line();
+            let number = colouring
+                .number_at(column, 0)
+                .map(|number| number.to_string())
+                .unwrap_or_default();
+            let (width, height) = lettering::size(&number, layout.cell_number_scale());
+            let (number_left, number_top) =
+                (left + (inside - width) / 2, top + (inside - height) / 2);
+            let mut expected: Vec<(u32, u32)> = lettering::ink(&number, layout.cell_number_scale())
+                .into_iter()
+                .map(|(x, y)| (number_left + x, number_top + y))
+                .collect();
+            let mut inked: Vec<(u32, u32)> = (top..top + inside)
+                .flat_map(|y| (left..left + inside).map(move |x| (x, y)))
+                .filter(|&(x, y)| sheet.pixel(x, y) == NUMBER_GREY)
+                .collect();
+            expected.sort();
+            inked.sort();
+
+            assert_eq!(inked, expected, "the number in cell {column}");
+        }
     }
 }
