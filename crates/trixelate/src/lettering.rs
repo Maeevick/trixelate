@@ -1,8 +1,9 @@
-//! The pixel digits colour numbers are written with, five dots wide and seven tall, one dot apart.
+//! The pixel digits and letters a sheet is written with, five dots wide and seven tall, one dot apart,
+//! after the character displays of the 1980s.
 
 const GLYPH_WIDTH: u32 = 5;
 const GLYPH_HEIGHT: u32 = 7;
-const SPACE_BETWEEN_DIGITS: u32 = 1;
+const SPACE_BETWEEN_CHARACTERS: u32 = 1;
 
 /// Each digit's rows from the top, the leftmost dot in the highest of five bits.
 const DIGITS: [[u8; GLYPH_HEIGHT as usize]; 10] = [
@@ -38,15 +39,221 @@ const DIGITS: [[u8; GLYPH_HEIGHT as usize]; 10] = [
     ],
 ];
 
-/// The dots a number's digits ink, from the top left corner of its first digit, each dot a square of `scale` by `scale`.
-pub fn ink(number: &str, scale: u32) -> Vec<(u32, u32)> {
-    number
-        .chars()
-        .filter_map(|digit| digit.to_digit(10))
+/// The letters and signs a sheet's credit is written with, drawn like the digits.
+const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 34] = [
+    (
+        'M',
+        [
+            0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001,
+        ],
+    ),
+    (
+        'I',
+        [
+            0b01110, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110,
+        ],
+    ),
+    (
+        'T',
+        [
+            0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100,
+        ],
+    ),
+    (
+        'L',
+        [
+            0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111,
+        ],
+    ),
+    (
+        'C',
+        [
+            0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110,
+        ],
+    ),
+    (
+        'A',
+        [
+            0b01110, 0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001,
+        ],
+    ),
+    (
+        'a',
+        [
+            0b00000, 0b00000, 0b01110, 0b00001, 0b01111, 0b10001, 0b01111,
+        ],
+    ),
+    (
+        'b',
+        [
+            0b10000, 0b10000, 0b10110, 0b11001, 0b10001, 0b10001, 0b11110,
+        ],
+    ),
+    (
+        'c',
+        [
+            0b00000, 0b00000, 0b01110, 0b10000, 0b10000, 0b10001, 0b01110,
+        ],
+    ),
+    (
+        'd',
+        [
+            0b00001, 0b00001, 0b01101, 0b10011, 0b10001, 0b10001, 0b01111,
+        ],
+    ),
+    (
+        'e',
+        [
+            0b00000, 0b00000, 0b01110, 0b10001, 0b11111, 0b10000, 0b01110,
+        ],
+    ),
+    (
+        'g',
+        [
+            0b00000, 0b00000, 0b01111, 0b10001, 0b01111, 0b00001, 0b01110,
+        ],
+    ),
+    (
+        'h',
+        [
+            0b10000, 0b10000, 0b10110, 0b11001, 0b10001, 0b10001, 0b10001,
+        ],
+    ),
+    (
+        'i',
+        [
+            0b00100, 0b00000, 0b01100, 0b00100, 0b00100, 0b00100, 0b01110,
+        ],
+    ),
+    (
+        'k',
+        [
+            0b10000, 0b10000, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010,
+        ],
+    ),
+    (
+        'l',
+        [
+            0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110,
+        ],
+    ),
+    (
+        'm',
+        [
+            0b00000, 0b00000, 0b11010, 0b10101, 0b10101, 0b10001, 0b10001,
+        ],
+    ),
+    (
+        'n',
+        [
+            0b00000, 0b00000, 0b10110, 0b11001, 0b10001, 0b10001, 0b10001,
+        ],
+    ),
+    (
+        'o',
+        [
+            0b00000, 0b00000, 0b01110, 0b10001, 0b10001, 0b10001, 0b01110,
+        ],
+    ),
+    (
+        'p',
+        [
+            0b00000, 0b00000, 0b11110, 0b10001, 0b11110, 0b10000, 0b10000,
+        ],
+    ),
+    (
+        'r',
+        [
+            0b00000, 0b00000, 0b10110, 0b11001, 0b10000, 0b10000, 0b10000,
+        ],
+    ),
+    (
+        's',
+        [
+            0b00000, 0b00000, 0b01110, 0b10000, 0b01110, 0b00001, 0b11110,
+        ],
+    ),
+    (
+        't',
+        [
+            0b01000, 0b01000, 0b11100, 0b01000, 0b01000, 0b01001, 0b00110,
+        ],
+    ),
+    (
+        'u',
+        [
+            0b00000, 0b00000, 0b10001, 0b10001, 0b10001, 0b10011, 0b01101,
+        ],
+    ),
+    (
+        'v',
+        [
+            0b00000, 0b00000, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100,
+        ],
+    ),
+    (
+        'w',
+        [
+            0b00000, 0b00000, 0b10001, 0b10001, 0b10101, 0b10101, 0b01010,
+        ],
+    ),
+    (
+        'x',
+        [
+            0b00000, 0b00000, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001,
+        ],
+    ),
+    (
+        'y',
+        [
+            0b00000, 0b00000, 0b10001, 0b10001, 0b01111, 0b00001, 0b01110,
+        ],
+    ),
+    (
+        '(',
+        [
+            0b00010, 0b00100, 0b01000, 0b01000, 0b01000, 0b00100, 0b00010,
+        ],
+    ),
+    (
+        ')',
+        [
+            0b01000, 0b00100, 0b00010, 0b00010, 0b00010, 0b00100, 0b01000,
+        ],
+    ),
+    (
+        '.',
+        [
+            0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b01100, 0b01100,
+        ],
+    ),
+    (
+        '/',
+        [
+            0b00000, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b00000,
+        ],
+    ),
+    (
+        '-',
+        [
+            0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000,
+        ],
+    ),
+    (
+        '|',
+        [
+            0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100,
+        ],
+    ),
+];
+
+/// The dots a text inks, from the top left corner of its first character, each dot a square of `scale` by `scale`.
+pub fn ink(text: &str, scale: u32) -> Vec<(u32, u32)> {
+    text.chars()
         .zip(0..)
-        .flat_map(|(digit, place)| {
-            let left = place * (GLYPH_WIDTH + SPACE_BETWEEN_DIGITS);
-            glyph_dots(digit).map(move |(x, y)| (left + x, y))
+        .flat_map(|(character, place)| {
+            let left = place * (GLYPH_WIDTH + SPACE_BETWEEN_CHARACTERS);
+            glyph_dots(glyph(character)).map(move |(x, y)| (left + x, y))
         })
         .flat_map(|(x, y)| {
             (0..scale).flat_map(move |down| {
@@ -56,21 +263,31 @@ pub fn ink(number: &str, scale: u32) -> Vec<(u32, u32)> {
         .collect()
 }
 
-/// The largest scale at which a number fits in a box, none when it does not fit even at one dot per dot.
-pub fn largest_scale_fitting(number: &str, width: u32, height: u32) -> Option<u32> {
-    let (width_at_one, height_at_one) = size(number, 1);
+/// The largest scale at which a text fits in a box, none when it does not fit even at one dot per dot.
+pub fn largest_scale_fitting(text: &str, width: u32, height: u32) -> Option<u32> {
+    let (width_at_one, height_at_one) = size(text, 1);
     Some((width / width_at_one).min(height / height_at_one)).filter(|&scale| scale > 0)
 }
 
-/// A number's width and height in dots at a scale, from the left of its first digit to the right of its last.
-pub fn size(number: &str, scale: u32) -> (u32, u32) {
-    let digits = number.chars().count() as u32;
-    let width = digits * (GLYPH_WIDTH + SPACE_BETWEEN_DIGITS) - SPACE_BETWEEN_DIGITS;
+/// A text's width and height in dots at a scale, from the left of its first character to the right of its last.
+pub fn size(text: &str, scale: u32) -> (u32, u32) {
+    let characters = text.chars().count() as u32;
+    let width = characters * (GLYPH_WIDTH + SPACE_BETWEEN_CHARACTERS) - SPACE_BETWEEN_CHARACTERS;
     (width * scale, GLYPH_HEIGHT * scale)
 }
 
-fn glyph_dots(digit: u32) -> impl Iterator<Item = (u32, u32)> {
-    let rows = DIGITS[digit as usize];
+/// A character's rows, blank for a space and for any character with no glyph.
+fn glyph(character: char) -> [u8; GLYPH_HEIGHT as usize] {
+    match character.to_digit(10) {
+        Some(digit) => DIGITS[digit as usize],
+        None => LETTERS
+            .iter()
+            .find(|&&(letter, _)| letter == character)
+            .map_or([0; GLYPH_HEIGHT as usize], |&(_, rows)| rows),
+    }
+}
+
+fn glyph_dots(rows: [u8; GLYPH_HEIGHT as usize]) -> impl Iterator<Item = (u32, u32)> {
     (0..GLYPH_HEIGHT).flat_map(move |y| {
         (0..GLYPH_WIDTH)
             .filter(move |x| rows[y as usize] & (1 << (GLYPH_WIDTH - 1 - x)) != 0)
