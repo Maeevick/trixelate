@@ -2,6 +2,7 @@
 
 const GLYPH_WIDTH: u32 = 5;
 const GLYPH_HEIGHT: u32 = 7;
+const SPACE_BETWEEN_DIGITS: u32 = 1;
 
 /// Each digit's rows from the top, the leftmost dot in the highest of five bits.
 const DIGITS: [[u8; GLYPH_HEIGHT as usize]; 10] = [
@@ -39,20 +40,29 @@ const DIGITS: [[u8; GLYPH_HEIGHT as usize]; 10] = [
 
 /// The dots a number's digits ink, from the top left corner of its first digit, each dot a square of `scale` by `scale`.
 pub fn ink(number: &str, scale: u32) -> Vec<(u32, u32)> {
-    let _ = scale;
     number
         .chars()
         .filter_map(|digit| digit.to_digit(10))
-        .take(1)
-        .flat_map(|digit| {
-            let rows = DIGITS[digit as usize];
-            (0..GLYPH_HEIGHT).flat_map(move |y| {
-                (0..GLYPH_WIDTH)
-                    .filter(move |x| rows[y as usize] & (1 << (GLYPH_WIDTH - 1 - x)) != 0)
-                    .map(move |x| (x, y))
+        .zip(0..)
+        .flat_map(|(digit, place)| {
+            let left = place * (GLYPH_WIDTH + SPACE_BETWEEN_DIGITS);
+            glyph_dots(digit).map(move |(x, y)| (left + x, y))
+        })
+        .flat_map(|(x, y)| {
+            (0..scale).flat_map(move |down| {
+                (0..scale).map(move |across| (x * scale + across, y * scale + down))
             })
         })
         .collect()
+}
+
+fn glyph_dots(digit: u32) -> impl Iterator<Item = (u32, u32)> {
+    let rows = DIGITS[digit as usize];
+    (0..GLYPH_HEIGHT).flat_map(move |y| {
+        (0..GLYPH_WIDTH)
+            .filter(move |x| rows[y as usize] & (1 << (GLYPH_WIDTH - 1 - x)) != 0)
+            .map(move |x| (x, y))
+    })
 }
 
 #[cfg(test)]
