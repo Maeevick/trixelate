@@ -10,6 +10,7 @@ use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
+use trixelate::sheet::{self, Model};
 use trixelate::{Order, make_sheet, png_file};
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -45,6 +46,10 @@ struct Cli {
     /// The blank paper around the sheet, in millimetres
     #[arg(short, long, default_value_t = 20)]
     margin: u32,
+
+    /// Whether the bubbles show the picture's colours, or only their numbers, leaving the child free to pick
+    #[arg(long, value_enum, default_value_t = Legend::Coloured)]
+    legend: Legend,
 
     /// Where to write the sheet [default: beside the picture, as <picture>.sheet.png]
     #[arg(short, long)]
@@ -87,6 +92,22 @@ impl From<Orientation> for layout::Orientation {
     }
 }
 
+#[derive(Clone, Copy, ValueEnum)]
+enum Legend {
+    #[value(alias = "colored")]
+    Coloured,
+    Freedom,
+}
+
+impl From<Legend> for sheet::Legend {
+    fn from(legend: Legend) -> sheet::Legend {
+        match legend {
+            Legend::Coloured => sheet::Legend::Coloured(Model::None),
+            Legend::Freedom => sheet::Legend::Freedom,
+        }
+    }
+}
+
 fn colour_count(raw: &str) -> Result<ColourCount, String> {
     let count: usize = raw.parse().map_err(|_| format!("{raw} is not a number"))?;
     ColourCount::new(count).map_err(|_| {
@@ -121,6 +142,7 @@ fn run(cli: Cli) -> Result<String, String> {
         format: cli.format.into(),
         orientation: cli.orientation.into(),
         margin: Margin(cli.margin),
+        legend: cli.legend.into(),
     };
     let sheet = make_sheet(&picture, order).map_err(explain)?;
     let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture));

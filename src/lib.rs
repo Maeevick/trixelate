@@ -14,9 +14,10 @@ use grid::GridSize;
 use layout::{Grids, Layout, Margin, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
-use sheet::{Legend, Model};
+use sheet::Legend;
 
-/// What a sheet is asked to be: its grid, its number of colours, its paper, which way up it lies and its margin.
+/// What a sheet is asked to be: its grid, its number of colours, its paper, which way up it lies, its margin
+/// and its legend.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Order {
     pub grid: GridSize,
@@ -24,6 +25,7 @@ pub struct Order {
     pub format: PageFormat,
     pub orientation: Orientation,
     pub margin: Margin,
+    pub legend: Legend,
 }
 
 /// Turns a picture into the colour-by-number sheet ordered, or says what lacks room on the page.
@@ -36,16 +38,13 @@ pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
         order.margin,
         Grids::Alone,
     )?;
-    Ok(sheet::draw(
-        &colouring,
-        &layout,
-        Legend::Coloured(Model::None),
-    ))
+    Ok(sheet::draw(&colouring, &layout, order.legend))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sheet::Model;
 
     fn order(columns: u32, format: PageFormat) -> Order {
         Order {
@@ -54,6 +53,7 @@ mod tests {
             format,
             orientation: Orientation::Portrait,
             margin: Margin::AROUND_A_SHEET,
+            legend: Legend::Coloured(Model::None),
         }
     }
 
