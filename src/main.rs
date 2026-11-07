@@ -43,9 +43,9 @@ struct Cli {
     #[arg(short, long, default_value_t = 20)]
     margin: u32,
 
-    /// Whether the bubbles show the picture's colours, or only their numbers, leaving the child free to pick
-    #[arg(long, value_enum, default_value_t = Legend::Coloured)]
-    legend: Legend,
+    /// Leave the bubbles blank with their numbers, so the child picks the colours
+    #[arg(long)]
+    freedom: bool,
 
     /// The picture coloured in, to copy from: none, the full sheet painted, or twinned with the sheet on one page
     #[arg(long, value_enum, default_value_t = Model::None)]
@@ -93,13 +93,6 @@ impl From<Orientation> for layout::Orientation {
 }
 
 #[derive(Clone, Copy, ValueEnum)]
-enum Legend {
-    #[value(alias = "colored")]
-    Coloured,
-    Freedom,
-}
-
-#[derive(Clone, Copy, ValueEnum)]
 enum Model {
     None,
     Full,
@@ -128,12 +121,12 @@ impl Model {
 }
 
 /// The legend asked for, refused when free with a model, since a model shows the legend's colours.
-fn legend_with(legend: Legend, model: Model) -> Result<sheet::Legend, &'static str> {
-    match (legend, model) {
-        (Legend::Coloured, model) => Ok(sheet::Legend::Coloured(model.into())),
-        (Legend::Freedom, Model::None) => Ok(sheet::Legend::Freedom),
-        (Legend::Freedom, Model::Full | Model::Twin) => Err(
-            "a model paints the cells in the legend's colours, so --model cannot go with --legend freedom",
+fn legend_with(freedom: bool, model: Model) -> Result<sheet::Legend, &'static str> {
+    match (freedom, model) {
+        (false, model) => Ok(sheet::Legend::Coloured(model.into())),
+        (true, Model::None) => Ok(sheet::Legend::Freedom),
+        (true, Model::Full | Model::Twin) => Err(
+            "a model paints the cells in the legend's colours, so --model cannot go with --freedom",
         ),
     }
 }
@@ -151,7 +144,7 @@ fn colour_count(raw: &str) -> Result<ColourCount, String> {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    let legend = legend_with(cli.legend, cli.model).unwrap_or_else(|conflict| {
+    let legend = legend_with(cli.freedom, cli.model).unwrap_or_else(|conflict| {
         Cli::command()
             .error(clap::error::ErrorKind::ArgumentConflict, conflict)
             .exit()
