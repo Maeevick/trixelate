@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+use crate::grid::Grid;
 use crate::picture::Rgb;
 
 /// How many colours a palette may hold at most, from 2 to 30: one colour is no colouring, and thirty is more than a box of crayons.
@@ -38,12 +39,9 @@ impl fmt::Display for ColourNumber {
 }
 
 impl Palette {
-    /// The colours that best stand for all the given ones, at most `count` of them, and no palette without a colour.
-    pub fn dominant(colours: &[Rgb], count: ColourCount) -> Option<Palette> {
-        if colours.is_empty() {
-            return None;
-        }
-        let mut boxes: Vec<Tallied> = vec![tally(colours).into_iter().collect()];
+    /// The colours that best stand for a grid's cells, at most `count` of them.
+    pub fn dominant(grid: &Grid, count: ColourCount) -> Palette {
+        let mut boxes: Vec<Tallied> = vec![tally(grid.cells()).into_iter().collect()];
         while boxes.len() < count.0 {
             let Some(widest) = index_of_the_widest(&boxes) else {
                 break;
@@ -55,12 +53,12 @@ impl Palette {
         most_used_first.sort_by(|(colour, uses), (other, other_uses)| {
             other_uses.cmp(uses).then(colour.cmp(other))
         });
-        Some(Palette(
+        Palette(
             most_used_first
                 .into_iter()
                 .map(|(colour, _)| colour)
                 .collect(),
-        ))
+        )
     }
 
     /// The number of the palette colour nearest to the given one.
@@ -155,50 +153,51 @@ fn tally(colours: &[Rgb]) -> BTreeMap<Rgb, usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::grid::GridSize;
+    use crate::picture::Picture;
 
     const RED: Rgb = Rgb(220, 30, 40);
     const BLUE: Rgb = Rgb(20, 60, 200);
 
+    fn grid_of(cells: &[Rgb]) -> Grid {
+        let rgba: Vec<u8> = cells
+            .iter()
+            .flat_map(|&Rgb(red, green, blue)| [red, green, blue, 255])
+            .collect();
+        let columns = cells.len() as u32;
+        let picture = Picture::from_rgba(columns, 1, &rgba).expect("a picture");
+        Grid::averaging(&picture, GridSize::new(columns, 1).expect("a grid"))
+    }
+
     #[test]
     fn fewer_colours_than_asked_are_each_kept_once_the_most_used_first()
     -> Result<(), ColourCountOutOfRange> {
-        let cells = [BLUE, RED, RED, BLUE, RED];
+        let cells = grid_of(&[BLUE, RED, RED, BLUE, RED]);
 
         let palette = Palette::dominant(&cells, ColourCount::new(4)?);
 
-        assert_eq!(
-            palette.as_ref().map(Palette::colours),
-            Some([RED, BLUE].as_slice())
-        );
+        assert_eq!(palette.colours(), [RED, BLUE]);
         Ok(())
     }
 
     #[test]
     fn more_colours_than_asked_merge_the_closest_into_their_weighted_average()
     -> Result<(), ColourCountOutOfRange> {
-        let cells = [
+        let cells = grid_of(&[
             Rgb(250, 0, 0),
             Rgb(0, 250, 0),
             Rgb(250, 0, 0),
             Rgb(240, 0, 0),
             Rgb(0, 240, 0),
             Rgb(0, 0, 250),
-        ];
+        ]);
 
         let palette = Palette::dominant(&cells, ColourCount::new(3)?);
 
         assert_eq!(
-            palette.as_ref().map(Palette::colours),
-            Some([Rgb(247, 0, 0), Rgb(0, 245, 0), Rgb(0, 0, 250)].as_slice())
+            palette.colours(),
+            [Rgb(247, 0, 0), Rgb(0, 245, 0), Rgb(0, 0, 250)]
         );
-        Ok(())
-    }
-
-    #[test]
-    fn no_colour_gives_no_palette() -> Result<(), ColourCountOutOfRange> {
-        let palette = Palette::dominant(&[], ColourCount::new(8)?);
-
-        assert_eq!(palette, None);
         Ok(())
     }
 
@@ -212,14 +211,12 @@ mod tests {
     #[test]
     fn a_colour_takes_the_number_of_the_nearest_palette_colour_counted_from_one()
     -> Result<(), ColourCountOutOfRange> {
-        let palette = Palette::dominant(&[RED, RED, BLUE], ColourCount::new(2)?);
+        let palette = Palette::dominant(&grid_of(&[RED, RED, BLUE]), ColourCount::new(2)?);
 
-        let numbers = palette.map(|palette| {
-            [Rgb(200, 20, 30), Rgb(10, 10, 180)]
-                .map(|colour| palette.number_for(colour).to_string())
-        });
+        let numbers = [Rgb(200, 20, 30), Rgb(10, 10, 180)]
+            .map(|colour| palette.number_for(colour).to_string());
 
-        assert_eq!(numbers, Some(["1".to_string(), "2".to_string()]));
+        assert_eq!(numbers, ["1", "2"]);
         Ok(())
     }
 }

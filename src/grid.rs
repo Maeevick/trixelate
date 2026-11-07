@@ -39,6 +39,11 @@ impl Grid {
         Grid { size, cells }
     }
 
+    /// The cells' colours, row after row.
+    pub fn cells(&self) -> &[Rgb] {
+        &self.cells
+    }
+
     pub fn cell(&self, column: u32, row: u32) -> Rgb {
         self.cells[(row * self.size.columns + column) as usize]
     }
