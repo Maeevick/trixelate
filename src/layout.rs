@@ -10,6 +10,24 @@ pub enum PageFormat {
     A5,
 }
 
+impl PageFormat {
+    fn millimetres(self) -> (u32, u32) {
+        match self {
+            PageFormat::A3 => (297, 420),
+            PageFormat::A4 => (210, 297),
+            PageFormat::A5 => (148, 210),
+        }
+    }
+}
+
+const DOTS_PER_INCH: u32 = 300;
+const TENTHS_OF_MILLIMETRE_PER_INCH: u32 = 254;
+
+fn dots(millimetres: u32) -> u32 {
+    (millimetres * DOTS_PER_INCH * 10 + TENTHS_OF_MILLIMETRE_PER_INCH / 2)
+        / TENTHS_OF_MILLIMETRE_PER_INCH
+}
+
 /// The blank paper around the sheet's content, in millimetres.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Margin(pub u32);
@@ -33,10 +51,11 @@ pub struct Layout {
 impl Layout {
     /// Lays out a colouring's grid and legend on the page, inside its margin.
     pub fn of(colouring: &Colouring, format: PageFormat, margin: Margin) -> Result<Layout, NoRoom> {
-        let _ = (colouring, format, margin);
+        let _ = (colouring, margin);
+        let (width, height) = format.millimetres();
         Ok(Layout {
-            page_width: 1,
-            page_height: 1,
+            page_width: dots(width),
+            page_height: dots(height),
         })
     }
 
