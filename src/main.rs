@@ -47,9 +47,13 @@ struct Cli {
     #[arg(long)]
     freedom: bool,
 
-    /// The picture coloured in, to copy from: none, the full sheet painted, or twinned with the sheet on one page
+    /// The picture coloured in, to copy from: none, or the full sheet painted
     #[arg(long, value_enum, default_value_t = Model::None)]
     model: Model,
+
+    /// Put the model and the sheet on one page: one above the other in portrait, side by side in landscape
+    #[arg(long)]
+    twin: bool,
 
     /// Where to write the sheet [default: beside the picture, as <picture>.sheet.png, .model.png or .twin.png]
     #[arg(short, long)]
@@ -96,6 +100,7 @@ impl From<Orientation> for layout::Orientation {
 enum Model {
     None,
     Full,
+    #[value(skip)]
     Twin,
 }
 
@@ -109,14 +114,12 @@ impl From<Model> for sheet::Model {
     }
 }
 
-impl Model {
-    /// What the written file is called after, beside its picture.
-    fn kind(self) -> &'static str {
-        match self {
-            Model::None => "sheet",
-            Model::Full => "model",
-            Model::Twin => "twin",
-        }
+/// What the written file is called after, beside its picture.
+fn kind_of(legend: sheet::Legend) -> &'static str {
+    match legend {
+        sheet::Legend::Coloured(sheet::Model::None) | sheet::Legend::Freedom => "sheet",
+        sheet::Legend::Coloured(sheet::Model::Full) => "model",
+        sheet::Legend::Coloured(sheet::Model::Twin) => "twin",
     }
 }
 
@@ -144,7 +147,8 @@ fn colour_count(raw: &str) -> Result<ColourCount, String> {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    let legend = legend_with(cli.freedom, cli.model).unwrap_or_else(|conflict| {
+    let model = if cli.twin { Model::Twin } else { cli.model };
+    let legend = legend_with(cli.freedom, model).unwrap_or_else(|conflict| {
         Cli::command()
             .error(clap::error::ErrorKind::ArgumentConflict, conflict)
             .exit()
@@ -176,7 +180,7 @@ fn run(cli: Cli, legend: sheet::Legend) -> Result<String, String> {
     let sheet = make_sheet(&picture, order).map_err(explain)?;
     let sheet_path = cli
         .output
-        .unwrap_or_else(|| beside(&cli.picture, cli.model.kind()));
+        .unwrap_or_else(|| beside(&cli.picture, kind_of(legend)));
     let bytes = png_file::write(&sheet)
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
