@@ -65,8 +65,17 @@ impl Palette {
 
     /// The number of the palette colour nearest to the given one.
     pub fn number_for(&self, colour: Rgb) -> ColourNumber {
-        let _ = colour;
-        ColourNumber(0)
+        let distance_to = |other: Rgb| {
+            channels(colour)
+                .into_iter()
+                .zip(channels(other))
+                .map(|(one, two)| u32::from(one.abs_diff(two)).pow(2))
+                .sum::<u32>()
+        };
+        let nearest = (0..self.0.len())
+            .min_by_key(|&index| distance_to(self.0[index]))
+            .unwrap_or(0);
+        ColourNumber(nearest + 1)
     }
 
     pub fn colours(&self) -> &[Rgb] {
