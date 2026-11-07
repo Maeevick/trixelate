@@ -20,7 +20,12 @@ pub struct Palette(Vec<Rgb>);
 impl Palette {
     /// The colours that best stand for all the given ones, at most `count` of them.
     pub fn dominant(colours: &[Rgb], count: ColourCount) -> Palette {
-        let mut boxes = vec![tally(colours).into_iter().collect::<Vec<_>>()];
+        let every_colour: Tallied = tally(colours).into_iter().collect();
+        let mut boxes = if every_colour.is_empty() {
+            vec![]
+        } else {
+            vec![every_colour]
+        };
         while boxes.len() < count.0 {
             let Some(widest) = index_of_the_widest(&boxes) else {
                 break;
