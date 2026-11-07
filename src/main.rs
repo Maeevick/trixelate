@@ -51,11 +51,11 @@ struct Cli {
     #[arg(long, value_enum, default_value_t = Legend::Coloured)]
     legend: Legend,
 
-    /// The picture coloured in, to copy from: none, or the full sheet painted
+    /// The picture coloured in, to copy from: none, the full sheet painted, or twinned with the sheet on one page
     #[arg(long, value_enum, default_value_t = Model::None)]
     model: Model,
 
-    /// Where to write the sheet [default: beside the picture, as <picture>.sheet.png, or .model.png]
+    /// Where to write the sheet [default: beside the picture, as <picture>.sheet.png, .model.png or .twin.png]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -107,6 +107,17 @@ enum Legend {
 enum Model {
     None,
     Full,
+    Twin,
+}
+
+impl From<Model> for sheet::Model {
+    fn from(model: Model) -> sheet::Model {
+        match model {
+            Model::None => sheet::Model::None,
+            Model::Full => sheet::Model::Full,
+            Model::Twin => sheet::Model::Twin,
+        }
+    }
 }
 
 impl Model {
@@ -115,6 +126,7 @@ impl Model {
         match self {
             Model::None => "sheet",
             Model::Full => "model",
+            Model::Twin => "twin",
         }
     }
 }
@@ -122,10 +134,9 @@ impl Model {
 /// The legend asked for, refused when free with a model, since a model shows the legend's colours.
 fn legend_with(legend: Legend, model: Model) -> Result<sheet::Legend, &'static str> {
     match (legend, model) {
-        (Legend::Coloured, Model::None) => Ok(sheet::Legend::Coloured(sheet::Model::None)),
-        (Legend::Coloured, Model::Full) => Ok(sheet::Legend::Coloured(sheet::Model::Full)),
+        (Legend::Coloured, model) => Ok(sheet::Legend::Coloured(model.into())),
         (Legend::Freedom, Model::None) => Ok(sheet::Legend::Freedom),
-        (Legend::Freedom, Model::Full) => Err(
+        (Legend::Freedom, Model::Full | Model::Twin) => Err(
             "a model paints the cells in the legend's colours, so --model cannot go with --legend freedom",
         ),
     }
