@@ -28,8 +28,12 @@ pub enum Model {
 /// Draws a colouring's sheet on white paper, as laid out.
 pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
+    let cells = match legend {
+        Legend::Coloured(Model::Full) => Cells::ColouredIn,
+        Legend::Coloured(Model::None) | Legend::Freedom => Cells::ToColourIn,
+    };
     outline_the_cells(&mut paper, colouring, layout);
-    number_the_cells(&mut paper, colouring, layout);
+    fill_in_the_cells(&mut paper, colouring, layout, cells);
     draw_the_legend(&mut paper, colouring, layout, legend);
     paper.into_picture()
 }
@@ -62,22 +66,34 @@ fn readable_on(Rgb(red, green, blue): Rgb) -> Rgb {
     }
 }
 
-fn number_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
-    let size = colouring.size();
-    let cells =
-        (0..size.rows()).flat_map(|row| (0..size.columns()).map(move |column| (column, row)));
-    for (column, row) in cells {
+/// Whether a grid's cells wait for the child's colours, or show them already coloured in.
+#[derive(Clone, Copy)]
+enum Cells {
+    ToColourIn,
+    ColouredIn,
+}
+
+/// Writes each cell's number, in grey on blank cells, or readable on the cell's colour once coloured in.
+fn fill_in_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout, cells: Cells) {
+    for (column, row, number) in colouring.numbered_cells() {
         let cell = layout.cell(column, row);
+        let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
         let inside = cell.side - layout.line();
-        if let Some(number) = colouring.number_at(column, row) {
-            paper.write(
-                &number.to_string(),
-                layout.cell_number_scale(),
-                (cell.left + layout.line(), cell.top + layout.line()),
-                (inside, inside),
-                NUMBER_GREY,
-            );
-        }
+        let ink = match cells {
+            Cells::ToColourIn => NUMBER_GREY,
+            Cells::ColouredIn => {
+                let colour = colouring.palette().colour_of(number);
+                paper.fill(left, top, inside, inside, colour);
+                readable_on(colour)
+            }
+        };
+        paper.write(
+            &number.to_string(),
+            layout.cell_number_scale(),
+            (left, top),
+            (inside, inside),
+            ink,
+        );
     }
 }
 

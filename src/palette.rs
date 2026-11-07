@@ -76,6 +76,11 @@ impl Palette {
         ColourNumber(nearest + 1)
     }
 
+    /// The colour a number stands for in this palette.
+    pub fn colour_of(&self, number: ColourNumber) -> Rgb {
+        self.0[number.0 - 1]
+    }
+
     /// Each colour with its number, colour 1 first.
     pub fn numbered(&self) -> impl Iterator<Item = (ColourNumber, Rgb)> + '_ {
         self.0

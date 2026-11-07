@@ -36,6 +36,14 @@ impl Colouring {
         &self.palette
     }
 
+    /// Each cell's column, row and colour number, row by row from the top left.
+    pub fn numbered_cells(&self) -> impl Iterator<Item = (u32, u32, ColourNumber)> + '_ {
+        let columns = self.size.columns();
+        (0..)
+            .zip(&self.numbers)
+            .map(move |(index, &number)| (index % columns, index / columns, number))
+    }
+
     pub fn number_at(&self, column: u32, row: u32) -> Option<ColourNumber> {
         self.numbers
             .get((row * self.size.columns() + column) as usize)
