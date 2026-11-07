@@ -44,6 +44,14 @@ impl Picture {
         })
     }
 
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
     pub fn pixel(&self, x: u32, y: u32) -> Rgb {
         self.pixels[(y * self.width + x) as usize]
     }
