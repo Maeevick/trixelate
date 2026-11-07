@@ -7,7 +7,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, ValueEnum};
 use trixelate::grid::GridSize;
-use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat};
+use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::{Order, make_sheet, png_file};
@@ -34,9 +34,13 @@ struct Cli {
     #[arg(short, long, visible_alias = "colors", default_value = "8", value_parser = colour_count)]
     colours: ColourCount,
 
-    /// The paper the sheet is drawn for, upright, at 300 dots per inch
+    /// The paper the sheet is drawn for, at 300 dots per inch
     #[arg(short, long, value_enum, default_value_t = Format::A4)]
     format: Format,
+
+    /// Which way up the paper lies
+    #[arg(long, value_enum, default_value_t = Orientation::Portrait)]
+    orientation: Orientation,
 
     /// The blank paper around the sheet, in millimetres
     #[arg(short, long, default_value_t = 20)]
@@ -64,6 +68,21 @@ impl From<Format> for PageFormat {
             Format::A3 => PageFormat::A3,
             Format::A4 => PageFormat::A4,
             Format::A5 => PageFormat::A5,
+        }
+    }
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Orientation {
+    Portrait,
+    Landscape,
+}
+
+impl From<Orientation> for layout::Orientation {
+    fn from(orientation: Orientation) -> layout::Orientation {
+        match orientation {
+            Orientation::Portrait => layout::Orientation::Portrait,
+            Orientation::Landscape => layout::Orientation::Landscape,
         }
     }
 }
@@ -100,7 +119,7 @@ fn run(cli: Cli) -> Result<String, String> {
         grid,
         colours: cli.colours,
         format: cli.format.into(),
-        orientation: Orientation::Portrait,
+        orientation: cli.orientation.into(),
         margin: Margin(cli.margin),
     };
     let sheet = make_sheet(&picture, order).map_err(explain)?;
