@@ -38,6 +38,7 @@ struct Settings {
     landscape: bool,
     margin: u32,
     freedom: bool,
+    with_model: bool,
 }
 
 impl Default for Settings {
@@ -49,34 +50,33 @@ impl Default for Settings {
             landscape: false,
             margin: Margin::AROUND_A_SHEET.0,
             freedom: false,
+            with_model: false,
         }
     }
 }
 
 impl Settings {
-    /// The legend for a sheet with the given model: none at all in freedom, which has no model.
-    fn legend(self, model: Model) -> Legend {
-        if self.freedom {
-            Legend::Freedom
-        } else {
-            Legend::Coloured(model)
+    /// The sheet's legend: none at all in freedom, which has no model, else coloured, with its model if asked.
+    fn legend(self) -> Legend {
+        match (self.freedom, self.with_model) {
+            (true, _) => Legend::Freedom,
+            (false, true) => Legend::Coloured(Model::Miniature),
+            (false, false) => Legend::Coloured(Model::None),
         }
+    }
+
+    /// Whether the sheet shows its model in miniature, which freedom never does.
+    fn shows_its_model(self) -> bool {
+        self.with_model && !self.freedom
     }
 }
 
-/// What the right-hand side shows beside the picture.
-#[derive(Clone, Copy, PartialEq)]
-enum Shown {
-    Model,
-    Sheet,
-}
-
-/// The order for the sheet, model or twin asked for, once sure its page has room for it, or why it would be refused.
-fn ready(picture: &Picture, settings: Settings, model: Model) -> Result<Order, String> {
-    let legend = settings.legend(model);
+/// The order for the sheet asked for, once sure its page has room for it, or why it would be refused.
+fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
+    let legend = settings.legend();
     let most = most_cells_across(settings.format, legend);
     if settings.width > most {
-        return Err(beyond(settings.format, legend, most));
+        return Err(beyond(settings.format, most));
     }
     let grid = GridSize::keeping_the_proportions_of(picture, settings.width)
         .map_err(|_| "A grid needs at least one cell across.".to_string())?;
@@ -99,26 +99,21 @@ fn ready(picture: &Picture, settings: Settings, model: Model) -> Result<Order, S
     Ok(order)
 }
 
-/// The sheet, model or twin ordered, as PNG bytes, or why it cannot be made.
+/// The sheet ordered, as PNG bytes, or why it cannot be made.
 fn paint(picture: &Picture, order: Order) -> Result<Vec<u8>, String> {
     let sheet = make_sheet(picture, order).map_err(explain)?;
     png_file::write(&sheet)
         .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
 }
 
-fn beyond(format: PageFormat, legend: Legend, most: u32) -> String {
+fn beyond(format: PageFormat, most: u32) -> String {
     let paper = match format {
         PageFormat::A3 => "A3",
         PageFormat::A4 => "A4",
         PageFormat::A5 => "A5",
     };
-    let kind = match legend {
-        Legend::Coloured(Model::None | Model::Miniature) | Legend::Freedom => "sheet",
-        Legend::Coloured(Model::Full) => "model",
-        Legend::Coloured(Model::Twin) => "twin",
-    };
     format!(
-        "An {paper} {kind} holds at most {most} cells across, or little fingers give up. Fewer cells, or bigger paper?"
+        "An {paper} sheet holds at most {most} cells across, or little fingers give up. Fewer cells, or bigger paper?"
     )
 }
 
@@ -193,7 +188,6 @@ pub fn App() -> impl IntoView {
     let unreadable = RwSignal::new(false);
     let hovering = RwSignal::new(false);
     let settings = RwSignal::new(Settings::default());
-    let shown = RwSignal::new(Shown::Model);
     let preview = RwSignal::new(None::<String>);
     let painting = RwSignal::new(false);
     let refusal = RwSignal::new(None::<String>);
@@ -224,24 +218,12 @@ pub fn App() -> impl IntoView {
         });
     };
 
-    let showing = move || {
-        if settings.get().freedom {
-            Shown::Sheet
-        } else {
-            shown.get()
-        }
-    };
-
     Effect::new(move |_| {
         let Some(picture) = dropped.with(|dropped| dropped.as_ref().map(|d| d.picture.clone()))
         else {
             return;
         };
         let settings = settings.get();
-        let model = match showing() {
-            Shown::Model => Model::Full,
-            Shown::Sheet => Model::None,
-        };
         let this = latest.get_value() + 1;
         latest.set_value(this);
         refusal.set(None);
@@ -250,7 +232,7 @@ pub fn App() -> impl IntoView {
             if latest.get_value() != this {
                 return;
             }
-            match ready(&picture, settings, model).and_then(|order| paint(&picture, order)) {
+            match ready(&picture, settings).and_then(|order| paint(&picture, order)) {
                 Ok(png) => {
                     let previous = preview.get_untracked();
                     preview.set(png_link(&png));
@@ -265,14 +247,14 @@ pub fn App() -> impl IntoView {
         });
     });
 
-    let download = move |model: Model| {
+    let download = move || {
         let Some(dropped) = dropped.get_untracked() else {
             return;
         };
         let settings = settings.get_untracked();
         saving.set(true);
         after_the_next_paint(move || {
-            let painted = ready(&dropped.picture, settings, model)
+            let painted = ready(&dropped.picture, settings)
                 .and_then(|order| Ok((paint(&dropped.picture, order)?, order)));
             match painted {
                 Ok((png, order)) => save(&png, &sheet_file_name(&dropped.name, &order)),
@@ -309,23 +291,10 @@ pub fn App() -> impl IntoView {
             .and_then(|colours| warnings_for(settings.width, colours).first().copied())
     };
     let no_picture = move || dropped.with(Option::is_none);
-    let no_model = move || no_picture() || settings.get().freedom;
-    let refusals = Memo::new(move |_| {
+    let refused = Memo::new(move |_| {
         let picture = dropped.with(|dropped| dropped.as_ref().map(|d| d.picture.clone()))?;
-        let settings = settings.get();
-        Some(
-            [Model::None, Model::Full, Model::Twin]
-                .map(|model| ready(&picture, settings, model).err()),
-        )
+        ready(&picture, settings.get()).err()
     });
-    let refusal_of = move |model: Model| {
-        refusals.get().and_then(|[sheet, full, twin]| match model {
-            Model::None | Model::Miniature => sheet,
-            Model::Full => full,
-            Model::Twin => twin,
-        })
-    };
-    let refused_download = move || refusal_of(Model::None).or_else(|| refusal_of(Model::Twin));
 
     view! {
         <section
@@ -501,37 +470,48 @@ pub fn App() -> impl IntoView {
                 <span class="text-center text-sm text-stone-500">
                     {move || if saving.get() { "Sharpening the crayons…" } else { "Download the" }}
                 </span>
-                {[
-                    (Model::None, "Sheet", "to colour in"),
-                    (Model::Full, "Model", "to copy from"),
-                    (Model::Twin, "Twin", "both on one page"),
-                ]
-                    .map(|(model, label, hint)| {
-                        view! {
-                            <button
-                                type="button"
-                                disabled=move || {
-                                    saving.get()
-                                        || if model == Model::None { no_picture() } else { no_model() }
-                                        || refusal_of(model).is_some()
-                                }
-                                title=move || refusal_of(model).unwrap_or_else(|| hint.to_string())
-                                aria-describedby=move || {
-                                    refusal_of(model).map(|_| DOWNLOADS_REFUSED.to_string())
-                                }
-                                class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
-                                on:click=move |_| download(model)
-                            >
-                                {label}
-                                <span class="ml-1.5 font-normal text-amber-200/80 group-disabled:text-stone-400">
-                                    {move || if refusal_of(model).is_some() { "doesn't fit" } else { hint }}
-                                </span>
-                            </button>
+                <button
+                    type="button"
+                    disabled=move || saving.get() || no_picture() || refused.get().is_some()
+                    title=move || refused.get().unwrap_or_else(|| "to colour in".to_string())
+                    aria-describedby=move || refused.get().map(|_| DOWNLOADS_REFUSED.to_string())
+                    class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
+                    on:click=move |_| download()
+                >
+                    "Sheet"
+                    <span class="ml-1.5 font-normal text-amber-200/80 group-disabled:text-stone-400">
+                        {move || {
+                            if refused.get().is_some() { "doesn't fit" } else { "to colour in" }
+                        }}
+                    </span>
+                </button>
+                <label class="flex items-center justify-center gap-2 text-sm font-medium">
+                    <input
+                        type="checkbox"
+                        class="size-4 accent-lime-600 disabled:cursor-not-allowed"
+                        prop:checked=move || settings.get().shows_its_model()
+                        disabled=move || settings.get().freedom
+                        on:change=move |event| {
+                            let with_model = event_target_checked(&event);
+                            settings.update(|settings| settings.with_model = with_model);
                         }
-                    })}
-                <Show when=move || refused_download().is_some()>
+                    />
+                    <span>
+                        "with its model "
+                        <span class="font-normal text-stone-500">
+                            {move || {
+                                if settings.get().freedom {
+                                    "freedom has none"
+                                } else {
+                                    "in the corner"
+                                }
+                            }}
+                        </span>
+                    </span>
+                </label>
+                <Show when=move || refused.get().is_some()>
                     <p id=DOWNLOADS_REFUSED class="basis-full text-center text-sm text-stone-600">
-                        {refused_download}
+                        {move || refused.get()}
                     </p>
                 </Show>
             </div>
@@ -583,41 +563,13 @@ pub fn App() -> impl IntoView {
 
             <figure class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
                 <figcaption class="flex h-9 items-center justify-between text-sm font-semibold text-stone-600">
-                    <span>
-                        {move || match showing() {
-                            Shown::Model => "The model, coloured in",
-                            Shown::Sheet => "The sheet, to colour in",
-                        }}
-                    </span>
-                    <div
-                        role="group"
-                        aria-label="Show the model or the sheet"
-                        class="flex rounded-full bg-stone-100 p-1 text-xs"
-                    >
-                        {[(Shown::Model, "Model"), (Shown::Sheet, "Sheet")]
-                            .map(|(choice, label)| {
-                                view! {
-                                    <button
-                                        type="button"
-                                        aria-pressed=move || (showing() == choice).to_string()
-                                        disabled=move || choice == Shown::Model && settings.get().freedom
-                                        class=move || {
-                                            format!(
-                                                "rounded-full px-3 py-1 font-medium transition disabled:cursor-not-allowed disabled:opacity-40 {}",
-                                                if showing() == choice {
-                                                    "bg-white text-stone-800 shadow-sm"
-                                                } else {
-                                                    "text-stone-600 hover:text-stone-900"
-                                                },
-                                            )
-                                        }
-                                        on:click=move |_| shown.set(choice)
-                                    >
-                                        {label}
-                                    </button>
-                                }
-                            })}
-                    </div>
+                    {move || {
+                        if settings.get().shows_its_model() {
+                            "The sheet, with its model"
+                        } else {
+                            "The sheet, to colour in"
+                        }
+                    }}
                 </figcaption>
                 <div class="relative flex min-h-80 flex-1 items-center justify-center rounded-2xl bg-stone-100 p-3">
                     {move || match (preview.get(), no_picture()) {
@@ -625,9 +577,12 @@ pub fn App() -> impl IntoView {
                             view! {
                                 <img
                                     src=link
-                                    alt=move || match showing() {
-                                        Shown::Model => "The model: the grid painted in its colours",
-                                        Shown::Sheet => "The sheet: a grid of numbered cells to colour in",
+                                    alt=move || {
+                                        if settings.get().shows_its_model() {
+                                            "The sheet: a grid of numbered cells to colour in, its model in miniature in the top left corner"
+                                        } else {
+                                            "The sheet: a grid of numbered cells to colour in"
+                                        }
                                     }
                                     class=move || {
                                         format!(
