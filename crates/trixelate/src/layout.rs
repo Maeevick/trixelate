@@ -61,9 +61,11 @@ pub struct MarginTooThin;
 impl Margin {
     pub const AROUND_A_SHEET: u32 = 10;
     pub const THINNEST: u32 = 5;
+    pub const WIDEST: u32 = 20;
 
     pub fn new(millimetres: u32) -> Result<Margin, MarginTooThin> {
-        (millimetres >= Self::THINNEST)
+        (Self::THINNEST..=Self::WIDEST)
+            .contains(&millimetres)
             .then_some(Margin(millimetres))
             .ok_or(MarginTooThin)
     }

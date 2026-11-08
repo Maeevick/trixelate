@@ -44,7 +44,7 @@ struct Cli {
     #[arg(long)]
     landscape: bool,
 
-    /// The blank paper around the sheet, in millimetres, at least 5 for the title and the credit
+    /// The blank paper around the sheet, in millimetres, from 5 for the title and the credit to 20, leaving the room to the cells
     #[arg(short, long, default_value = "10", value_parser = margin)]
     margin: Margin,
 
@@ -119,8 +119,9 @@ fn margin(raw: &str) -> Result<Margin, String> {
     let millimetres: u32 = raw.parse().map_err(|_| format!("{raw} is not a number"))?;
     Margin::new(millimetres).map_err(|_| {
         format!(
-            "a margin is at least {} mm, for the title and the credit",
-            Margin::THINNEST
+            "a margin is from {} mm, for the title and the credit, to {} mm, leaving the room to the cells",
+            Margin::THINNEST,
+            Margin::WIDEST
         )
     })
 }

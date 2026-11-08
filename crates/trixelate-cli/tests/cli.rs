@@ -249,37 +249,18 @@ fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
 fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
     let folder = folder("failures");
     let picture = a_picture_in(&folder);
-    let twelve_colours = a_twelve_colour_picture_in(&folder);
     let not_a_png = folder.join("drawing.txt");
     fs::write(&not_a_png, "a drawing described in words").expect("a text file");
     let picture = picture.to_str().unwrap_or_default();
-    let cases: [(&[&str], &str); 5] = [
+    let cases: [(&[&str], &str); 3] = [
         (&["missing.png", "--width", "4"], "cannot read missing.png"),
         (
             &[not_a_png.to_str().unwrap_or_default(), "--width", "4"],
             "is not a PNG or JPEG picture",
         ),
         (
-            &[picture, "--width", "4", "--margin", "105"],
-            "try a smaller --margin",
-        ),
-        (
             &[picture, "--width", "900", "--chaos"],
             "try fewer cells with --width",
-        ),
-        (
-            &[
-                twelve_colours.to_str().unwrap_or_default(),
-                "--width",
-                "4",
-                "--colours",
-                "12",
-                "--margin",
-                "65",
-                "--format",
-                "a5",
-            ],
-            "try fewer --colours",
         ),
     ];
 
@@ -347,7 +328,7 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
 
 #[test]
 fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
-    let cases: [&[&str]; 10] = [
+    let cases: [&[&str]; 11] = [
         &["missing.png", "--width", "0"],
         &["missing.png", "--width", "4", "--colours", "25"],
         &["--width", "4"],
@@ -358,6 +339,7 @@ fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
         &["missing.png", "--width", "4", "--mini", "1"],
         &["missing.png", "--width", "4", "--freedom"],
         &["missing.png", "--width", "4", "--margin", "4"],
+        &["missing.png", "--width", "4", "--margin", "21"],
     ];
 
     for arguments in cases {
