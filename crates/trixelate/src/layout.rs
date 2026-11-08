@@ -153,6 +153,10 @@ pub struct Layout {
 
 /// The credit stays small, under two millimetres tall, and at most half as tall as the margin it sits in.
 const CREDIT_SCALE_AT_MOST: u32 = 3;
+/// How many of the miniature's cells fit across one of the grid's: the miniature is an eighth of the grid wide.
+const MINIATURE_CELLS_PER_CELL: u32 = 8;
+/// The miniature sticks out of the grid's top left corner by a third of its width, like a sticker on the sheet.
+const MINIATURE_STICKING_OUT: u32 = 3;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
 const GAP_BETWEEN_TWINS_MM: u32 = 10;
@@ -233,6 +237,23 @@ impl Layout {
         let twins_height = grids_down * grid_height + (grids_down - 1) * gap_between_twins;
         let twins_left = margin + (content_width - twins_width) / 2;
         let twins_top = margin + (grid_room - twins_height) / 2;
+        let miniature = match legend {
+            Legend::Coloured(Model::Miniature) => {
+                let miniature_cell_side = (cell_side / MINIATURE_CELLS_PER_CELL).max(1);
+                let sticking_out = size.columns() * miniature_cell_side / MINIATURE_STICKING_OUT;
+                let room_for_its_frame = line;
+                Some(Miniature {
+                    left: twins_left
+                        .saturating_sub(sticking_out)
+                        .max(room_for_its_frame),
+                    top: twins_top
+                        .saturating_sub(sticking_out)
+                        .max(room_for_its_frame),
+                    cell_side: miniature_cell_side,
+                })
+            }
+            Legend::Coloured(Model::None | Model::Full | Model::Twin) | Legend::Freedom => None,
+        };
 
         let bubbles = bubble.map_or_else(Vec::new, |bubble| {
             let spacing = bubble / 4;
@@ -273,7 +294,7 @@ impl Layout {
             cell_number_scale,
             bubble_number_scale,
             credit,
-            miniature: None,
+            miniature,
         })
     }
 
