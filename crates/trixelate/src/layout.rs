@@ -116,7 +116,7 @@ impl GridPlace {
 }
 
 /// The line crediting trixelate and its licence, written small at the bottom right of every sheet.
-pub const CREDIT: &str = "Made with trixelate (github.com/Maeevick/trixelate) • MIT License";
+pub const CREDIT: &str = "Made with trixelate (github.com/Maeevick/trixelate) - MIT License";
 
 /// Where the credit is written: the top left corner of its first character, and its scale.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
