@@ -376,7 +376,8 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
 }
 
 #[test]
-fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_and_look_hold() {
+fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds_and_a_twin_too_wide_is_refused()
+ {
     let folder = folder("default-width");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
@@ -385,9 +386,9 @@ fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_and_look_hold(
     let twin = trixelate(&[picture, "--twin"]);
 
     assert!(on_a5.status.success(), "{}", text(&on_a5.stderr));
-    assert!(twin.status.success(), "{}", text(&twin.stderr));
     assert!(folder.join("sunset-32-8-a5.sheet.png").exists());
-    assert!(folder.join("sunset-24-8-a4.twin.png").exists());
+    assert_eq!(twin.status.code(), Some(2));
+    assert!(text(&twin.stderr).contains("an A4 twin holds at most 24 cells across"));
 }
 
 #[test]
