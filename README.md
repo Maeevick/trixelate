@@ -37,7 +37,7 @@ trixelate [OPTIONS] <PICTURE>
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `<PICTURE>` | The PNG or JPEG picture to turn into a sheet, of any colour type and depth; the sheet is always a PNG | |
-| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched. At most 128 on A3, 96 on A4 and 64 on A5, half in a twin | 48 |
+| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched. At most 64 on A3, 48 on A4 and 32 on A5, half in a twin | 48 |
 | `-c`, `--colours` | Colours in the palette, from 2 to 24 (`--colors` works too) | 8 |
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |
@@ -45,7 +45,7 @@ trixelate [OPTIONS] <PICTURE>
 | `--freedom` | No legend: the numbers only group the cells, and the child picks the colours | |
 | `--model` | The sheet painted in its colours, a model to copy from | |
 | `--twin` | The model and the sheet on one page, one above the other in portrait, side by side in landscape | |
-| `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-64-24-a5-landscape.twin.png`, `goblin-48-8-a4-freedom.sheet.png` |
+| `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-16-24-a5-landscape.twin.png`, `goblin-48-8-a4-freedom.sheet.png` |
 | `--force` | Overwrite the sheet if it already exists | |
 | `-y`, `--yes` | Go ahead without being asked when warned: under 16 cells across it is big cubes, under 4 colours solid patches, more than pixel art | asks |
 | `--chaos` | Go beyond the most cells across, to try what the limits refuse | |

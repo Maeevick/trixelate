@@ -24,9 +24,9 @@ impl PageFormat {
 /// The most cells across a grid may have on a paper, for a child to colour them, half as many for each of a twin's grids.
 pub fn most_cells_across(format: PageFormat, legend: Legend) -> u32 {
     let on_the_page = match format {
-        PageFormat::A3 => 128,
-        PageFormat::A4 => 96,
-        PageFormat::A5 => 64,
+        PageFormat::A3 => 64,
+        PageFormat::A4 => 48,
+        PageFormat::A5 => 32,
     };
     match legend {
         Legend::Coloured(Model::Twin) => on_the_page / 2,

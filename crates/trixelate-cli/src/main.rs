@@ -72,7 +72,7 @@ struct Cli {
     #[arg(short, long)]
     yes: bool,
 
-    /// Go beyond the most cells across the paper holds for a child: 128 on A3, 96 on A4, 64 on A5, half in a twin
+    /// Go beyond the most cells across the paper holds for a child: 64 on A3, 48 on A4, 32 on A5, half in a twin
     #[arg(long)]
     chaos: bool,
 }
