@@ -261,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn a_coloured_sheet_writes_its_title_in_grey_in_its_top_margin() {
+    fn a_sheet_writes_its_title_in_grey_in_its_top_margin() {
         let (colouring, layout) = red_red_yellow();
         let layout = layout.titled("red-red-yellow.png");
         let margin = 236;

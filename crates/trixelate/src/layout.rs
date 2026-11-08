@@ -174,7 +174,7 @@ struct Placed {
 }
 
 impl Layout {
-    /// Lays out a colouring's grid, its legend and any model on the page, inside its margin.
+    /// Lays out a colouring's grid, its legend and its model on the page, inside its margin.
     pub fn of(
         colouring: &Colouring,
         format: PageFormat,
@@ -302,7 +302,7 @@ impl Layout {
         Layout { title, ..self }
     }
 
-    /// Where the title is written, if the sheet has one.
+    /// Where the title is written, if the margin has room for it.
     pub fn title(&self) -> Option<Title> {
         self.title.clone()
     }
@@ -531,7 +531,7 @@ mod tests {
     }
 
     #[test]
-    fn upright_a_coloured_sheet_sets_its_grid_down_on_its_legend_as_wide_as_the_room_its_model_seven_sixteenths_of_the_grid_wide_in_the_top_left_corner_over_the_grid()
+    fn upright_a_sheet_sets_its_grid_down_on_its_legend_as_wide_as_the_room_its_model_seven_sixteenths_of_the_grid_wide_in_the_top_left_corner_over_the_grid()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
         let (margin, right) = (118, 2480 - 118);
@@ -557,7 +557,7 @@ mod tests {
     }
 
     #[test]
-    fn on_its_side_a_coloured_sheet_lays_its_model_in_the_top_left_corner_its_legend_in_rows_centred_below_it_and_the_grid_on_the_right()
+    fn on_its_side_a_sheet_lays_its_model_in_the_top_left_corner_its_legend_in_rows_centred_below_it_and_the_grid_on_the_right()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 24);
         let (margin, right, bottom, gap) = (118, 3508 - 118, 2480 - 118, dots(5));
@@ -733,7 +733,7 @@ mod tests {
     }
 
     #[test]
-    fn a_coloured_sheet_is_titled_with_its_file_name_centred_in_the_top_margin_as_big_as_the_bubbles_numbers_shrinking_to_fit()
+    fn a_sheet_is_titled_with_its_file_name_centred_in_the_top_margin_as_big_as_the_bubbles_numbers_shrinking_to_fit()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
         let (name, long_name) = ("goblin-48-8-a4.sheet.png", "goblin-".repeat(40));
