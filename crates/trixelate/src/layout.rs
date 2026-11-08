@@ -30,7 +30,9 @@ pub fn most_cells_across(format: PageFormat, legend: Legend) -> u32 {
     };
     match legend {
         Legend::Coloured(Model::Twin) => on_the_page / 2,
-        Legend::Coloured(Model::None | Model::Full) | Legend::Freedom => on_the_page,
+        Legend::Coloured(Model::None | Model::Full | Model::Miniature) | Legend::Freedom => {
+            on_the_page
+        }
     }
 }
 
@@ -72,12 +74,22 @@ pub enum Legend {
     Freedom,
 }
 
-/// The coloured-in picture to copy from: none, the full sheet painted, or twinned with the sheet on one page.
+/// The coloured-in picture to copy from: none, the full sheet painted, twinned with the sheet on one page,
+/// or a miniature over the sheet's top left corner.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Model {
     None,
     Full,
     Twin,
+    Miniature,
+}
+
+/// Where the model's miniature lies: its top left corner and its cells' side, in dots, its frame around it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Miniature {
+    pub left: u32,
+    pub top: u32,
+    pub cell_side: u32,
 }
 
 /// A square on the page, from its top left corner, its side in dots.
@@ -136,6 +148,7 @@ pub struct Layout {
     bubbles: Vec<Disc>,
     bubble_number_scale: u32,
     credit: Option<Credit>,
+    miniature: Option<Miniature>,
 }
 
 /// The credit stays small, under two millimetres tall, and at most half as tall as the margin it sits in.
@@ -180,7 +193,10 @@ impl Layout {
         let (grids_across, grids_down) = match (legend, orientation) {
             (Legend::Coloured(Model::Twin), Orientation::Portrait) => (1, 2),
             (Legend::Coloured(Model::Twin), Orientation::Landscape) => (2, 1),
-            (Legend::Coloured(Model::None | Model::Full) | Legend::Freedom, _) => (1, 1),
+            (
+                Legend::Coloured(Model::None | Model::Full | Model::Miniature) | Legend::Freedom,
+                _,
+            ) => (1, 1),
         };
         let gap_between_twins = dots(GAP_BETWEEN_TWINS_MM);
         let room_shared = |room: u32, grids: u32| {
@@ -257,6 +273,7 @@ impl Layout {
             cell_number_scale,
             bubble_number_scale,
             credit,
+            miniature: None,
         })
     }
 
@@ -291,6 +308,11 @@ impl Layout {
     /// Where the credit is written, if the margin has room for it.
     pub fn credit(&self) -> Option<Credit> {
         self.credit
+    }
+
+    /// Where the model's miniature lies, if the sheet has one.
+    pub fn miniature(&self) -> Option<Miniature> {
+        self.miniature
     }
 
     /// How thick the lines outlining the cells are, in dots.
@@ -343,6 +365,56 @@ mod tests {
             margin,
             Legend::Freedom,
         )
+    }
+
+    #[test]
+    fn a_sheet_with_its_model_shows_it_an_eighth_of_the_grid_wide_over_its_top_left_corner_sticking_out_by_a_third()
+    -> Result<(), NoRoom> {
+        let square = colouring(48, 48, 8);
+
+        let with_model = Layout::of(
+            &square,
+            PageFormat::A4,
+            Orientation::Portrait,
+            Margin(10),
+            Legend::Coloured(Model::Miniature),
+        )?;
+        let without = upright(&square, PageFormat::A4, Margin(10))?;
+
+        let corner = with_model.grids()[0].cell(0, 0);
+        let side = corner.side / 8;
+        let sticking_out = 48 * side / 3;
+        assert_eq!(
+            with_model.miniature(),
+            Some(Miniature {
+                left: corner.left - sticking_out,
+                top: corner.top - sticking_out,
+                cell_side: side
+            })
+        );
+        assert_eq!(with_model.grids(), without.grids());
+        assert_eq!(without.miniature(), None);
+        Ok(())
+    }
+
+    #[test]
+    fn a_miniature_with_no_margin_to_stick_out_into_stops_at_the_page_edge_leaving_room_for_its_frame()
+    -> Result<(), NoRoom> {
+        let square = colouring(48, 48, 8);
+
+        let layout = Layout::of(
+            &square,
+            PageFormat::A4,
+            Orientation::Portrait,
+            Margin(0),
+            Legend::Coloured(Model::Miniature),
+        )?;
+
+        assert_eq!(
+            layout.miniature().map(|miniature| miniature.left),
+            Some(layout.line())
+        );
+        Ok(())
     }
 
     fn twinned(colouring: &Colouring, orientation: Orientation) -> Result<Layout, NoRoom> {

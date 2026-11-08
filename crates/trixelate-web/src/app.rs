@@ -113,7 +113,7 @@ fn beyond(format: PageFormat, legend: Legend, most: u32) -> String {
         PageFormat::A5 => "A5",
     };
     let kind = match legend {
-        Legend::Coloured(Model::None) | Legend::Freedom => "sheet",
+        Legend::Coloured(Model::None | Model::Miniature) | Legend::Freedom => "sheet",
         Legend::Coloured(Model::Full) => "model",
         Legend::Coloured(Model::Twin) => "twin",
     };
@@ -320,7 +320,7 @@ pub fn App() -> impl IntoView {
     });
     let refusal_of = move |model: Model| {
         refusals.get().and_then(|[sheet, full, twin]| match model {
-            Model::None => sheet,
+            Model::None | Model::Miniature => sheet,
             Model::Full => full,
             Model::Twin => twin,
         })

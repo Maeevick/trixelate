@@ -14,7 +14,9 @@ const MINUTES_AN_AFTERNOON: u32 = 30;
 /// The report of a sheet written to a path, after the time it took, its grid holding a number of cells.
 pub fn written(legend: Legend, path: &Path, took: Duration, cells: u32) -> String {
     let (kind, to_colour) = match legend {
-        Legend::Coloured(Model::None) | Legend::Freedom => ("Sheet", how_long_to_colour(cells)),
+        Legend::Coloured(Model::None | Model::Miniature) | Legend::Freedom => {
+            ("Sheet", how_long_to_colour(cells))
+        }
         Legend::Coloured(Model::Twin) => ("Twin", how_long_to_colour(cells)),
         Legend::Coloured(Model::Full) => (
             "Model",

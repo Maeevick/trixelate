@@ -61,7 +61,7 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
         .file_stem()
         .map_or(picture_file_name.into(), |stem| stem.to_string_lossy());
     let kind = match order.legend {
-        Legend::Coloured(Model::None) | Legend::Freedom => "sheet",
+        Legend::Coloured(Model::None | Model::Miniature) | Legend::Freedom => "sheet",
         Legend::Coloured(Model::Full) => "model",
         Legend::Coloured(Model::Twin) => "twin",
     };

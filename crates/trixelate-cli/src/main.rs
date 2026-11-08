@@ -127,7 +127,8 @@ fn within_the_limits(cli: &Cli) -> Result<(), String> {
         Format::A5 => "A5",
     };
     let kind = match legend {
-        layout::Legend::Coloured(layout::Model::None) | layout::Legend::Freedom => "sheet",
+        layout::Legend::Coloured(layout::Model::None | layout::Model::Miniature)
+        | layout::Legend::Freedom => "sheet",
         layout::Legend::Coloured(layout::Model::Full) => "model",
         layout::Legend::Coloured(layout::Model::Twin) => "twin",
     };

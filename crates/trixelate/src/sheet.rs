@@ -14,7 +14,7 @@ const OUTLINES_PER_BUBBLE_DIAMETER: u32 = 24;
 pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
     let grids: &[Cells] = match legend {
-        Legend::Coloured(Model::None) | Legend::Freedom => &[Cells::ToColourIn],
+        Legend::Coloured(Model::None | Model::Miniature) | Legend::Freedom => &[Cells::ToColourIn],
         Legend::Coloured(Model::Full) => &[Cells::ColouredIn],
         Legend::Coloured(Model::Twin) => &[Cells::ColouredIn, Cells::ToColourIn],
     };
