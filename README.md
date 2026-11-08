@@ -101,3 +101,5 @@ The sheet's drawing is pinned by golden masters in `crates/trixelate-cli/tests/g
 ## License
 
 [MIT](LICENSE) © 2026 Aurel | Maeevick
+
+The page's title is set in [VT323](https://fonts.google.com/specimen/VT323) by Peter Hull, under the [SIL Open Font License 1.1](crates/trixelate-web/fonts/VT323-OFL.txt).

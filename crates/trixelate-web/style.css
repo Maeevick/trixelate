@@ -1,2 +1,20 @@
 @import "tailwindcss";
 @source "./src";
+
+/* Trix's colours, from maeevick.com, with deeper shades where small text or a control's edge needs the contrast. */
+@theme {
+  --color-trix: #ff6b2c;
+  --color-trix-edge: #f2551a;
+  --color-trix-ink: #c2410c;
+  --color-grimble: #00a1de;
+  --color-veil: #e22fbd;
+  --color-goblin: #84cc16;
+  --font-pixel: "VT323", ui-monospace, monospace;
+}
+
+/* VT323 by Peter Hull, under the SIL Open Font License 1.1: fonts/VT323-OFL.txt. */
+@font-face {
+  font-family: "VT323";
+  src: url("fonts/VT323.woff2") format("woff2");
+  font-display: swap;
+}

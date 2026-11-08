@@ -335,11 +335,11 @@ pub fn App() -> impl IntoView {
             <label
                 class=move || {
                     format!(
-                        "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition focus-within:ring-4 focus-within:ring-lime-300 {}",
+                        "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition focus-within:ring-4 focus-within:ring-trix-edge {}",
                         if hovering.get() {
-                            "border-lime-500 bg-lime-50"
+                            "border-trix-edge bg-orange-50"
                         } else {
-                            "border-stone-300 hover:border-lime-400 hover:bg-lime-50/50"
+                            "border-stone-300 hover:border-trix-edge hover:bg-orange-50/50"
                         },
                     )
                 }
@@ -389,7 +389,7 @@ pub fn App() -> impl IntoView {
                             most_cells_across(settings.get().format, Legend::Coloured(Model::None))
                                 .to_string()
                         }
-                        class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
+                        class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-trix-edge focus:outline-none focus:ring-2 focus:ring-trix-edge"
                         prop:value=move || settings.get().width.to_string()
                         on:change=move |event| {
                             if let Ok(width) = event_target_value(&event).parse::<u32>() {
@@ -401,7 +401,7 @@ pub fn App() -> impl IntoView {
                 <label class="flex flex-col gap-1 text-sm font-medium">
                     <span>
                         "Colours "
-                        <span class="font-mono text-lime-700">
+                        <span class="font-mono text-trix-ink">
                             {move || settings.get().colours}
                         </span>
                     </span>
@@ -409,7 +409,7 @@ pub fn App() -> impl IntoView {
                         type="range"
                         min="2"
                         max="24"
-                        class="mt-2 accent-lime-600"
+                        class="mt-2 accent-trix-edge"
                         prop:value=move || settings.get().colours.to_string()
                         on:input=move |event| {
                             if let Ok(colours) = event_target_value(&event).parse::<usize>() {
@@ -421,7 +421,7 @@ pub fn App() -> impl IntoView {
                 <label class="order-last flex items-start gap-2 text-sm font-medium sm:order-none sm:mt-6">
                     <input
                         type="checkbox"
-                        class="mt-0.5 size-4 accent-lime-600"
+                        class="mt-0.5 size-4 accent-trix-edge"
                         prop:checked=move || settings.get().freedom
                         on:change=move |event| {
                             let freedom = event_target_checked(&event);
@@ -447,7 +447,7 @@ pub fn App() -> impl IntoView {
                 <label class="flex flex-col gap-1 text-sm font-medium">
                     "Paper"
                     <select
-                        class="rounded-xl border border-stone-300 bg-white px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
+                        class="rounded-xl border border-stone-300 bg-white px-3 py-2 font-normal focus:border-trix-edge focus:outline-none focus:ring-2 focus:ring-trix-edge"
                         on:change=move |event| {
                             let format = match event_target_value(&event).as_str() {
                                 "a3" => PageFormat::A3,
@@ -468,7 +468,7 @@ pub fn App() -> impl IntoView {
                         type="number"
                         min="0"
                         max="100"
-                        class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
+                        class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-trix-edge focus:outline-none focus:ring-2 focus:ring-trix-edge"
                         prop:value=move || settings.get().margin.to_string()
                         on:change=move |event| {
                             if let Ok(margin) = event_target_value(&event).parse::<u32>() {
@@ -480,7 +480,7 @@ pub fn App() -> impl IntoView {
                 <label class="flex items-start gap-2 text-sm font-medium sm:mt-6">
                     <input
                         type="checkbox"
-                        class="mt-0.5 size-4 accent-lime-600"
+                        class="mt-0.5 size-4 accent-trix-edge"
                         prop:checked=move || settings.get().landscape
                         on:change=move |event| {
                             let landscape = event_target_checked(&event);
@@ -519,11 +519,11 @@ pub fn App() -> impl IntoView {
                                 aria-describedby=move || {
                                     refusal_of(model).map(|_| DOWNLOADS_REFUSED.to_string())
                                 }
-                                class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
+                                class="group w-full rounded-full bg-trix px-5 py-2.5 text-sm font-semibold text-stone-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-trix-edge disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
                                 on:click=move |_| download(model)
                             >
                                 {label}
-                                <span class="ml-1.5 font-normal text-amber-200/80 group-disabled:text-stone-400">
+                                <span class="ml-1.5 font-normal text-stone-800 group-disabled:text-stone-400">
                                     {move || if refusal_of(model).is_some() { "doesn't fit" } else { hint }}
                                 </span>
                             </button>
@@ -674,7 +674,7 @@ pub fn App() -> impl IntoView {
                 href=REPOSITORY
                 target="_blank"
                 rel="noopener noreferrer"
-                class="font-medium text-stone-700 underline decoration-lime-500 decoration-2 underline-offset-2 hover:text-lime-700"
+                class="font-medium text-stone-700 underline decoration-trix decoration-2 underline-offset-2 hover:text-trix-ink"
             >
                 "github.com/Maeevick/trixelate"
                 <span class="sr-only">" (opens in a new tab)"</span>
