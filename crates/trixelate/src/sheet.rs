@@ -1,7 +1,7 @@
 //! The page printed for the child: the grid of numbered cells and its legend, drawn where the layout says.
 
 use crate::colouring::Colouring;
-use crate::layout::{CREDIT, Disc, GridPlace, Layout, Legend, Model};
+use crate::layout::{CREDIT, Disc, Layout};
 use crate::lettering;
 use crate::picture::{Picture, Rgb};
 
@@ -11,17 +11,10 @@ const BLACK: Rgb = Rgb(0, 0, 0);
 const OUTLINES_PER_BUBBLE_DIAMETER: u32 = 24;
 
 /// Draws a colouring's sheet on white paper, as laid out.
-pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
+pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
-    let grids: &[Cells] = match legend {
-        Legend::Coloured(Model::None | Model::Miniature) | Legend::Freedom => &[Cells::ToColourIn],
-        Legend::Coloured(Model::Full) => &[Cells::ColouredIn],
-        Legend::Coloured(Model::Twin) => &[Cells::ColouredIn, Cells::ToColourIn],
-    };
-    for (place, &cells) in layout.grids().iter().zip(grids) {
-        outline_the_cells(&mut paper, colouring, layout, place);
-        fill_in_the_cells(&mut paper, colouring, layout, place, cells);
-    }
+    outline_the_cells(&mut paper, colouring, layout);
+    number_the_cells(&mut paper, colouring, layout);
     draw_the_miniature(&mut paper, colouring, layout);
     draw_the_legend(&mut paper, colouring, layout);
     write_the_credit(&mut paper, layout);
@@ -92,44 +85,24 @@ fn readable_on(Rgb(red, green, blue): Rgb) -> Rgb {
     }
 }
 
-/// Whether a grid's cells wait for the child's colours, or show them already coloured in.
-#[derive(Clone, Copy)]
-enum Cells {
-    ToColourIn,
-    ColouredIn,
-}
-
-/// Writes each cell's number, in grey on blank cells, or readable on the cell's colour once coloured in.
-fn fill_in_the_cells(
-    paper: &mut Paper,
-    colouring: &Colouring,
-    layout: &Layout,
-    place: &GridPlace,
-    cells: Cells,
-) {
+/// Writes each cell's number in grey, centred inside its outline.
+fn number_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+    let place = layout.grid();
     for (column, row, number) in colouring.numbered_cells() {
         let cell = place.cell(column, row);
-        let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
         let inside = cell.side - layout.line();
-        let ink = match cells {
-            Cells::ToColourIn => NUMBER_GREY,
-            Cells::ColouredIn => {
-                let colour = colouring.palette().colour_of(number);
-                paper.fill(left, top, inside, inside, colour);
-                readable_on(colour)
-            }
-        };
         paper.write(
             &number.to_string(),
             layout.cell_number_scale(),
-            (left, top),
+            (cell.left + layout.line(), cell.top + layout.line()),
             (inside, inside),
-            ink,
+            NUMBER_GREY,
         );
     }
 }
 
-fn outline_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout, place: &GridPlace) {
+fn outline_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+    let place = layout.grid();
     let (columns, rows) = (colouring.size().columns(), colouring.size().rows());
     let top_left = place.cell(0, 0);
     let bottom_right = place.cell(columns, rows);
@@ -214,7 +187,7 @@ impl Paper {
 mod tests {
     use super::*;
     use crate::grid::GridSize;
-    use crate::layout::{CREDIT, Margin, Orientation, PageFormat};
+    use crate::layout::{CREDIT, Legend, Margin, Model, Orientation, PageFormat};
     use crate::lettering;
     use crate::palette::ColourCount;
     use std::collections::BTreeSet;
@@ -253,7 +226,7 @@ mod tests {
         let (colouring, layout) = red_red_yellow();
         let margin = 236;
 
-        let sheet = draw(&colouring, &layout, Legend::Coloured(Model::None));
+        let sheet = draw(&colouring, &layout);
 
         let (width, height) = (layout.page_width(), layout.page_height());
         assert_eq!((sheet.width(), sheet.height()), (width, height));
@@ -276,7 +249,7 @@ mod tests {
             .unwrap_or_default();
         assert!(!credit.is_empty());
         assert_eq!(inked_in_the_margin, credit);
-        let corners = (0..3).map(|column| layout.grids()[0].cell(column, 0));
+        let corners = (0..3).map(|column| layout.grid().cell(column, 0));
         assert!(
             corners
                 .into_iter()
@@ -289,10 +262,10 @@ mod tests {
     fn each_cell_shows_its_colour_number_in_dark_grey_centred_inside_its_outline() {
         let (colouring, layout) = red_red_yellow();
 
-        let sheet = draw(&colouring, &layout, Legend::Coloured(Model::None));
+        let sheet = draw(&colouring, &layout);
 
         for column in 0..3 {
-            let cell = layout.grids()[0].cell(column, 0);
+            let cell = layout.grid().cell(column, 0);
             let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
             let inside = cell.side - layout.line();
             let number = colouring
@@ -322,7 +295,7 @@ mod tests {
     fn each_bubble_is_filled_with_its_palette_colour_and_outlined_in_black() {
         let (colouring, layout) = red_red_yellow();
 
-        let sheet = draw(&colouring, &layout, Legend::Coloured(Model::None));
+        let sheet = draw(&colouring, &layout);
 
         let bubbles = layout.bubbles().iter().zip(colouring.palette().colours());
         for (bubble, &colour) in bubbles {
@@ -335,68 +308,12 @@ mod tests {
     }
 
     #[test]
-    fn a_full_model_paints_each_cell_in_its_colour_with_its_number_readable_on_it() {
-        let (colouring, layout) = red_red_yellow();
-        let [red, yellow] = [RED, YELLOW].map(|[r, g, b, _]| Rgb(r, g, b));
-
-        let sheet = draw(&colouring, &layout, Legend::Coloured(Model::Full));
-
-        for (column, colour, ink) in [
-            (0, red, Rgb::WHITE),
-            (1, red, Rgb::WHITE),
-            (2, yellow, BLACK),
-        ] {
-            let cell = layout.grids()[0].cell(column, 0);
-            let (left, top) = (cell.left + layout.line(), cell.top + layout.line());
-            let inside = cell.side - layout.line();
-            let number = colouring
-                .numbered_cells()
-                .nth(column as usize)
-                .map(|(_, _, number)| number.to_string())
-                .unwrap_or_default();
-            let (width, height) = lettering::size(&number, layout.cell_number_scale());
-            let (number_left, number_top) =
-                (left + (inside - width) / 2, top + (inside - height) / 2);
-            let inks: std::collections::BTreeSet<Rgb> =
-                lettering::ink(&number, layout.cell_number_scale())
-                    .into_iter()
-                    .map(|(x, y)| sheet.pixel(number_left + x, number_top + y))
-                    .collect();
-            assert_eq!(sheet.pixel(cell.left, cell.top), LINE_GREY, "cell {column}");
-            assert_eq!(sheet.pixel(left, top), colour, "cell {column}");
-            assert_eq!(
-                sheet.pixel(left + inside - 1, top + inside - 1),
-                colour,
-                "cell {column}"
-            );
-            assert_eq!(inks.into_iter().collect::<Vec<_>>(), [ink], "cell {column}");
-        }
-    }
-
-    #[test]
-    fn a_twin_model_paints_the_first_grid_and_leaves_the_second_for_the_child_to_colour_in() {
-        let (colouring, layout) = red_red_yellow_laid_out(Legend::Coloured(Model::Twin));
-        let [red, green, blue, _] = RED;
-
-        let sheet = draw(&colouring, &layout, Legend::Coloured(Model::Twin));
-
-        let insides = layout.grids().iter().map(|place| {
-            let cell = place.cell(0, 0);
-            sheet.pixel(cell.left + layout.line(), cell.top + layout.line())
-        });
-        assert_eq!(
-            insides.collect::<Vec<_>>(),
-            [Rgb(red, green, blue), Rgb::WHITE]
-        );
-    }
-
-    #[test]
     fn a_miniature_shows_each_cell_in_its_colour_without_number_or_line_framed_in_grey_over_the_grid()
      {
         let legend = Legend::Coloured(Model::Miniature);
         let (colouring, layout) = red_red_yellow_laid_out(legend);
 
-        let sheet = draw(&colouring, &layout, legend);
+        let sheet = draw(&colouring, &layout);
 
         let miniature = layout.miniature().expect("a miniature");
         let side = miniature.cell_side;
@@ -433,7 +350,7 @@ mod tests {
     fn a_bubbles_number_is_written_in_white_on_a_dark_colour_and_in_black_on_a_light_one() {
         let (colouring, layout) = red_red_yellow();
 
-        let sheet = draw(&colouring, &layout, Legend::Coloured(Model::None));
+        let sheet = draw(&colouring, &layout);
 
         let inks = layout
             .bubbles()
@@ -471,7 +388,7 @@ mod tests {
         )
         .expect("room");
 
-        let sheet = draw(&colouring, &layout, Legend::Coloured(Model::None));
+        let sheet = draw(&colouring, &layout);
 
         let inks = layout
             .bubbles()

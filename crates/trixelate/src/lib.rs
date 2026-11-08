@@ -33,7 +33,7 @@ pub struct Order {
 /// Turns a picture into the colour-by-number sheet ordered, or says what lacks room on the page.
 pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
     let (colouring, layout) = lay_out(picture, order)?;
-    Ok(sheet::draw(&colouring, &layout, order.legend))
+    Ok(sheet::draw(&colouring, &layout))
 }
 
 /// Whether the sheet ordered would fit its page, told without drawing it, so a page can say so before it is asked.
@@ -60,11 +60,6 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
     let stem = std::path::Path::new(picture_file_name)
         .file_stem()
         .map_or(picture_file_name.into(), |stem| stem.to_string_lossy());
-    let kind = match order.legend {
-        Legend::Coloured(Model::None | Model::Miniature) | Legend::Freedom => "sheet",
-        Legend::Coloured(Model::Full) => "model",
-        Legend::Coloured(Model::Twin) => "twin",
-    };
     let paper = match order.format {
         PageFormat::A3 => "a3",
         PageFormat::A4 => "a4",
@@ -75,12 +70,12 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
         Orientation::Landscape => "-landscape",
     };
     let look = match order.legend {
-        Legend::Coloured(Model::None | Model::Full | Model::Twin) => "",
+        Legend::Coloured(Model::None) => "",
         Legend::Coloured(Model::Miniature) => "-with-model",
         Legend::Freedom => "-freedom",
     };
     format!(
-        "{stem}-{}-{}-{paper}{landscape}{look}.{kind}.png",
+        "{stem}-{}-{}-{paper}{landscape}{look}.sheet.png",
         order.grid.columns(),
         order.colours.get()
     )
@@ -148,20 +143,7 @@ mod tests {
 
         let names = [
             named("goblin.png", (48, 8), PageFormat::A4, portrait, sheet),
-            named(
-                "goblin.jpg",
-                (64, 24),
-                PageFormat::A5,
-                portrait,
-                Legend::Coloured(Model::Full),
-            ),
-            named(
-                "my.photo.jpeg",
-                (32, 12),
-                PageFormat::A3,
-                landscape,
-                Legend::Coloured(Model::Twin),
-            ),
+            named("my.photo.jpeg", (64, 12), PageFormat::A3, landscape, sheet),
             named(
                 "goblin",
                 (48, 2),
@@ -176,8 +158,7 @@ mod tests {
             names,
             [
                 "goblin-48-8-a4.sheet.png",
-                "goblin-64-24-a5.model.png",
-                "my.photo-32-12-a3-landscape.twin.png",
+                "my.photo-64-12-a3-landscape.sheet.png",
                 "goblin-48-2-a4-landscape-freedom.sheet.png",
                 "goblin-32-8-a5-with-model.sheet.png"
             ]

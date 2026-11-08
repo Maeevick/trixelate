@@ -74,7 +74,7 @@ impl Settings {
 /// The order for the sheet asked for, once sure its page has room for it, or why it would be refused.
 fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
     let legend = settings.legend();
-    let most = most_cells_across(settings.format, legend);
+    let most = most_cells_across(settings.format);
     if settings.width > most {
         return Err(beyond(settings.format, most));
     }
@@ -355,7 +355,7 @@ pub fn App() -> impl IntoView {
                         type="number"
                         min="1"
                         max=move || {
-                            most_cells_across(settings.get().format, Legend::Coloured(Model::None))
+                            most_cells_across(settings.get().format)
                                 .to_string()
                         }
                         class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-lime-600 focus:outline-none focus:ring-2 focus:ring-lime-600"

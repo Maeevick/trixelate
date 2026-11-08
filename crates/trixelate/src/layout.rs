@@ -21,18 +21,12 @@ impl PageFormat {
     }
 }
 
-/// The most cells across a grid may have on a paper, for a child to colour them, half as many for each of a twin's grids.
-pub fn most_cells_across(format: PageFormat, legend: Legend) -> u32 {
-    let on_the_page = match format {
+/// The most cells across a grid may have on a paper, for a child to colour them.
+pub fn most_cells_across(format: PageFormat) -> u32 {
+    match format {
         PageFormat::A3 => 64,
         PageFormat::A4 => 48,
         PageFormat::A5 => 32,
-    };
-    match legend {
-        Legend::Coloured(Model::Twin) => on_the_page / 2,
-        Legend::Coloured(Model::None | Model::Full | Model::Miniature) | Legend::Freedom => {
-            on_the_page
-        }
     }
 }
 
@@ -74,13 +68,10 @@ pub enum Legend {
     Freedom,
 }
 
-/// The coloured-in picture to copy from: none, the full sheet painted, twinned with the sheet on one page,
-/// or a miniature over the sheet's top left corner.
+/// The coloured-in picture to copy from: none, or a miniature over the sheet's top left corner.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Model {
     None,
-    Full,
-    Twin,
     Miniature,
 }
 
@@ -142,7 +133,7 @@ pub struct Credit {
 pub struct Layout {
     page_width: u32,
     page_height: u32,
-    grids: Vec<GridPlace>,
+    grid: GridPlace,
     line: u32,
     cell_number_scale: u32,
     bubbles: Vec<Disc>,
@@ -159,12 +150,11 @@ const MINIATURE_CELLS_PER_CELL: u32 = 8;
 const MINIATURE_STICKING_OUT: u32 = 3;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
-const GAP_BETWEEN_TWINS_MM: u32 = 10;
 const WIDEST_BUBBLE_MM: u32 = 15;
 const LINES_PER_CELL_SIDE: u32 = 16;
 
 impl Layout {
-    /// Lays out a colouring's grids and legend on the page, inside its margin.
+    /// Lays out a colouring's grid, its legend and any model on the page, inside its margin.
     pub fn of(
         colouring: &Colouring,
         format: PageFormat,
@@ -194,22 +184,7 @@ impl Layout {
             .checked_sub(legend_height)
             .ok_or(NoRoom::InsideTheMargin)?;
 
-        let (grids_across, grids_down) = match (legend, orientation) {
-            (Legend::Coloured(Model::Twin), Orientation::Portrait) => (1, 2),
-            (Legend::Coloured(Model::Twin), Orientation::Landscape) => (2, 1),
-            (
-                Legend::Coloured(Model::None | Model::Full | Model::Miniature) | Legend::Freedom,
-                _,
-            ) => (1, 1),
-        };
-        let gap_between_twins = dots(GAP_BETWEEN_TWINS_MM);
-        let room_shared = |room: u32, grids: u32| {
-            room.checked_sub((grids - 1) * gap_between_twins)
-                .map(|room| room / grids)
-                .ok_or(NoRoom::InsideTheMargin)
-        };
-        let room_across = room_shared(content_width, grids_across)?;
-        let room_down = room_shared(grid_room, grids_down)?;
+        let (room_across, room_down) = (content_width, grid_room);
 
         let size = colouring.size();
         let roomiest_side = (room_across / size.columns()).min(room_down / size.rows());
@@ -233,26 +208,24 @@ impl Layout {
             .unwrap_or_default();
         let grid_width = cell_side * size.columns() + line;
         let grid_height = cell_side * size.rows() + line;
-        let twins_width = grids_across * grid_width + (grids_across - 1) * gap_between_twins;
-        let twins_height = grids_down * grid_height + (grids_down - 1) * gap_between_twins;
-        let twins_left = margin + (content_width - twins_width) / 2;
-        let twins_top = margin + (grid_room - twins_height) / 2;
+        let grid_left = margin + (content_width - grid_width) / 2;
+        let grid_top = margin + (grid_room - grid_height) / 2;
         let miniature = match legend {
             Legend::Coloured(Model::Miniature) => {
                 let miniature_cell_side = (cell_side / MINIATURE_CELLS_PER_CELL).max(1);
                 let sticking_out = size.columns() * miniature_cell_side / MINIATURE_STICKING_OUT;
                 let room_for_its_frame = line;
                 Some(Miniature {
-                    left: twins_left
+                    left: grid_left
                         .saturating_sub(sticking_out)
                         .max(room_for_its_frame),
-                    top: twins_top
+                    top: grid_top
                         .saturating_sub(sticking_out)
                         .max(room_for_its_frame),
                     cell_side: miniature_cell_side,
                 })
             }
-            Legend::Coloured(Model::None | Model::Full | Model::Twin) | Legend::Freedom => None,
+            Legend::Coloured(Model::None) | Legend::Freedom => None,
         };
 
         let bubbles = bubble.map_or_else(Vec::new, |bubble| {
@@ -283,13 +256,11 @@ impl Layout {
             page_width,
             page_height,
             bubbles,
-            grids: (0..grids_across * grids_down)
-                .map(|index| GridPlace {
-                    left: twins_left + index % grids_across * (grid_width + gap_between_twins),
-                    top: twins_top + index / grids_across * (grid_height + gap_between_twins),
-                    cell_side,
-                })
-                .collect(),
+            grid: GridPlace {
+                left: grid_left,
+                top: grid_top,
+                cell_side,
+            },
             line,
             cell_number_scale,
             bubble_number_scale,
@@ -306,9 +277,9 @@ impl Layout {
         self.page_height
     }
 
-    /// Where each grid lies, in the order they are drawn.
-    pub fn grids(&self) -> &[GridPlace] {
-        &self.grids
+    /// Where the grid lies.
+    pub fn grid(&self) -> GridPlace {
+        self.grid
     }
 
     /// The legend's bubbles, in the order of their colour numbers.
@@ -406,7 +377,7 @@ mod tests {
         let with_model = with_its_model(&square, Margin(10))?;
         let without = upright(&square, PageFormat::A4, Margin(10))?;
 
-        let corner = with_model.grids()[0].cell(0, 0);
+        let corner = with_model.grid().cell(0, 0);
         let side = corner.side / 8;
         let sticking_out = 48 * side / 3;
         assert_eq!(
@@ -417,7 +388,7 @@ mod tests {
                 cell_side: side
             })
         );
-        assert_eq!(with_model.grids(), without.grids());
+        assert_eq!(with_model.grid(), without.grid());
         assert_eq!(without.miniature(), None);
         Ok(())
     }
@@ -434,16 +405,6 @@ mod tests {
             Some(layout.line())
         );
         Ok(())
-    }
-
-    fn twinned(colouring: &Colouring, orientation: Orientation) -> Result<Layout, NoRoom> {
-        Layout::of(
-            colouring,
-            PageFormat::A4,
-            orientation,
-            Margin(20),
-            Legend::Coloured(Model::Twin),
-        )
     }
 
     #[test]
@@ -479,66 +440,6 @@ mod tests {
     }
 
     #[test]
-    fn on_an_upright_page_a_twinned_model_stands_above_its_sheet_a_gap_apart_and_alike()
-    -> Result<(), NoRoom> {
-        let wide = colouring(10, 5, 2);
-        let (margin, gap) = (236, 118);
-
-        let layout = twinned(&wide, Orientation::Portrait)?;
-
-        let grids = layout.grids();
-        assert_eq!(grids.len(), 2);
-        let (model, sheet) = (grids[0], grids[1]);
-        let model_bottom = model.cell(0, 5).top + layout.line();
-        let sheet_bottom = sheet.cell(0, 5).top + layout.line();
-        let legend_top = layout.bubbles()[0].centre_y - layout.bubbles()[0].diameter / 2;
-        assert_eq!(model.cell(0, 0).side, sheet.cell(0, 0).side);
-        assert_eq!(model.cell(0, 0).left, sheet.cell(0, 0).left);
-        assert_eq!(sheet.cell(0, 0).top - model_bottom, gap);
-        assert!(model.cell(0, 0).top >= margin && sheet_bottom < legend_top);
-        Ok(())
-    }
-
-    #[test]
-    fn on_an_upright_page_twins_stand_together_halfway_between_the_top_margin_and_the_legend()
-    -> Result<(), NoRoom> {
-        let wide = colouring(10, 5, 2);
-        let (margin, gap) = (236, 118);
-
-        let layout = twinned(&wide, Orientation::Portrait)?;
-
-        let (model, sheet) = (layout.grids()[0], layout.grids()[1]);
-        let above = model.cell(0, 0).top - margin;
-        let legend_top = layout.bubbles()[0].centre_y - layout.bubbles()[0].diameter / 2;
-        let below = legend_top - gap - (sheet.cell(0, 5).top + layout.line());
-        assert!(
-            above > gap && above.abs_diff(below) <= 1,
-            "{above} above, {below} below"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn on_a_landscape_page_a_twinned_model_stands_left_of_its_sheet_a_gap_apart_and_alike()
-    -> Result<(), NoRoom> {
-        let square = colouring(5, 5, 2);
-        let (margin, gap) = (236, 118);
-
-        let layout = twinned(&square, Orientation::Landscape)?;
-
-        let grids = layout.grids();
-        assert_eq!(grids.len(), 2);
-        let (model, sheet) = (grids[0], grids[1]);
-        let model_right = model.cell(5, 0).left + layout.line();
-        let sheet_right = sheet.cell(5, 0).left + layout.line();
-        assert_eq!(model.cell(0, 0).side, sheet.cell(0, 0).side);
-        assert_eq!(model.cell(0, 0).top, sheet.cell(0, 0).top);
-        assert_eq!(sheet.cell(0, 0).left - model_right, gap);
-        assert!(model.cell(0, 0).left >= margin && sheet_right <= 3508 - margin);
-        Ok(())
-    }
-
-    #[test]
     fn a_free_sheet_has_no_legend_its_grid_taking_the_room_and_no_bubble_too_small_to_refuse()
     -> Result<(), NoRoom> {
         let (tall, twelve_colours) = (colouring(5, 10, 12), colouring(10, 5, 12));
@@ -548,7 +449,7 @@ mod tests {
         let on_a_narrow_page = free(&twelve_colours, PageFormat::A5, Margin(63));
 
         assert!(without.bubbles().is_empty());
-        assert!(without.grids()[0].cell(0, 0).side > with_a_legend.grids()[0].cell(0, 0).side);
+        assert!(without.grid().cell(0, 0).side > with_a_legend.grid().cell(0, 0).side);
         assert!(on_a_narrow_page.is_ok());
         Ok(())
     }
@@ -585,10 +486,10 @@ mod tests {
 
         let layout = upright(&ten_by_five, PageFormat::A4, Margin(20))?;
 
-        let first = layout.grids()[0].cell(0, 0);
-        let next_across = layout.grids()[0].cell(1, 0);
-        let next_down = layout.grids()[0].cell(0, 1);
-        let last = layout.grids()[0].cell(9, 4);
+        let first = layout.grid().cell(0, 0);
+        let next_across = layout.grid().cell(1, 0);
+        let next_down = layout.grid().cell(0, 1);
+        let last = layout.grid().cell(9, 4);
         let right_edge = last.left + last.side + layout.line();
         assert!(first.side > 0 && layout.line() > 0);
         assert_eq!(
@@ -611,7 +512,7 @@ mod tests {
 
         let bubbles = layout.bubbles();
         assert_eq!(bubbles.len(), 12);
-        let last_cell = layout.grids()[0].cell(4, 9);
+        let last_cell = layout.grid().cell(4, 9);
         let grid_bottom = last_cell.top + last_cell.side + layout.line();
         let first = bubbles[0];
         let last = bubbles[bubbles.len() - 1];
@@ -674,20 +575,12 @@ mod tests {
     }
 
     #[test]
-    fn a_grid_has_at_most_64_cells_across_on_a3_48_on_a4_and_32_on_a5_and_half_as_many_in_a_twin() {
+    fn a_grid_has_at_most_64_cells_across_on_a3_48_on_a4_and_32_on_a5() {
         let formats = [PageFormat::A3, PageFormat::A4, PageFormat::A5];
 
-        let most = formats.map(|format| {
-            [
-                Legend::Coloured(Model::None),
-                Legend::Coloured(Model::Full),
-                Legend::Freedom,
-                Legend::Coloured(Model::Twin),
-            ]
-            .map(|legend| most_cells_across(format, legend))
-        });
+        let most = formats.map(most_cells_across);
 
-        assert_eq!(most, [[64, 64, 64, 32], [48, 48, 48, 24], [32, 32, 32, 16]]);
+        assert_eq!(most, [64, 48, 32]);
     }
 
     #[test]
@@ -728,7 +621,7 @@ mod tests {
 
         let layout = upright(&tall, PageFormat::A4, Margin(20))?;
 
-        assert_eq!(layout.line(), layout.grids()[0].cell(0, 0).side / 16);
+        assert_eq!(layout.line(), layout.grid().cell(0, 0).side / 16);
         Ok(())
     }
 
@@ -739,7 +632,7 @@ mod tests {
 
         let layout = upright(&few_colours, PageFormat::A4, Margin(20))?;
 
-        let half_inside = (layout.grids()[0].cell(0, 0).side - layout.line()) / 2;
+        let half_inside = (layout.grid().cell(0, 0).side - layout.line()) / 2;
         let (_, height) = lettering::size("2", layout.cell_number_scale());
         assert!(height <= half_inside && height + 7 > half_inside);
         Ok(())

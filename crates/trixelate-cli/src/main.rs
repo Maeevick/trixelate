@@ -99,20 +99,15 @@ fn legend_of(cli: &Cli) -> layout::Legend {
     }
 }
 
-/// The cells across asked for, or else the most a sheet on the paper holds, whatever the look: a twin never narrows it.
+/// The cells across asked for, or else the most the paper holds.
 fn cells_across(cli: &Cli) -> u32 {
-    cli.width.unwrap_or_else(|| {
-        layout::most_cells_across(
-            cli.format.into(),
-            layout::Legend::Coloured(layout::Model::None),
-        )
-    })
+    cli.width
+        .unwrap_or_else(|| layout::most_cells_across(cli.format.into()))
 }
 
 /// Refuses more cells across than the paper holds for a child, unless chaos is asked.
 fn within_the_limits(cli: &Cli) -> Result<(), String> {
-    let legend = legend_of(cli);
-    let most = layout::most_cells_across(cli.format.into(), legend);
+    let most = layout::most_cells_across(cli.format.into());
     if cli.chaos || cells_across(cli) <= most {
         return Ok(());
     }
@@ -121,14 +116,8 @@ fn within_the_limits(cli: &Cli) -> Result<(), String> {
         Format::A4 => "A4",
         Format::A5 => "A5",
     };
-    let kind = match legend {
-        layout::Legend::Coloured(layout::Model::None | layout::Model::Miniature)
-        | layout::Legend::Freedom => "sheet",
-        layout::Legend::Coloured(layout::Model::Full) => "model",
-        layout::Legend::Coloured(layout::Model::Twin) => "twin",
-    };
     Err(format!(
-        "an {paper} {kind} holds at most {most} cells across: try a smaller --width, a bigger --format, or --chaos to go beyond"
+        "an {paper} sheet holds at most {most} cells across: try a smaller --width, a bigger --format, or --chaos to go beyond"
     ))
 }
 
@@ -212,7 +201,6 @@ fn run(cli: Cli) -> Result<String, String> {
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
     Ok(report::written(
-        legend,
         &sheet_path,
         started.elapsed(),
         grid.columns() * grid.rows(),
