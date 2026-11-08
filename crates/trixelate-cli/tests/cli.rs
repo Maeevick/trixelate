@@ -382,12 +382,12 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
     let picture = picture.to_str().unwrap_or_default();
     let chaotic = folder.join("chaotic.png");
 
-    let on_a4 = trixelate(&[picture, "--width", "97"]);
-    let twin_on_a5 = trixelate(&[picture, "--width", "33", "--format", "a5", "--twin"]);
+    let on_a4 = trixelate(&[picture, "--width", "49"]);
+    let twin_on_a5 = trixelate(&[picture, "--width", "17", "--format", "a5", "--twin"]);
     let chaos = trixelate(&[
         picture,
         "--width",
-        "97",
+        "49",
         "--chaos",
         "--output",
         chaotic.to_str().unwrap_or_default(),
@@ -397,8 +397,8 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
         [&on_a4, &twin_on_a5].map(|run| run.status.code()),
         [Some(2), Some(2)]
     );
-    assert!(text(&on_a4.stderr).contains("an A4 sheet holds at most 96 cells across"));
-    assert!(text(&twin_on_a5.stderr).contains("an A5 twin holds at most 32 cells across"));
+    assert!(text(&on_a4.stderr).contains("an A4 sheet holds at most 48 cells across"));
+    assert!(text(&twin_on_a5.stderr).contains("an A5 twin holds at most 16 cells across"));
     assert!(text(&on_a4.stderr).contains("--chaos"));
     assert!(chaos.status.success(), "{}", text(&chaos.stderr));
 }

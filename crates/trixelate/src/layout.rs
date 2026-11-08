@@ -587,8 +587,7 @@ mod tests {
     }
 
     #[test]
-    fn a_grid_has_at_most_128_cells_across_on_a3_96_on_a4_and_64_on_a5_and_half_as_many_in_a_twin()
-    {
+    fn a_grid_has_at_most_64_cells_across_on_a3_48_on_a4_and_32_on_a5_and_half_as_many_in_a_twin() {
         let formats = [PageFormat::A3, PageFormat::A4, PageFormat::A5];
 
         let most = formats.map(|format| {
@@ -601,10 +600,7 @@ mod tests {
             .map(|legend| most_cells_across(format, legend))
         });
 
-        assert_eq!(
-            most,
-            [[128, 128, 128, 64], [96, 96, 96, 48], [64, 64, 64, 32]]
-        );
+        assert_eq!(most, [[64, 64, 64, 32], [48, 48, 48, 24], [32, 32, 32, 16]]);
     }
 
     #[test]
