@@ -392,15 +392,12 @@ mod tests {
     }
 
     #[test]
-    fn either_way_up_a_sheet_centres_its_grid_above_a_row_of_bubbles_centred_on_the_bottom_its_model_seven_thirty_seconds_of_the_grid_wide_in_the_top_left_corner()
+    fn on_its_side_a_sheet_centres_its_grid_above_a_row_of_bubbles_centred_on_the_bottom_its_model_seven_thirty_seconds_of_the_grid_wide_in_the_top_left_corner()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
         let margin = 118;
 
-        let layouts = [
-            (upright(&square, PageFormat::A4, Margin(10))?, (2480, 3508)),
-            (on_its_side(&square, Margin(10))?, (3508, 2480)),
-        ];
+        let layouts = [(on_its_side(&square, Margin(10))?, (3508, 2480))];
 
         for (layout, (page_width, page_height)) in layouts {
             let (right, bottom) = (page_width - margin, page_height - margin);
@@ -435,6 +432,49 @@ mod tests {
             );
             assert!((legend_left - margin).abs_diff(right - legend_right) <= 1);
         }
+        Ok(())
+    }
+
+    #[test]
+    fn upright_a_sheet_lays_its_legend_in_the_room_right_of_its_model_centred_on_its_middle_and_centres_its_grid_in_the_room_below()
+    -> Result<(), NoRoom> {
+        let square = colouring(48, 48, 8);
+        let (margin, right, bottom, gap) = (118, 2480 - 118, 3508 - 118, dots(10));
+
+        let layout = upright(&square, PageFormat::A4, Margin(10))?;
+
+        let (grid, line) = (layout.grid(), layout.line());
+        let (top_left, past_the_end) = (grid.cell(0, 0), grid.cell(48, 48));
+        let (grid_right, grid_bottom) = (past_the_end.left + line, past_the_end.top + line);
+        let model = layout.miniature();
+        let model_right = model.left + 48 * model.cell_side + line;
+        let model_middle = (margin + model.top + 48 * model.cell_side + line) / 2;
+        let bubbles = layout.bubbles();
+        let radius = bubbles[0].diameter / 2;
+        let legend_left = bubbles[0].centre_x - radius;
+        let legend_right = bubbles[bubbles.len() - 1].centre_x + radius + 1;
+        let below_the_legend = bubbles[0].centre_y + radius + 1 + gap;
+        assert_eq!(
+            model,
+            Miniature {
+                left: margin + line,
+                top: margin + line,
+                cell_side: top_left.side * 7 / 32,
+            }
+        );
+        assert!(
+            bubbles
+                .iter()
+                .all(|bubble| bubble.centre_y.abs_diff(model_middle) <= 1)
+        );
+        assert!((legend_left - model_right - gap).abs_diff(right - legend_right) <= 1);
+        assert!((top_left.left - margin).abs_diff(right - grid_right) <= 1);
+        assert!((top_left.top - below_the_legend).abs_diff(bottom - grid_bottom) <= 1);
+        assert!(
+            (right - margin - (grid_right - top_left.left))
+                .min(bottom - below_the_legend - (grid_bottom - top_left.top))
+                < 48
+        );
         Ok(())
     }
 
