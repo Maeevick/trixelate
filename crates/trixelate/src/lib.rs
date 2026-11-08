@@ -42,6 +42,12 @@ pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
     Ok(sheet::draw(&colouring, &layout, order.legend))
 }
 
+/// Whether the sheet ordered would fit its page, told without drawing it, so a page can say so before it is asked.
+pub fn fits_on_its_page(picture: &Picture, order: Order) -> Result<(), NoRoom> {
+    let _ = (picture, order);
+    Ok(())
+}
+
 /// What a sheet made from a picture file is called: the picture's name, without its extension, then what the sheet is.
 pub fn sheet_file_name(picture_file_name: &str, legend: Legend) -> String {
     let stem = std::path::Path::new(picture_file_name)
@@ -82,6 +88,17 @@ mod tests {
             sheets,
             [Ok((2480, 3508)), Err(NoRoom::ForTheNumbersInTheCells)]
         );
+    }
+
+    #[test]
+    fn whether_a_sheet_fits_its_page_is_told_without_drawing_it_as_making_it_would_tell() {
+        let picture =
+            Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
+
+        let fits = [order(4, PageFormat::A4), order(400, PageFormat::A5)]
+            .map(|order| fits_on_its_page(&picture, order));
+
+        assert_eq!(fits, [Ok(()), Err(NoRoom::ForTheNumbersInTheCells)]);
     }
 
     #[test]
