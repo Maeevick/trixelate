@@ -41,7 +41,11 @@ const DOTS_PER_INCH: u32 = 300;
 const TENTHS_OF_MILLIMETRE_PER_INCH: u32 = 254;
 
 fn dots(millimetres: u32) -> u32 {
-    (millimetres * DOTS_PER_INCH * 10 + TENTHS_OF_MILLIMETRE_PER_INCH / 2)
+    dots_of_tenths(millimetres * 10)
+}
+
+fn dots_of_tenths(tenths_of_millimetre: u32) -> u32 {
+    (tenths_of_millimetre * DOTS_PER_INCH + TENTHS_OF_MILLIMETRE_PER_INCH / 2)
         / TENTHS_OF_MILLIMETRE_PER_INCH
 }
 
@@ -148,7 +152,8 @@ const CREDIT_SCALE_AT_MOST: u32 = 3;
 const MINIATURE_CELLS_PER_CELL: u32 = 4;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
-const WIDEST_BUBBLE_MM: u32 = 15;
+/// A bubble is at most seven and a half millimetres wide, big enough for its number, leaving the room to the cells.
+const WIDEST_BUBBLE_TENTHS_OF_MM: u32 = 75;
 const LINES_PER_CELL_SIDE: u32 = 16;
 
 impl Layout {
@@ -172,7 +177,8 @@ impl Layout {
         let colours = colouring.palette().colours().len() as u32;
         let bubble = match legend {
             Legend::Coloured(_) => {
-                let widest = dots(WIDEST_BUBBLE_MM).min(4 * content_width / (5 * colours - 1));
+                let widest = dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM)
+                    .min(4 * content_width / (5 * colours - 1));
                 Some(widest.saturating_sub(1 - widest % 2))
             }
             Legend::Freedom => None,
@@ -601,7 +607,7 @@ mod tests {
             last.centre_x + last.diameter / 2 + 1 - (first.centre_x - first.diameter / 2);
         assert_eq!(roomy.bubbles()[0].diameter, 89);
         assert!(first.diameter < 89);
-        assert!(content_width - row_width < first.diameter / 4);
+        assert!(row_width <= content_width && content_width - row_width < first.diameter);
         Ok(())
     }
 
