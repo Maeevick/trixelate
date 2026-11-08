@@ -95,7 +95,7 @@ mod tests {
             colours: ColourCount::new(2).expect("a count"),
             format,
             orientation: Orientation::Portrait,
-            margin: Margin::AROUND_A_SHEET,
+            margin: Margin(20),
             legend: Legend::Coloured(Model::None),
         }
     }
@@ -133,7 +133,7 @@ mod tests {
             colours: ColourCount::new(colours).expect("a count"),
             format,
             orientation,
-            margin: Margin::AROUND_A_SHEET,
+            margin: Margin(20),
             legend,
         };
         let (portrait, landscape) = (Orientation::Portrait, Orientation::Landscape);

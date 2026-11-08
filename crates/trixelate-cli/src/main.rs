@@ -45,7 +45,7 @@ struct Cli {
     landscape: bool,
 
     /// The blank paper around the sheet, in millimetres
-    #[arg(short, long, default_value_t = 20)]
+    #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET.0)]
     margin: u32,
 
     /// No legend: the numbers only group the cells, and the child picks the colours

@@ -350,7 +350,7 @@ mod tests {
             colouring,
             PageFormat::A4,
             orientation,
-            Margin::AROUND_A_SHEET,
+            Margin(20),
             Legend::Coloured(Model::Twin),
         )
     }
@@ -360,7 +360,7 @@ mod tests {
         let small = colouring(4, 4, 2);
 
         let pages = [PageFormat::A3, PageFormat::A4, PageFormat::A5]
-            .map(|format| upright(&small, format, Margin::AROUND_A_SHEET))
+            .map(|format| upright(&small, format, Margin(20)))
             .map(|layout| layout.map(|layout| (layout.page_width(), layout.page_height())));
 
         assert_eq!(
@@ -377,7 +377,7 @@ mod tests {
             &small,
             PageFormat::A4,
             Orientation::Landscape,
-            Margin::AROUND_A_SHEET,
+            Margin(20),
             Legend::Coloured(Model::None),
         );
 
@@ -452,8 +452,8 @@ mod tests {
     -> Result<(), NoRoom> {
         let (tall, twelve_colours) = (colouring(5, 10, 12), colouring(10, 5, 12));
 
-        let with_a_legend = upright(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
-        let without = free(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let with_a_legend = upright(&tall, PageFormat::A4, Margin(20))?;
+        let without = free(&tall, PageFormat::A4, Margin(20))?;
         let on_a_narrow_page = free(&twelve_colours, PageFormat::A5, Margin(63));
 
         assert!(without.bubbles().is_empty());
@@ -467,7 +467,7 @@ mod tests {
     -> Result<(), NoRoom> {
         let small = colouring(4, 4, 2);
 
-        let a4 = upright(&small, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let a4 = upright(&small, PageFormat::A4, Margin(20))?;
         let narrow = upright(&small, PageFormat::A5, Margin(40))?;
         let thin_margin = upright(&small, PageFormat::A4, Margin(1))?;
 
@@ -492,7 +492,7 @@ mod tests {
         let ten_by_five = colouring(10, 5, 2);
         let margin = 236;
 
-        let layout = upright(&ten_by_five, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let layout = upright(&ten_by_five, PageFormat::A4, Margin(20))?;
 
         let first = layout.grids()[0].cell(0, 0);
         let next_across = layout.grids()[0].cell(1, 0);
@@ -516,7 +516,7 @@ mod tests {
         let tall = colouring(5, 10, 12);
         let margin = 236;
 
-        let layout = upright(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let layout = upright(&tall, PageFormat::A4, Margin(20))?;
 
         let bubbles = layout.bubbles();
         assert_eq!(bubbles.len(), 12);
@@ -567,11 +567,7 @@ mod tests {
         let one_column_of_twelve_colours = colouring(1, 12, 12);
 
         let layouts = [
-            upright(
-                &three_hundred_columns,
-                PageFormat::A5,
-                Margin::AROUND_A_SHEET,
-            ),
+            upright(&three_hundred_columns, PageFormat::A5, Margin(20)),
             upright(&twelve_colours, PageFormat::A5, Margin(63)),
             upright(&one_column_of_twelve_colours, PageFormat::A5, Margin(73)),
         ];
@@ -611,7 +607,7 @@ mod tests {
         let layout = upright(
             &sixty_four_by_sixty_four_in_twelve_colours,
             PageFormat::A5,
-            Margin::AROUND_A_SHEET,
+            Margin(20),
         );
 
         assert_eq!(layout.map(|layout| layout.cell_number_scale()), Ok(1));
@@ -623,8 +619,8 @@ mod tests {
         let (few, many) = (colouring(4, 4, 2), colouring(4, 4, 12));
         let content_width = 2480 - 2 * 236;
 
-        let roomy = upright(&few, PageFormat::A4, Margin::AROUND_A_SHEET)?;
-        let crowded = upright(&many, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let roomy = upright(&few, PageFormat::A4, Margin(20))?;
+        let crowded = upright(&many, PageFormat::A4, Margin(20))?;
 
         let bubbles = crowded.bubbles();
         let (first, last) = (bubbles[0], bubbles[bubbles.len() - 1]);
@@ -639,7 +635,7 @@ mod tests {
     fn cell_outlines_are_a_sixteenth_of_a_cells_side_thick() -> Result<(), NoRoom> {
         let tall = colouring(5, 10, 2);
 
-        let layout = upright(&tall, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let layout = upright(&tall, PageFormat::A4, Margin(20))?;
 
         assert_eq!(layout.line(), layout.grids()[0].cell(0, 0).side / 16);
         Ok(())
@@ -650,7 +646,7 @@ mod tests {
     -> Result<(), NoRoom> {
         let few_colours = colouring(10, 5, 2);
 
-        let layout = upright(&few_colours, PageFormat::A4, Margin::AROUND_A_SHEET)?;
+        let layout = upright(&few_colours, PageFormat::A4, Margin(20))?;
 
         let half_inside = (layout.grids()[0].cell(0, 0).side - layout.line()) / 2;
         let (_, height) = lettering::size("2", layout.cell_number_scale());

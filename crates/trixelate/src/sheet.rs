@@ -211,7 +211,7 @@ mod tests {
             &colouring,
             PageFormat::A5,
             Orientation::Portrait,
-            Margin::AROUND_A_SHEET,
+            Margin(20),
             legend,
         )
         .expect("room");
@@ -397,7 +397,7 @@ mod tests {
             &colouring,
             PageFormat::A5,
             Orientation::Portrait,
-            Margin::AROUND_A_SHEET,
+            Margin(20),
             Legend::Coloured(Model::None),
         )
         .expect("room");
