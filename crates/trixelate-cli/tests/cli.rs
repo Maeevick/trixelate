@@ -297,7 +297,7 @@ fn a_free_legend_sheet_matches_its_golden_master_its_bubbles_left_blank() {
 }
 
 #[test]
-fn a_sheet_with_its_model_beside_its_picture_matches_its_golden_master_the_miniature_over_its_corner()
+fn a_sheet_with_its_model_beside_its_picture_matches_its_golden_master_the_miniature_in_its_corner_and_the_title_on_top()
  {
     let folder = folder("with-model");
     let picture = a_twelve_colour_picture_in(&folder);

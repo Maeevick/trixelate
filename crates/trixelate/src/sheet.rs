@@ -22,7 +22,7 @@ pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
     paper.into_picture()
 }
 
-/// Paints the model's miniature over the grid, a block of colour per cell, framed like the grid's lines.
+/// Paints the model's miniature, a block of colour per cell, framed like the grid's lines.
 fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
     let Some(miniature) = layout.miniature() else {
         return;
@@ -52,24 +52,21 @@ fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout)
 }
 
 fn write_the_credit(paper: &mut Paper, layout: &Layout) {
-    let dots = layout.credit().into_iter().flat_map(|credit| {
-        lettering::ink(CREDIT, credit.scale)
-            .into_iter()
-            .map(move |(x, y)| (credit.left + x, credit.top + y))
-    });
-    for (x, y) in dots {
-        paper.fill(x, y, 1, 1, NUMBER_GREY);
+    if let Some(credit) = layout.credit() {
+        write_small(paper, CREDIT, (credit.left, credit.top), credit.scale);
     }
 }
 
 fn write_the_title(paper: &mut Paper, layout: &Layout) {
-    let dots = layout.title().into_iter().flat_map(|title| {
-        lettering::ink(&title.text, title.scale)
-            .into_iter()
-            .map(move |(x, y)| (title.left + x, title.top + y))
-    });
-    for (x, y) in dots {
-        paper.fill(x, y, 1, 1, NUMBER_GREY);
+    if let Some(title) = layout.title() {
+        write_small(paper, &title.text, (title.left, title.top), title.scale);
+    }
+}
+
+/// Writes a line in grey in a margin, from the top left corner of its first character.
+fn write_small(paper: &mut Paper, text: &str, (left, top): (u32, u32), scale: u32) {
+    for (x, y) in lettering::ink(text, scale) {
+        paper.fill(left + x, top + y, 1, 1, NUMBER_GREY);
     }
 }
 
@@ -347,8 +344,7 @@ mod tests {
     }
 
     #[test]
-    fn a_miniature_shows_each_cell_in_its_colour_without_number_or_line_framed_in_grey_over_the_grid()
-     {
+    fn a_miniature_shows_each_cell_in_its_colour_without_number_or_line_framed_in_grey() {
         let legend = Legend::Coloured(Model::Miniature(MiniatureSize::RoomLeft));
         let (colouring, layout) = red_red_yellow_laid_out(legend);
 
