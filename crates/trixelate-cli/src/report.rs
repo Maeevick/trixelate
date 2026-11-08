@@ -4,11 +4,59 @@
 use std::path::Path;
 use std::time::Duration;
 
-use trixelate::layout::Legend;
+use trixelate::layout::{Legend, Model};
 
+/// How many cells a five-year-old colours in a minute, picking each crayon included.
+const CELLS_A_MINUTE: u32 = 3;
+/// How long a five-year-old keeps colouring in one go.
+const MINUTES_AN_AFTERNOON: u32 = 30;
+
+/// The report of a sheet written to a path, after the time it took, its grid holding a number of cells.
 pub fn written(legend: Legend, path: &Path, took: Duration, cells: u32) -> String {
-    let _ = (legend, path, took, cells);
-    String::new()
+    let (kind, to_colour) = match legend {
+        Legend::Coloured(Model::None) | Legend::Freedom => ("Sheet", how_long_to_colour(cells)),
+        Legend::Coloured(Model::Twin) => ("Twin", how_long_to_colour(cells)),
+        Legend::Coloured(Model::Full) => (
+            "Model",
+            "Nothing to colour in a model: pin it up, and copy away.".to_string(),
+        ),
+    };
+    format!(
+        "{kind} written to {} in {:.2} s\n{to_colour}",
+        path.display(),
+        took.as_secs_f64()
+    )
+}
+
+fn how_long_to_colour(cells: u32) -> String {
+    let minutes = cells.div_ceil(CELLS_A_MINUTE);
+    let time = match minutes {
+        ..=20 => format!("about {minutes} min: done before the juice gets warm"),
+        21..=90 => format!("about {minutes} min: one rainy afternoon"),
+        _ => format!(
+            "about {} h {:02} min, or {} afternoons of half an hour, snack breaks not included",
+            minutes / 60,
+            minutes % 60,
+            minutes.div_ceil(MINUTES_AN_AFTERNOON)
+        ),
+    };
+    format!(
+        "{} cells to colour: at {CELLS_A_MINUTE} a minute, a five-year-old needs {time}.",
+        in_thousands(cells)
+    )
+}
+
+/// A count written with a comma between its thousands, as an English reader expects.
+fn in_thousands(count: u32) -> String {
+    let digits = count.to_string();
+    digits
+        .chars()
+        .enumerate()
+        .flat_map(|(place, digit)| {
+            let comma = place > 0 && (digits.len() - place).is_multiple_of(3);
+            comma.then_some(',').into_iter().chain([digit])
+        })
+        .collect()
 }
 
 #[cfg(test)]

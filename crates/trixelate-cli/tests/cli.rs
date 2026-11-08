@@ -113,8 +113,8 @@ fn the_command_says_what_it_wrote_where_how_fast_and_how_long_a_five_year_old_wi
     assert!(model.starts_with("Model written to "));
     assert!(twin.starts_with("Twin written to "));
     assert!(sheet.contains(" s\n"));
-    assert!(sheet.contains("16 cells to colour"));
-    assert!(twin.contains("16 cells to colour"));
+    assert!(sheet.contains("12 cells to colour"));
+    assert!(twin.contains("12 cells to colour"));
     assert!(model.contains("Nothing to colour"));
 }
 

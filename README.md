@@ -26,7 +26,8 @@ trixelate sample/goblin.png
 ```
 
 ```
-Sheet written to sample/goblin-48-8-a4.sheet.png
+Sheet written to sample/goblin-48-8-a4.sheet.png in 0.05 s
+2,304 cells to colour: at 3 a minute, a five-year-old needs about 12 h 48 min, or 26 afternoons of half an hour, snack breaks not included.
 ```
 
 ## In the browser

@@ -6,6 +6,7 @@ use std::fs;
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::time::Instant;
 
 use clap::error::ErrorKind as ArgumentError;
 use clap::{CommandFactory, Parser, ValueEnum};
@@ -151,6 +152,7 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: Cli) -> Result<String, String> {
+    let started = Instant::now();
     let legend = legend_of(&cli);
     let picture = read_picture(&cli.picture)?;
     let grid = GridSize::keeping_the_proportions_of(&picture, cli.width)
@@ -172,7 +174,12 @@ fn run(cli: Cli) -> Result<String, String> {
     let bytes = png_file::write(&sheet)
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
-    Ok(format!("Sheet written to {}", sheet_path.display()))
+    Ok(report::written(
+        legend,
+        &sheet_path,
+        started.elapsed(),
+        grid.columns() * grid.rows(),
+    ))
 }
 
 /// Writes the sheet, refusing to replace an existing file unless forced, even if one appears meanwhile.
