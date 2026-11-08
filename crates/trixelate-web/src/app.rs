@@ -474,7 +474,7 @@ pub fn App() -> impl IntoView {
                 <figure class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
                     <figcaption class="flex h-9 items-center justify-between text-sm font-semibold text-stone-600">
                         "Your picture"
-                        <span class="font-mono text-xs font-normal text-stone-400">
+                        <span class="font-mono text-xs font-normal text-stone-500">
                             {move || {
                                 dropped
                                     .get()
@@ -504,7 +504,7 @@ pub fn App() -> impl IntoView {
                             }
                             None => {
                                 view! {
-                                    <p class="text-center text-stone-400">
+                                    <p class="text-center text-stone-600">
                                         "No picture yet. The goblin is waiting."
                                     </p>
                                 }
@@ -540,7 +540,7 @@ pub fn App() -> impl IntoView {
                                                     if showing() == choice {
                                                         "bg-white text-stone-800 shadow-sm"
                                                     } else {
-                                                        "text-stone-500 hover:text-stone-800"
+                                                        "text-stone-600 hover:text-stone-900"
                                                     },
                                                 )
                                             }
@@ -574,7 +574,7 @@ pub fn App() -> impl IntoView {
                             }
                             _ => {
                                 view! {
-                                    <p class="text-center text-stone-400">
+                                    <p class="text-center text-stone-600">
                                         "Your sheet shows up here, once there is something to pixelate."
                                     </p>
                                 }
