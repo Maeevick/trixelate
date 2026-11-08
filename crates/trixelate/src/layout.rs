@@ -450,6 +450,13 @@ mod tests {
     }
 
     #[test]
+    fn a_margin_is_at_most_twenty_millimetres() {
+        let [widest, too_wide] = [20, 21].map(Margin::new);
+
+        assert!(widest.is_ok() && too_wide.is_err());
+    }
+
+    #[test]
     fn a_margin_is_at_least_five_millimetres_so_the_title_and_the_credit_always_fit_in_it()
     -> Result<(), NoRoom> {
         let small = colouring(4, 4, 2);
