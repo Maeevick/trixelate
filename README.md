@@ -11,7 +11,7 @@ trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, find
 ## Why
 
 - **Made for children**: big square cells outlined in light grey, numbers in dark grey rather than black, and a legend whose numbers stay readable on dark and light bubbles.
-- **A model when it helps**: `--with-model` sets the picture in miniature in the page's top left corner, in its colours and without numbers, for the youngest to see what they are making, and titles the sheet with its file name; `--freedom` gives only the numbers, leaving the colours to the child.
+- **A model to copy from**: every sheet shows the picture in miniature in the page's top left corner, in its colours and without numbers, for the youngest to see what they are making, and is titled with its file name; `--freedom` gives only the numbers, leaving the colours to the child.
 - **Ready to print**: A3, A4 or A5, portrait or landscape, at 300 dots per inch, the resolution written in the PNG so the printer keeps the paper's size.
 - **Safe by default**: a sheet that would not fit, cells too small for their numbers or a margin too wide is refused with what to try instead; an existing sheet is never overwritten without `--force`.
 - **Small**: the library needs only `png` and `zune-jpeg`, the command line adds `clap`, the page adds Leptos; the digits and letters are drawn from a five-by-seven pixel font, with no font file.
@@ -42,24 +42,23 @@ trixelate [OPTIONS] <PICTURE>
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres | 10 |
-| `--freedom` | No legend: the numbers only group the cells, and the child picks the colours | |
-| `--with-model` | The model in miniature in the page's top left corner, the picture in its colours to copy from, and the sheet's file name as its title | |
-| `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-32-24-a5-landscape-with-model.sheet.png`, `goblin-48-8-a4-freedom.sheet.png` |
+| `--freedom` | No legend, no model and no title: the numbers only group the cells, and the child picks the colours | |
+| `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-32-24-a5-landscape.sheet.png`, `goblin-48-8-a4-freedom.sheet.png` |
 | `--force` | Overwrite the sheet if it already exists | |
 | `-y`, `--yes` | Go ahead without being asked when warned: under 16 cells across it is big cubes, under 4 colours solid patches, more than pixel art | asks |
 | `--chaos` | Go beyond the most cells across, to try what the limits refuse | |
 
-Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, or the answer to a warning was no, `2` the arguments are wrong, `--freedom` and `--with-model` together, too many cells across, or a warning with nobody at a terminal to answer it and no `--yes` included. Errors go to stderr and say what to try.
+Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, or the answer to a warning was no, `2` the arguments are wrong, too many cells across, or a warning with nobody at a terminal to answer it and no `--yes` included. Errors go to stderr and say what to try.
 
-A goblin turned into a sheet to colour with `trixelate sample/goblin.png`, and into the same sheet with its model with `trixelate sample/goblin.png --with-model`: 48 cells wide, 8 colours, on A4.
+A goblin turned into a sheet to colour with `trixelate sample/goblin.png`: 48 cells wide, 8 colours, on A4.
 
-| Picture | Sheet | With its model |
-| --- | --- | --- |
-| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: a grid of numbered cells above a legend of eight coloured bubbles](sample/goblin.sheet.png) | ![The goblin's sheet with its model: the same grid, the goblin in miniature and in colour in the page's top left corner, over the grid's corner, the file name on top](sample/goblin.with-model.png) |
+| Picture | Sheet |
+| --- | --- |
+| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: a grid of numbered cells above a legend of eight coloured bubbles, the goblin in miniature and in colour in the page's top left corner, over the grid's corner, the file name on top](sample/goblin.sheet.png) |
 
 ## In the browser
 
-The same sheets without a command line or a server: drop a picture in, set the sheet up, look at it beside your picture, with its model or without, then download it. The picture never leaves the browser.
+The same sheets without a command line or a server: drop a picture in, set the sheet up, look at it beside your picture, then download it. The picture never leaves the browser.
 
 ```sh
 rustup target add wasm32-unknown-unknown
@@ -77,10 +76,10 @@ make web-build  # a static site in crates/trixelate-web/dist, for any host
 3. **The palette is cut from the cells' colours**: the box of colours that spreads the most is cut through the middle of its widest channel until there are as many boxes as colours asked, and each box gives its weighted average. Far-apart colours are never merged, and colour 1 is the one used most.
 4. **Every cell takes the number of its nearest palette colour**, and a colour no cell takes is dropped, so every bubble has cells to colour.
 5. **The layout gives the cells the largest square side the page allows**, inside the margin and above the legend, and the largest digits each cell and bubble can hold.
-6. **A model sits in miniature in the page's top left corner**, inside the margin, a block of colour per cell, framed, with no number and no line. Upright, it is seven sixteenths of the grid's width, the grid set down on the legend, and over the grid where they meet. On its side, it sits beside the grid, which moves to the right and grows as tall as the room, the model filling the room left from a quarter to half the grid's width, the legend in rows below it. The sheet is then titled with its file name, as big as the bubbles' numbers.
+6. **The model sits in miniature in the page's top left corner**, unless the sheet is free, inside the margin, a block of colour per cell, framed, with no number and no line. Upright, it is seven sixteenths of the grid's width, the grid set down on the legend, and over the grid where they meet. On its side, it sits beside the grid, which moves to the right and grows as tall as the room, the model filling the room left from a quarter to half the grid's width, the legend in rows below it. The sheet is then titled with its file name, as big as the bubbles' numbers.
 7. **A small credit is written at the bottom right**, in the margin: trixelate and its licence.
 
-![A twelve-colour sheet on A5 with its model: the grid of numbered cells, the twelve colours in miniature over its top left corner, the legend below, the file name on top](crates/trixelate-cli/tests/golden/twelve-a5-with-model.sheet.png)
+![A twelve-colour sheet on A5: the grid of numbered cells, the twelve colours in miniature over its top left corner, the legend below, the file name on top](crates/trixelate-cli/tests/golden/twelve-a5.sheet.png)
 
 The workspace holds the library, `crates/trixelate`, the command line, `crates/trixelate-cli`, and the page, `crates/trixelate-web`. The library takes bytes and gives bytes, with no file or terminal in it, so it can also run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
 
