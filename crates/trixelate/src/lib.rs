@@ -126,55 +126,50 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_is_named_after_its_picture_then_its_cells_across_colours_paper_and_any_landscape_or_freedom_then_what_it_is()
+    fn a_sheet_is_named_after_its_picture_then_its_cells_across_colours_paper_and_any_landscape_freedom_or_model_then_what_it_is()
      {
-        let ordered = |columns, colours, format, orientation, legend| Order {
-            grid: GridSize::new(columns, 2).expect("a grid"),
-            colours: ColourCount::new(colours).expect("a count"),
-            format,
-            orientation,
-            margin: Margin(20),
-            legend,
+        let named = |picture, (columns, colours), format, orientation, legend| {
+            let order = Order {
+                grid: GridSize::new(columns, 2).expect("a grid"),
+                colours: ColourCount::new(colours).expect("a count"),
+                format,
+                orientation,
+                margin: Margin(20),
+                legend,
+            };
+            sheet_file_name(picture, &order)
         };
         let (portrait, landscape) = (Orientation::Portrait, Orientation::Landscape);
+        let (sheet, with_model) = (
+            Legend::Coloured(Model::None),
+            Legend::Coloured(Model::Miniature),
+        );
 
         let names = [
-            (
-                "goblin.png",
-                ordered(
-                    48,
-                    8,
-                    PageFormat::A4,
-                    portrait,
-                    Legend::Coloured(Model::None),
-                ),
-            ),
-            (
+            named("goblin.png", (48, 8), PageFormat::A4, portrait, sheet),
+            named(
                 "goblin.jpg",
-                ordered(
-                    64,
-                    24,
-                    PageFormat::A5,
-                    portrait,
-                    Legend::Coloured(Model::Full),
-                ),
+                (64, 24),
+                PageFormat::A5,
+                portrait,
+                Legend::Coloured(Model::Full),
             ),
-            (
+            named(
                 "my.photo.jpeg",
-                ordered(
-                    32,
-                    12,
-                    PageFormat::A3,
-                    landscape,
-                    Legend::Coloured(Model::Twin),
-                ),
+                (32, 12),
+                PageFormat::A3,
+                landscape,
+                Legend::Coloured(Model::Twin),
             ),
-            (
+            named(
                 "goblin",
-                ordered(48, 2, PageFormat::A4, landscape, Legend::Freedom),
+                (48, 2),
+                PageFormat::A4,
+                landscape,
+                Legend::Freedom,
             ),
-        ]
-        .map(|(picture, order)| sheet_file_name(picture, &order));
+            named("goblin.png", (32, 8), PageFormat::A5, portrait, with_model),
+        ];
 
         assert_eq!(
             names,
@@ -182,7 +177,8 @@ mod tests {
                 "goblin-48-8-a4.sheet.png",
                 "goblin-64-24-a5.model.png",
                 "my.photo-32-12-a3-landscape.twin.png",
-                "goblin-48-2-a4-landscape-freedom.sheet.png"
+                "goblin-48-2-a4-landscape-freedom.sheet.png",
+                "goblin-32-8-a5-with-model.sheet.png"
             ]
         );
     }
