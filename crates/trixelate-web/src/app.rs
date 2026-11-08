@@ -1,4 +1,4 @@
-//! The page's parts: the picture dropped in, the settings, the preview and the downloads.
+//! The page's parts: the picture dropped in, the settings, the preview and the download.
 //! Everything happens here, in the browser: no picture is ever sent anywhere.
 
 use std::sync::Arc;
@@ -16,8 +16,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, File, HtmlAnchorElement, HtmlInputElement, Url};
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
-/// The id of the line saying why a download is disabled, for its button to point to.
-const DOWNLOADS_REFUSED: &str = "downloads-refused";
+/// The id of the line saying why the download is disabled, for its button to point to.
+const DOWNLOAD_REFUSED: &str = "download-refused";
 
 /// A picture dropped in: its file's name, its pixels, and the link the page shows it from.
 #[derive(Clone)]
@@ -425,7 +425,7 @@ pub fn App() -> impl IntoView {
             </form>
             <div
                 role="group"
-                aria-label="Downloads"
+                aria-label="Download"
                 class="grid gap-3 border-t border-stone-100 pt-5 sm:flex sm:flex-wrap sm:items-center sm:justify-center lg:col-span-2"
             >
                 <span class="text-center text-sm text-stone-500">
@@ -435,7 +435,7 @@ pub fn App() -> impl IntoView {
                     type="button"
                     disabled=move || saving.get() || no_picture() || refused.get().is_some()
                     title=move || refused.get().unwrap_or_else(|| "to colour in".to_string())
-                    aria-describedby=move || refused.get().map(|_| DOWNLOADS_REFUSED.to_string())
+                    aria-describedby=move || refused.get().map(|_| DOWNLOAD_REFUSED.to_string())
                     class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
                     on:click=move |_| download()
                 >
@@ -447,7 +447,7 @@ pub fn App() -> impl IntoView {
                     </span>
                 </button>
                 <Show when=move || refused.get().is_some()>
-                    <p id=DOWNLOADS_REFUSED class="basis-full text-center text-sm text-stone-600">
+                    <p id=DOWNLOAD_REFUSED class="basis-full text-center text-sm text-stone-600">
                         {move || refused.get()}
                     </p>
                 </Show>
