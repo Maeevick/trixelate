@@ -328,6 +328,27 @@ mod tests {
     }
 
     #[test]
+    fn every_letter_of_a_file_name_in_either_case_and_its_underscores_are_inked_each_in_a_shape_of_its_own()
+    {
+        let characters: Vec<char> = ('a'..='z').chain('A'..='Z').chain(['_']).collect();
+
+        let shapes: Vec<Vec<(u32, u32)>> = characters
+            .iter()
+            .map(|character| ink(&character.to_string(), 1))
+            .collect();
+
+        let blank = characters
+            .iter()
+            .zip(&shapes)
+            .filter(|(_, shape)| shape.is_empty())
+            .map(|(character, _)| *character)
+            .collect::<String>();
+        let distinct = shapes.iter().collect::<std::collections::HashSet<_>>();
+        assert_eq!(blank, "");
+        assert_eq!(distinct.len(), characters.len());
+    }
+
+    #[test]
     fn a_dash_is_inked_as_a_line_across_the_middle() {
         let dots = ink("-", 1);
 
