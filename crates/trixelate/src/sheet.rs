@@ -268,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_with_its_model_writes_its_title_in_grey_in_its_top_margin() {
+    fn a_coloured_sheet_writes_its_title_in_grey_in_its_top_margin() {
         let legend = Legend::Coloured;
         let (colouring, layout) = red_red_yellow_laid_out(legend);
         let layout = layout.titled("red-red-yellow.png");

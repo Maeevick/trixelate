@@ -300,7 +300,7 @@ impl Layout {
     }
 
     /// The layout with the sheet's file name as its title, centred in the top margin as big as the bubbles' numbers,
-    /// when the sheet shows its model.
+    /// when the sheet shows its model, as every coloured sheet does.
     pub fn titled(self, file_name: &str) -> Layout {
         let room_width = self.page_width - 2 * self.margin;
         let title = self
@@ -823,7 +823,7 @@ mod tests {
     fn a_coloured_sheet_is_titled_with_its_file_name_centred_in_the_top_margin_as_big_as_the_bubbles_numbers_shrinking_to_fit_a_free_one_is_not()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
-        let (name, long_name) = ("goblin-48-8-a4-with-model.sheet.png", "goblin-".repeat(40));
+        let (name, long_name) = ("goblin-48-8-a4.sheet.png", "goblin-".repeat(40));
 
         let titled = upright(&square, PageFormat::A4, Margin(10))?.titled(name);
         let long = upright(&square, PageFormat::A4, Margin(10))?.titled(&long_name);
