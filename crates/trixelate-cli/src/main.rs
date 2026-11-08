@@ -44,9 +44,9 @@ struct Cli {
     #[arg(long)]
     landscape: bool,
 
-    /// The blank paper around the sheet, in millimetres
-    #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET.0)]
-    margin: u32,
+    /// The blank paper around the sheet, in millimetres, at least 5 for the title and the credit
+    #[arg(short, long, default_value = "10", value_parser = margin)]
+    margin: Margin,
 
     /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape before .sheet.png when asked]
     #[arg(short, long)]
@@ -115,6 +115,16 @@ fn colour_count(raw: &str) -> Result<ColourCount, String> {
     })
 }
 
+fn margin(raw: &str) -> Result<Margin, String> {
+    let millimetres: u32 = raw.parse().map_err(|_| format!("{raw} is not a number"))?;
+    Margin::new(millimetres).map_err(|_| {
+        format!(
+            "a margin is at least {} mm, for the title and the credit",
+            Margin::THINNEST
+        )
+    })
+}
+
 fn main() -> ExitCode {
     let cli = Cli::parse();
     if let Err(beyond) = within_the_limits(&cli) {
@@ -174,7 +184,7 @@ fn run(cli: Cli) -> Result<String, String> {
         } else {
             layout::Orientation::Portrait
         },
-        margin: Margin(cli.margin),
+        margin: cli.margin,
     };
     let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture, &order));
     let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();

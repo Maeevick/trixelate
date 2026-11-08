@@ -60,6 +60,9 @@ fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
     let colours = ColourCount::new(settings.colours).map_err(|_| {
         "A sheet holds from 2 to 24 colours, like a big box of crayons.".to_string()
     })?;
+    let margin = Margin::new(settings.margin).map_err(|_| {
+        "A margin of 5 mm at least, or the title and the credit fall off the page.".to_string()
+    })?;
     let order = Order {
         grid,
         colours,
@@ -69,7 +72,7 @@ fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
         } else {
             Orientation::Portrait
         },
-        margin: Margin(settings.margin),
+        margin,
     };
     fits_on_its_page(picture, order).map_err(explain)?;
     Ok(order)
@@ -397,7 +400,7 @@ pub fn App() -> impl IntoView {
                     "Margin, in mm"
                     <input
                         type="number"
-                        min="0"
+                        min="5"
                         max="100"
                         class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-lime-600 focus:outline-none focus:ring-2 focus:ring-lime-600"
                         prop:value=move || settings.get().margin.to_string()
