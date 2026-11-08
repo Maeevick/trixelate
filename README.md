@@ -51,7 +51,7 @@ trixelate [OPTIONS] <PICTURE>
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `<PICTURE>` | The PNG or JPEG picture to turn into a sheet, of any colour type and depth; the sheet is always a PNG | |
-| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched | 48 |
+| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched. At most 128 on A3, 96 on A4 and 64 on A5, half in a twin | 48 |
 | `-c`, `--colours` | Colours in the palette, from 2 to 24 (`--colors` works too) | 8 |
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |
@@ -61,8 +61,9 @@ trixelate [OPTIONS] <PICTURE>
 | `--twin` | The model and the sheet on one page, one above the other in portrait, side by side in landscape | |
 | `-o`, `--output` | Where to write the sheet | beside the picture, as `<picture>.sheet.png`, `.model.png` or `.twin.png` |
 | `--force` | Overwrite the sheet if it already exists | |
+| `--chaos` | Go beyond the most cells across, to try what the limits refuse | |
 
-Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` the arguments are wrong, two of `--freedom`, `--model` and `--twin` together included. Errors go to stderr and say what to try.
+Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` the arguments are wrong, two of `--freedom`, `--model` and `--twin` together or too many cells across included. Errors go to stderr and say what to try.
 
 ![A twin on A5 landscape: the model painted in twelve colours on the left, the grid to colour on the right, the legend below](crates/trixelate-cli/tests/golden/twelve-a5-landscape.twin.png)
 

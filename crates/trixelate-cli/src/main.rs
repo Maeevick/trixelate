@@ -5,7 +5,8 @@ use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use clap::{Parser, ValueEnum};
+use clap::error::ErrorKind as ArgumentError;
+use clap::{CommandFactory, Parser, ValueEnum};
 use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
@@ -15,6 +16,7 @@ use trixelate::{Order, make_sheet, picture_file, png_file, sheet_file_name};
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
 #[derive(Parser)]
 #[command(
+    name = "trixelate",
     version,
     after_help = "Exit codes: 0 the sheet is written, 1 the picture or the sheet failed, 2 the arguments are wrong."
 )]
@@ -61,6 +63,10 @@ struct Cli {
     /// Overwrite the sheet if it already exists
     #[arg(long)]
     force: bool,
+
+    /// Go beyond the most cells across the paper holds for a child: 128 on A3, 96 on A4, 64 on A5, half in a twin
+    #[arg(long)]
+    chaos: bool,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -90,6 +96,28 @@ fn legend_of(cli: &Cli) -> layout::Legend {
     }
 }
 
+/// Refuses more cells across than the paper holds for a child, unless chaos is asked.
+fn within_the_limits(cli: &Cli) -> Result<(), String> {
+    let legend = legend_of(cli);
+    let most = layout::most_cells_across(cli.format.into(), legend);
+    if cli.chaos || cli.width <= most {
+        return Ok(());
+    }
+    let paper = match cli.format {
+        Format::A3 => "A3",
+        Format::A4 => "A4",
+        Format::A5 => "A5",
+    };
+    let kind = match legend {
+        layout::Legend::Coloured(layout::Model::None) | layout::Legend::Freedom => "sheet",
+        layout::Legend::Coloured(layout::Model::Full) => "model",
+        layout::Legend::Coloured(layout::Model::Twin) => "twin",
+    };
+    Err(format!(
+        "an {paper} {kind} holds at most {most} cells across: try a smaller --width, a bigger --format, or --chaos to go beyond"
+    ))
+}
+
 fn colour_count(raw: &str) -> Result<ColourCount, String> {
     let count: usize = raw.parse().map_err(|_| format!("{raw} is not a number"))?;
     ColourCount::new(count).map_err(|_| {
@@ -102,7 +130,13 @@ fn colour_count(raw: &str) -> Result<ColourCount, String> {
 }
 
 fn main() -> ExitCode {
-    match run(Cli::parse()) {
+    let cli = Cli::parse();
+    if let Err(beyond) = within_the_limits(&cli) {
+        Cli::command()
+            .error(ArgumentError::ValueValidation, beyond)
+            .exit();
+    }
+    match run(cli) {
         Ok(written) => {
             println!("{written}");
             ExitCode::SUCCESS

@@ -281,7 +281,10 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
             &[picture, "--width", "4", "--margin", "105"],
             "try a smaller --margin",
         ),
-        (&[picture, "--width", "900"], "try fewer cells with --width"),
+        (
+            &[picture, "--width", "900", "--chaos"],
+            "try fewer cells with --width",
+        ),
         (
             &[
                 twelve_colours.to_str().unwrap_or_default(),
