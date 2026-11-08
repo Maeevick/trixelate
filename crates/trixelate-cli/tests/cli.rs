@@ -248,19 +248,13 @@ fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
 #[test]
 fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
     let folder = folder("failures");
-    let picture = a_picture_in(&folder);
     let not_a_png = folder.join("drawing.txt");
     fs::write(&not_a_png, "a drawing described in words").expect("a text file");
-    let picture = picture.to_str().unwrap_or_default();
-    let cases: [(&[&str], &str); 3] = [
+    let cases: [(&[&str], &str); 2] = [
         (&["missing.png", "--width", "4"], "cannot read missing.png"),
         (
             &[not_a_png.to_str().unwrap_or_default(), "--width", "4"],
             "is not a PNG or JPEG picture",
-        ),
-        (
-            &[picture, "--width", "900", "--chaos"],
-            "try fewer cells with --width",
         ),
     ];
 
@@ -299,22 +293,13 @@ fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds() {
 }
 
 #[test]
-fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_asked() {
-    let folder = folder("chaos");
+fn more_cells_across_than_the_paper_holds_are_refused_as_misuse() {
+    let folder = folder("beyond");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
-    let chaotic = folder.join("chaotic.png");
 
     let on_a4 = trixelate(&[picture, "--width", "49"]);
     let on_a5 = trixelate(&[picture, "--width", "33", "--format", "a5"]);
-    let chaos = trixelate(&[
-        picture,
-        "--width",
-        "49",
-        "--chaos",
-        "--output",
-        chaotic.to_str().unwrap_or_default(),
-    ]);
 
     assert_eq!(
         [&on_a4, &on_a5].map(|run| run.status.code()),
@@ -322,13 +307,11 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
     );
     assert!(text(&on_a4.stderr).contains("an A4 sheet holds at most 48 cells across"));
     assert!(text(&on_a5.stderr).contains("an A5 sheet holds at most 32 cells across"));
-    assert!(text(&on_a4.stderr).contains("--chaos"));
-    assert!(chaos.status.success(), "{}", text(&chaos.stderr));
 }
 
 #[test]
 fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
-    let cases: [&[&str]; 11] = [
+    let cases: [&[&str]; 12] = [
         &["missing.png", "--width", "0"],
         &["missing.png", "--width", "4", "--colours", "25"],
         &["--width", "4"],
@@ -340,6 +323,7 @@ fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
         &["missing.png", "--width", "4", "--freedom"],
         &["missing.png", "--width", "4", "--margin", "4"],
         &["missing.png", "--width", "4", "--margin", "21"],
+        &["missing.png", "--width", "4", "--chaos"],
     ];
 
     for arguments in cases {
