@@ -71,7 +71,7 @@ fn paint(picture: &Picture, settings: Settings, model: Model) -> Result<Vec<u8>,
     let grid = GridSize::keeping_the_proportions_of(picture, settings.width)
         .map_err(|_| "A grid needs at least one cell across.")?;
     let colours = ColourCount::new(settings.colours)
-        .map_err(|_| "A sheet holds from 2 to 12 colours, like a box of crayons.")?;
+        .map_err(|_| "A sheet holds from 2 to 24 colours, like a big box of crayons.")?;
     let order = Order {
         grid,
         colours,
@@ -341,7 +341,7 @@ pub fn App() -> impl IntoView {
                     <input
                         type="range"
                         min="2"
-                        max="12"
+                        max="24"
                         class="mt-2 accent-lime-600"
                         prop:value=move || settings.get().colours.to_string()
                         on:input=move |event| {

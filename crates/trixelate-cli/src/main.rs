@@ -26,7 +26,7 @@ struct Cli {
     #[arg(long, default_value_t = 48, value_parser = clap::value_parser!(u32).range(1..))]
     width: u32,
 
-    /// Colours in the palette, from 2 to 12
+    /// Colours in the palette, from 2 to 24
     #[arg(short, long, visible_alias = "colors", default_value = "8", value_parser = colour_count)]
     colours: ColourCount,
 
