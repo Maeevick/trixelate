@@ -187,7 +187,7 @@ impl Layout {
         let inside_a_cell = cell_side.saturating_sub(line);
         let cell_number_scale = lettering::largest_scale_fitting(
             &widest_number,
-            inside_a_cell * 3 / 5,
+            inside_a_cell * 2 / 3,
             inside_a_cell / 2,
         )
         .ok_or(NoRoom::ForTheNumbersInTheCells)?;
