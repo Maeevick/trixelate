@@ -43,7 +43,7 @@ trixelate [OPTIONS] <PICTURE>
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres | 10 |
 | `--freedom` | No legend: the numbers only group the cells, and the child picks the colours | |
-| `--with-model` | The model in miniature over the sheet's top left corner, an eighth of the grid wide, the picture in its colours to copy from | |
+| `--with-model` | The model in miniature in the page's top left corner, a quarter of the grid wide and over it where they meet, the picture in its colours to copy from | |
 | `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-32-24-a5-landscape-with-model.sheet.png`, `goblin-48-8-a4-freedom.sheet.png` |
 | `--force` | Overwrite the sheet if it already exists | |
 | `-y`, `--yes` | Go ahead without being asked when warned: under 16 cells across it is big cubes, under 4 colours solid patches, more than pixel art | asks |
@@ -55,7 +55,7 @@ A goblin turned into a sheet to colour with `trixelate sample/goblin.png`, and i
 
 | Picture | Sheet | With its model |
 | --- | --- | --- |
-| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: a grid of numbered cells above a legend of eight coloured bubbles](sample/goblin.sheet.png) | ![The goblin's sheet with its model: the same grid, the goblin in miniature and in colour over its top left corner](sample/goblin.with-model.png) |
+| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: a grid of numbered cells above a legend of eight coloured bubbles](sample/goblin.sheet.png) | ![The goblin's sheet with its model: the same grid, the goblin in miniature and in colour in the page's top left corner, over the grid's corner](sample/goblin.with-model.png) |
 
 ## In the browser
 
@@ -77,7 +77,7 @@ make web-build  # a static site in crates/trixelate-web/dist, for any host
 3. **The palette is cut from the cells' colours**: the box of colours that spreads the most is cut through the middle of its widest channel until there are as many boxes as colours asked, and each box gives its weighted average. Far-apart colours are never merged, and colour 1 is the one used most.
 4. **Every cell takes the number of its nearest palette colour**, and a colour no cell takes is dropped, so every bubble has cells to colour.
 5. **The layout gives the cells the largest square side the page allows**, inside the margin and above the legend, and the largest digits each cell and bubble can hold.
-6. **A model sits in miniature over the grid's top left corner**, an eighth of its width and sticking out by a third, a block of colour per cell, framed, with no number and no line.
+6. **A model sits in miniature in the page's top left corner**, inside the margin, a quarter of the grid's width and over the grid where they meet, a block of colour per cell, framed, with no number and no line.
 7. **A small credit is written at the bottom right**, in the margin: trixelate and its licence.
 
 ![A twelve-colour sheet on A5 with its model: the grid of numbered cells, the twelve colours in miniature over its top left corner, the legend below](crates/trixelate-cli/tests/golden/twelve-a5-with-model.sheet.png)

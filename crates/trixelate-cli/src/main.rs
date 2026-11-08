@@ -52,7 +52,7 @@ struct Cli {
     #[arg(long, group = "look")]
     freedom: bool,
 
-    /// Put the model in miniature over the sheet's top left corner, the picture in its colours to copy from
+    /// Put the model in miniature in the page's top left corner, a quarter of the grid wide, the picture in its colours to copy from
     #[arg(long, group = "look")]
     with_model: bool,
 

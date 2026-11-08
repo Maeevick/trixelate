@@ -11,7 +11,7 @@ The words trixelate's code and docs use, read before naming anything.
 | **Colour number** | A colour's place in the palette, from 1, written in every cell to paint with it. |
 | **Colouring** | A grid's cells, each with its colour number, and the palette they are numbered from. |
 | **Sheet** | The page printed for the child: the grid of numbered cells and its legend. |
-| **Model** | The picture in miniature over the sheet's top left corner, a block of colour per cell with no number and no line, for the child to see what they are making. |
+| **Model** | The picture in miniature in the page's top left corner, a quarter of the grid wide and over it where they meet, a block of colour per cell with no number and no line, for the child to see what they are making. |
 | **Page format** | The paper the sheet is drawn for, A3, A4 or A5, at 300 dots per inch. |
 | **Orientation** | Which way up the paper lies: portrait, upright, or landscape, on its side. |
 | **Margin** | The blank paper around the sheet's content, 20 mm unless asked otherwise. |
