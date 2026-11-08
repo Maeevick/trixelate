@@ -74,12 +74,13 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
         Orientation::Portrait => "",
         Orientation::Landscape => "-landscape",
     };
-    let freedom = match order.legend {
-        Legend::Coloured(_) => "",
+    let look = match order.legend {
+        Legend::Coloured(Model::None | Model::Full | Model::Twin) => "",
+        Legend::Coloured(Model::Miniature) => "-with-model",
         Legend::Freedom => "-freedom",
     };
     format!(
-        "{stem}-{}-{}-{paper}{landscape}{freedom}.{kind}.png",
+        "{stem}-{}-{}-{paper}{landscape}{look}.{kind}.png",
         order.grid.columns(),
         order.colours.get()
     )
