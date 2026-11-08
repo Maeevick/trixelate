@@ -18,5 +18,5 @@ The words trixelate's code and docs use, read before naming anything.
 | **Margin** | The blank paper around the sheet's content, 20 mm unless asked otherwise. |
 | **Legend** | The row of bubbles at the bottom of a sheet, left out in freedom. |
 | **Freedom** | A sheet with no legend: the numbers only group the cells, and the child picks the colours; it has no model. |
-| **Credit** | The small line at the bottom right of every sheet, in its margin: trixelate, its licence and its author. |
+| **Credit** | The small line at the bottom right of every sheet, in its margin: trixelate and its licence. |
 | **Bubble** | A disc filled with one palette colour, its colour number written inside. |

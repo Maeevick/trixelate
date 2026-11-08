@@ -102,8 +102,8 @@ impl GridPlace {
     }
 }
 
-/// The line crediting trixelate, its licence and its author, written small at the bottom right of every sheet.
-pub const CREDIT: &str = "Made with trixelate (github.com/Maeevick/trixelate). MIT License - Copyright (c) 2026 Aurel | Maeevick";
+/// The line crediting trixelate and its licence, written small at the bottom right of every sheet.
+pub const CREDIT: &str = "Made with trixelate (github.com/Maeevick/trixelate) • MIT License";
 
 /// Where the credit is written: the top left corner of its first character, and its scale.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -455,7 +455,7 @@ mod tests {
         let small = colouring(4, 4, 2);
 
         let a4 = upright(&small, PageFormat::A4, Margin::AROUND_A_SHEET)?;
-        let a5 = upright(&small, PageFormat::A5, Margin::AROUND_A_SHEET)?;
+        let narrow = upright(&small, PageFormat::A5, Margin(40))?;
         let thin_margin = upright(&small, PageFormat::A4, Margin(1))?;
 
         let edges = a4.credit().map(|credit| {
@@ -468,7 +468,7 @@ mod tests {
             )
         });
         assert_eq!(edges, Some((3, 2480 - 236, 3379, 3400)));
-        assert_eq!(a5.credit().map(|credit| credit.scale), Some(2));
+        assert_eq!(narrow.credit().map(|credit| credit.scale), Some(2));
         assert_eq!(thin_margin.credit(), None);
         Ok(())
     }

@@ -74,7 +74,7 @@ Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` t
 4. **Every cell takes the number of its nearest palette colour**, and a colour no cell takes is dropped, so every bubble has cells to colour.
 5. **The layout gives the cells the largest square side the page allows**, inside the margin and above the legend, and the largest digits each cell and bubble can hold. A twin shares that room between its two grids, 10 mm apart.
 6. **A model paints each cell in its colour**, its number in black or white, whichever reads better, as in the legend.
-7. **A small credit is written at the bottom right**, in the margin: trixelate, its licence and its author.
+7. **A small credit is written at the bottom right**, in the margin: trixelate and its licence.
 
 The workspace holds the library, `crates/trixelate`, the command line, `crates/trixelate-cli`, and the page, `crates/trixelate-web`. The library takes bytes and gives bytes, with no file or terminal in it, so it can also run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
 
