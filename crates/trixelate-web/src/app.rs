@@ -12,6 +12,7 @@ use trixelate::layout::{
 };
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
+use trixelate::warning::warnings_for;
 use trixelate::{Order, fits_on_its_page, make_sheet, picture_file, png_file, sheet_file_name};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, File, HtmlAnchorElement, HtmlInputElement, Url};
@@ -130,6 +131,15 @@ fn explain(no_room: NoRoom) -> String {
         }
     }
     .to_string()
+}
+
+/// A text started with a capital, as a sentence on the page.
+fn sentence(text: &str) -> String {
+    let mut characters = text.chars();
+    characters
+        .next()
+        .map(|first| first.to_uppercase().chain(characters).collect())
+        .unwrap_or_default()
 }
 
 /// A link to PNG bytes held by the browser, for an image to show or a file to save.
@@ -290,6 +300,12 @@ pub fn App() -> impl IntoView {
         }
     };
 
+    let warning = move || {
+        let settings = settings.get();
+        ColourCount::new(settings.colours)
+            .ok()
+            .and_then(|colours| warnings_for(settings.width, colours).first().copied())
+    };
     let no_picture = move || dropped.with(Option::is_none);
     let no_model = move || no_picture() || settings.get().freedom;
     let refusals = Memo::new(move |_| {
@@ -416,6 +432,15 @@ pub fn App() -> impl IntoView {
                         </span>
                     </span>
                 </label>
+                <Show when=move || warning().is_some()>
+                    <p
+                        role="status"
+                        class="col-span-full rounded-2xl bg-amber-100 px-4 py-2 text-sm text-amber-900 ring-1 ring-amber-200"
+                    >
+                        <span aria-hidden="true">"⚠️ "</span>
+                        {move || warning().map(|warning| sentence(warning.says()))}
+                    </p>
+                </Show>
                 <label class="flex flex-col gap-1 text-sm font-medium">
                     "Paper"
                     <select
