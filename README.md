@@ -45,7 +45,6 @@ trixelate [OPTIONS] <PICTURE>
 | `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-32-24-a5-landscape.sheet.png` |
 | `--force` | Overwrite the sheet if it already exists | |
 | `-y`, `--yes` | Go ahead without being asked when warned: under 16 cells across it is big cubes, under 4 colours solid patches, more than pixel art | asks |
-| `--chaos` | Go beyond the most cells across, to try what the limits refuse | |
 
 Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, or the answer to a warning was no, `2` the arguments are wrong, too many cells across, or a warning with nobody at a terminal to answer it and no `--yes` included. Errors go to stderr and say what to try.
 
