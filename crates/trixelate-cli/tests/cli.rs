@@ -177,6 +177,33 @@ fn a_sheet_with_its_model_is_written_beside_the_picture_apart_from_its_plain_she
 }
 
 #[test]
+fn the_models_size_is_tried_with_mini_1_filling_the_room_left_2_half_the_grid_or_3_a_third_each_sheet_its_own()
+ {
+    let folder = folder("mini");
+    let picture = a_picture_in(&folder);
+
+    let sheets = ["1", "2", "3"].map(|size| {
+        let sheet = folder.join(format!("mini-{size}.png"));
+        let run = trixelate(&[
+            picture.to_str().unwrap_or_default(),
+            "--width",
+            "4",
+            "--landscape",
+            "--with-model",
+            "--mini",
+            size,
+            "-o",
+            sheet.to_str().unwrap_or_default(),
+        ]);
+        assert!(run.status.success(), "{}", text(&run.stderr));
+        fs::read(&sheet).unwrap_or_default()
+    });
+
+    assert!(sheets.iter().all(|sheet| !sheet.is_empty()));
+    assert!(sheets[0] != sheets[1] && sheets[1] != sheets[2] && sheets[0] != sheets[2]);
+}
+
+#[test]
 fn a_landscape_sheet_lies_on_its_side() {
     let folder = folder("landscape");
     let picture = a_picture_in(&folder);
@@ -422,7 +449,7 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
 
 #[test]
 fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
-    let cases: [&[&str]; 7] = [
+    let cases: [&[&str]; 9] = [
         &["missing.png", "--width", "0"],
         &["missing.png", "--width", "4", "--colours", "25"],
         &["--width", "4"],
@@ -430,6 +457,8 @@ fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
         &["missing.png", "--width", "4", "--freedom", "--with-model"],
         &["missing.png", "--width", "4", "--model"],
         &["missing.png", "--width", "4", "--twin"],
+        &["missing.png", "--width", "4", "--with-model", "--mini", "4"],
+        &["missing.png", "--width", "4", "--mini", "2"],
     ];
 
     for arguments in cases {
