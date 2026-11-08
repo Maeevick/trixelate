@@ -2,10 +2,10 @@ SHELL := bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 
-.PHONY: help test check mutants install web web-build
+.PHONY: help test check mutants install web web-build lighthouse
 
 help: ## list the targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-10s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-11s %s\n", $$1, $$2}'
 
 test: ## every test, the command line's included
 	cargo test
@@ -27,3 +27,20 @@ web: ## the page, served at http://127.0.0.1:8080 and rebuilt on every change
 
 web-build: ## the page, built for any static host in crates/trixelate-web/dist
 	cd crates/trixelate-web && trunk build --release
+
+LIGHTHOUSE_PORT := 8090
+LIGHTHOUSE_PAGE := http://127.0.0.1:$(LIGHTHOUSE_PORT)/
+
+lighthouse: web-build ## the built page audited on a phone and a desktop, served gzipped as a host would, reports in lighthouse/
+	mkdir -p lighthouse
+	npx -y serve@14 crates/trixelate-web/dist -l $(LIGHTHOUSE_PORT) --no-clipboard > /dev/null 2>&1 & server=$$!; \
+	trap 'kill $$server' EXIT; \
+	for try in $$(seq 30); do curl -s -o /dev/null $(LIGHTHOUSE_PAGE) && break; sleep 1; done; \
+	npx -y lighthouse@12 $(LIGHTHOUSE_PAGE) --quiet --chrome-flags=--headless=new \
+		--output=html --output=json --output-path=lighthouse/mobile; \
+	npx -y lighthouse@12 $(LIGHTHOUSE_PAGE) --quiet --chrome-flags=--headless=new --preset=desktop \
+		--output=html --output=json --output-path=lighthouse/desktop
+	@for form in mobile desktop; do \
+		node -e 'const r = require(process.argv[1]); console.log(process.argv[2].padEnd(8), Object.values(r.categories).map(c => `$${c.title} $${Math.round(c.score * 100)}`).join(" · "))' \
+			"$$PWD/lighthouse/$$form.report.json" $$form; \
+	done
