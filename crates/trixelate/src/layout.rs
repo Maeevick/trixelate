@@ -593,7 +593,7 @@ mod tests {
     }
 
     #[test]
-    fn bubbles_are_seven_and_a_half_millimetres_wide_when_the_row_has_room_and_shrink_to_share_a_long_row()
+    fn bubbles_are_eight_millimetres_wide_when_the_row_has_room_and_shrink_to_share_a_long_row()
     -> Result<(), NoRoom> {
         let (few, many) = (colouring(4, 4, 2), colouring(6, 4, 24));
         let content_width = 2480 - 2 * 236;
@@ -605,8 +605,8 @@ mod tests {
         let (first, last) = (bubbles[0], bubbles[bubbles.len() - 1]);
         let row_width =
             last.centre_x + last.diameter / 2 + 1 - (first.centre_x - first.diameter / 2);
-        assert_eq!(roomy.bubbles()[0].diameter, 89);
-        assert!(first.diameter < 89);
+        assert_eq!(roomy.bubbles()[0].diameter, 93);
+        assert!(first.diameter < 93);
         assert!(row_width <= content_width && content_width - row_width < first.diameter);
         Ok(())
     }
