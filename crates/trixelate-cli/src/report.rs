@@ -94,10 +94,10 @@ mod tests {
         });
 
         assert!(small.ends_with(
-            "60 cells to colour: at 3 a minute, a five-year-old needs about 20 min: done before the juice gets warm."
+            "\n60 cells to colour: at 3 a minute, a five-year-old needs about 20 min: done before the juice gets warm."
         ));
         assert!(middling.ends_with(
-            "150 cells to colour: at 3 a minute, a five-year-old needs about 50 min: one rainy afternoon."
+            "\n150 cells to colour: at 3 a minute, a five-year-old needs about 50 min: one rainy afternoon."
         ));
     }
 
