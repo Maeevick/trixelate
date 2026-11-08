@@ -52,7 +52,7 @@ A goblin turned into a sheet to colour with `trixelate sample/goblin.png`: 48 ce
 
 | Picture | Sheet |
 | --- | --- |
-| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: the goblin in miniature and in colour in the page's top left corner, a legend of eight coloured bubbles beside it, the grid of numbered cells below, the file name on top](sample/goblin.sheet.png) |
+| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: the goblin in miniature and in colour in the page's top left corner, a legend of eight coloured bubbles beside it, the grid of numbered cells below, the file name on top](sample/goblin-48-8-a4.sheet.png) |
 
 ## In the browser
 
