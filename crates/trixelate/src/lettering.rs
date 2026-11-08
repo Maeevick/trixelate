@@ -40,7 +40,7 @@ const DIGITS: [[u8; GLYPH_HEIGHT as usize]; 10] = [
 ];
 
 /// The letters and signs a sheet's credit is written with, drawn like the digits.
-const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 30] = [
+const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 29] = [
     (
         'M',
         [
@@ -215,12 +215,6 @@ const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 30] = [
             0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000,
         ],
     ),
-    (
-        '•',
-        [
-            0b00000, 0b00000, 0b01110, 0b01110, 0b01110, 0b00000, 0b00000,
-        ],
-    ),
 ];
 
 /// The dots a text inks, from the top left corner of its first character, each dot a square of `scale` by `scale`.
@@ -331,18 +325,6 @@ mod tests {
         );
         assert_eq!(unknown, ink("1 1", 1));
         assert_eq!(size("Ma(c)", 2), (58, 14));
-    }
-
-    #[test]
-    fn a_bullet_is_inked_as_a_dot_in_the_middle_of_the_line() {
-        let dots = ink("•", 1);
-
-        assert_eq!(
-            drawn(&dots, 5, 7),
-            [
-                ".....", ".....", ".###.", ".###.", ".###.", ".....", "....."
-            ]
-        );
     }
 
     #[test]
