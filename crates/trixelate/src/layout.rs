@@ -152,8 +152,8 @@ const CREDIT_SCALE_AT_MOST: u32 = 3;
 const MINIATURE_CELLS_PER_CELL: u32 = 4;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
-/// A bubble is at most seven and a half millimetres wide, big enough for its number, leaving the room to the cells.
-const WIDEST_BUBBLE_TENTHS_OF_MM: u32 = 75;
+/// A bubble is at most eight millimetres wide, big enough for its number, leaving the room to the cells.
+const WIDEST_BUBBLE_TENTHS_OF_MM: u32 = 80;
 const LINES_PER_CELL_SIDE: u32 = 16;
 
 impl Layout {
