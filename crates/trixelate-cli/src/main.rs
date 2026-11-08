@@ -52,13 +52,9 @@ struct Cli {
     #[arg(long, group = "look")]
     freedom: bool,
 
-    /// Paint the sheet in its colours, a model to copy from
+    /// Put the model in miniature over the sheet's top left corner, the picture in its colours to copy from
     #[arg(long, group = "look")]
-    model: bool,
-
-    /// Put the model and the sheet on one page: one above the other in portrait, side by side in landscape
-    #[arg(long, group = "look")]
-    twin: bool,
+    with_model: bool,
 
     /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, .model.png or .twin.png, with -landscape and -freedom when asked]
     #[arg(short, long)]
@@ -96,11 +92,10 @@ impl From<Format> for PageFormat {
 
 /// The legend asked for, coloured unless free, with the model asked for, if any; clap lets one through at most.
 fn legend_of(cli: &Cli) -> layout::Legend {
-    match (cli.freedom, cli.model, cli.twin) {
-        (true, _, _) => layout::Legend::Freedom,
-        (_, true, _) => layout::Legend::Coloured(layout::Model::Full),
-        (_, _, true) => layout::Legend::Coloured(layout::Model::Twin),
-        (false, false, false) => layout::Legend::Coloured(layout::Model::None),
+    match (cli.freedom, cli.with_model) {
+        (true, _) => layout::Legend::Freedom,
+        (false, true) => layout::Legend::Coloured(layout::Model::Miniature),
+        (false, false) => layout::Legend::Coloured(layout::Model::None),
     }
 }
 

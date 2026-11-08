@@ -108,20 +108,21 @@ fn the_command_says_what_it_wrote_where_how_fast_and_how_long_a_five_year_old_wi
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
 
-    let reports = [&[][..], &["--model"][..], &["--twin"][..]]
+    let reports = [&[][..], &["--with-model"][..]]
         .map(|look| text(&trixelate(&[&[picture, "--width", "4"][..], look].concat()).stdout));
 
-    let [sheet, model, twin] = &reports;
+    let [sheet, with_model] = &reports;
     assert!(sheet.starts_with(&format!(
         "Sheet written to {} in ",
         folder.join("sunset-4-8-a4.sheet.png").display()
     )));
-    assert!(model.starts_with("Model written to "));
-    assert!(twin.starts_with("Twin written to "));
+    assert!(with_model.starts_with(&format!(
+        "Sheet written to {} in ",
+        folder.join("sunset-4-8-a4-with-model.sheet.png").display()
+    )));
     assert!(sheet.contains(" s\n"));
     assert!(sheet.contains("12 cells to colour"));
-    assert!(twin.contains("12 cells to colour"));
-    assert!(model.contains("Nothing to colour"));
+    assert!(with_model.contains("12 cells to colour"));
 }
 
 #[test]
@@ -151,7 +152,7 @@ fn a_sheet_of_few_cells_or_few_colours_is_warned_of_and_written_only_once_the_us
 }
 
 #[test]
-fn a_full_model_is_written_beside_the_picture_apart_from_its_sheet() {
+fn a_sheet_with_its_model_is_written_beside_the_picture_apart_from_its_plain_sheet() {
     let folder = folder("model");
     let picture = a_picture_in(&folder);
 
@@ -159,19 +160,19 @@ fn a_full_model_is_written_beside_the_picture_apart_from_its_sheet() {
         picture.to_str().unwrap_or_default(),
         "--width",
         "4",
-        "--model",
+        "--with-model",
     ]);
 
-    let model_path = folder.join("sunset-4-8-a4.model.png");
-    let model = fs::read(&model_path)
+    let sheet_path = folder.join("sunset-4-8-a4-with-model.sheet.png");
+    let sheet = fs::read(&sheet_path)
         .ok()
         .and_then(|bytes| png_file::read(&bytes).ok());
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert_eq!(
-        model.map(|model| (model.width(), model.height())),
+        sheet.map(|sheet| (sheet.width(), sheet.height())),
         Some((2480, 3508))
     );
-    assert!(text(&run.stdout).contains(&model_path.display().to_string()));
+    assert!(text(&run.stdout).contains(&sheet_path.display().to_string()));
     assert!(!folder.join("sunset-4-8-a4.sheet.png").exists());
 }
 
@@ -293,30 +294,6 @@ fn a_sheet_with_its_model_beside_its_picture_matches_its_golden_master_the_minia
 }
 
 #[test]
-fn a_landscape_twin_beside_its_picture_matches_its_golden_master_model_left_sheet_right() {
-    let folder = folder("twin");
-    let picture = a_twelve_colour_picture_in(&folder);
-
-    let run = trixelate(&[
-        picture.to_str().unwrap_or_default(),
-        "--width",
-        "4",
-        "--colours",
-        "12",
-        "--format",
-        "a5",
-        "--landscape",
-        "--twin",
-    ]);
-
-    assert!(run.status.success(), "{}", text(&run.stderr));
-    assert!(matches_golden(
-        &folder.join("twelve-4-12-a5-landscape.twin.png"),
-        "twelve-a5-landscape.twin.png"
-    ));
-}
-
-#[test]
 fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
     let folder = folder("overwrite");
     let picture = a_picture_in(&folder);
@@ -400,19 +377,19 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
 }
 
 #[test]
-fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds_and_a_twin_too_wide_is_refused()
- {
+fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds_with_or_without_its_model()
+{
     let folder = folder("default-width");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
 
     let on_a5 = trixelate(&[picture, "--format", "a5"]);
-    let twin = trixelate(&[picture, "--twin"]);
+    let with_model = trixelate(&[picture, "--with-model"]);
 
     assert!(on_a5.status.success(), "{}", text(&on_a5.stderr));
+    assert!(with_model.status.success(), "{}", text(&with_model.stderr));
     assert!(folder.join("sunset-32-8-a5.sheet.png").exists());
-    assert_eq!(twin.status.code(), Some(2));
-    assert!(text(&twin.stderr).contains("an A4 twin holds at most 24 cells across"));
+    assert!(folder.join("sunset-48-8-a4-with-model.sheet.png").exists());
 }
 
 #[test]
@@ -423,7 +400,7 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
     let chaotic = folder.join("chaotic.png");
 
     let on_a4 = trixelate(&[picture, "--width", "49"]);
-    let twin_on_a5 = trixelate(&[picture, "--width", "17", "--format", "a5", "--twin"]);
+    let with_model_on_a5 = trixelate(&[picture, "--width", "33", "--format", "a5", "--with-model"]);
     let chaos = trixelate(&[
         picture,
         "--width",
@@ -434,11 +411,11 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
     ]);
 
     assert_eq!(
-        [&on_a4, &twin_on_a5].map(|run| run.status.code()),
+        [&on_a4, &with_model_on_a5].map(|run| run.status.code()),
         [Some(2), Some(2)]
     );
     assert!(text(&on_a4.stderr).contains("an A4 sheet holds at most 48 cells across"));
-    assert!(text(&twin_on_a5.stderr).contains("an A5 twin holds at most 16 cells across"));
+    assert!(text(&with_model_on_a5.stderr).contains("an A5 sheet holds at most 32 cells across"));
     assert!(text(&on_a4.stderr).contains("--chaos"));
     assert!(chaos.status.success(), "{}", text(&chaos.stderr));
 }
