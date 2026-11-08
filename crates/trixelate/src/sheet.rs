@@ -259,6 +259,33 @@ mod tests {
     }
 
     #[test]
+    fn a_sheet_with_its_model_writes_its_title_in_grey_in_its_top_margin() {
+        let legend = Legend::Coloured(Model::Miniature(MiniatureSize::RoomLeft));
+        let (colouring, layout) = red_red_yellow_laid_out(legend);
+        let layout = layout.titled("red-red-yellow.png");
+        let margin = 236;
+
+        let sheet = draw(&colouring, &layout);
+
+        let inked_in_the_top_margin: BTreeSet<(u32, u32, Rgb)> = (0..margin)
+            .flat_map(|y| (0..layout.page_width()).map(move |x| (x, y)))
+            .map(|(x, y)| (x, y, sheet.pixel(x, y)))
+            .filter(|&(_, _, colour)| colour != Rgb::WHITE)
+            .collect();
+        let title: BTreeSet<(u32, u32, Rgb)> = layout
+            .title()
+            .map(|title| {
+                lettering::ink(&title.text, title.scale)
+                    .into_iter()
+                    .map(|(x, y)| (title.left + x, title.top + y, NUMBER_GREY))
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert!(!title.is_empty());
+        assert_eq!(inked_in_the_top_margin, title);
+    }
+
+    #[test]
     fn each_cell_shows_its_colour_number_in_dark_grey_centred_inside_its_outline() {
         let (colouring, layout) = red_red_yellow();
 

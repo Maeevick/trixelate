@@ -143,6 +143,15 @@ pub struct Credit {
     pub scale: u32,
 }
 
+/// Where a sheet's title is written: its text, the top left corner of its first character, and its scale.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Title {
+    pub text: String,
+    pub left: u32,
+    pub top: u32,
+    pub scale: u32,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Layout {
     page_width: u32,
@@ -295,6 +304,17 @@ impl Layout {
     /// Where the credit is written, if the margin has room for it.
     pub fn credit(&self) -> Option<Credit> {
         self.credit
+    }
+
+    /// The layout with the sheet's file name as its title, centred in the top margin as small as the credit, when the
+    /// sheet shows its model.
+    pub fn titled(self, _file_name: &str) -> Layout {
+        self
+    }
+
+    /// Where the title is written, if the sheet has one.
+    pub fn title(&self) -> Option<Title> {
+        None
     }
 
     /// Where the model's miniature lies, if the sheet has one.
@@ -794,6 +814,32 @@ mod tests {
         assert!(without.bubbles().is_empty());
         assert!(without.grid().cell(0, 0).side > with_a_legend.grid().cell(0, 0).side);
         assert!(on_a_narrow_page.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn with_its_model_the_sheet_is_titled_with_its_file_name_centred_in_the_top_margin_as_small_as_the_credit_shrinking_to_fit()
+    -> Result<(), NoRoom> {
+        let square = colouring(48, 48, 8);
+        let (name, long_name) = ("goblin-48-8-a4-with-model.sheet.png", "goblin-".repeat(40));
+
+        let titled = model_upright(&square, MiniatureSize::RoomLeft)?.titled(name);
+        let long = model_upright(&square, MiniatureSize::RoomLeft)?.titled(&long_name);
+        let plain = upright(&square, PageFormat::A4, Margin(10))?.titled(name);
+
+        let (width, height) = lettering::size(name, 3);
+        assert_eq!(
+            titled.title(),
+            Some(Title {
+                text: name.to_string(),
+                left: 118 + (2244 - width) / 2,
+                top: (118 - height) / 2,
+                scale: 3,
+            })
+        );
+        assert_eq!(titled.credit().map(|credit| credit.scale), Some(3));
+        assert_eq!(long.title().map(|title| title.scale), Some(1));
+        assert_eq!(plain.title(), None);
         Ok(())
     }
 
