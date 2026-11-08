@@ -73,9 +73,7 @@ impl Margin {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NoRoom {
-    InsideTheMargin,
     ForTheNumbersInTheCells,
-    ForTheNumbersInTheLegend,
 }
 
 /// Where the model's miniature lies: its top left corner and its cells' side, in dots, its frame around it.
@@ -151,13 +149,14 @@ pub struct Layout {
     bubbles: Vec<Disc>,
     bubble_number_scale: u32,
     margin: u32,
-    credit: Option<Credit>,
+    credit: Credit,
     title: Option<Title>,
     miniature: Miniature,
 }
 
-/// The credit stays small, under two millimetres tall, which half the thinnest margin holds.
-const CREDIT_SCALE_AT_MOST: u32 = 3;
+/// The credit stays small, under two millimetres tall, which half the thinnest margin holds, and narrower than the
+/// room inside the widest margin on the smallest page.
+const CREDIT_SCALE: u32 = 3;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
 /// A bubble is at most eight millimetres wide, big enough for its number, leaving the room to the cells.
@@ -196,18 +195,17 @@ impl Layout {
         };
         let (page_width, page_height) = (dots(width), dots(height));
         let margin = dots(margin.0);
-        let room_inside = |side: u32| side.checked_sub(2 * margin).filter(|&room| room > 0);
         let room = Room {
             margin,
-            width: room_inside(page_width).ok_or(NoRoom::InsideTheMargin)?,
-            height: room_inside(page_height).ok_or(NoRoom::InsideTheMargin)?,
+            width: page_width - 2 * margin,
+            height: page_height - 2 * margin,
         };
         let size = colouring.size();
         let colours = colouring.palette().colours().len() as u32;
         let (placed, bubble) = match orientation {
             Orientation::Landscape => {
                 let bubble = bubble_sharing(room.width, colours);
-                let placed = centred_above_its_legend_under_its_model(size, colours, bubble, room)?;
+                let placed = centred_above_its_legend_under_its_model(size, colours, bubble, room);
                 (placed, bubble)
             }
             Orientation::Portrait => beside_its_model_above_its_grid(size, colours, room)
@@ -224,17 +222,14 @@ impl Layout {
         .ok_or(NoRoom::ForTheNumbersInTheCells)?;
         let bubble_number_scale =
             lettering::largest_scale_fitting(&widest_number, bubble * 11 / 20, bubble * 9 / 20)
-                .ok_or(NoRoom::ForTheNumbersInTheLegend)?;
+                .expect("a bubble holds its number whenever a cell does");
 
-        let credit = lettering::largest_scale_fitting(CREDIT, room.width, margin).map(|scale| {
-            let scale = scale.min(CREDIT_SCALE_AT_MOST);
-            let (width, height) = lettering::size(CREDIT, scale);
-            Credit {
-                left: margin + room.width - width,
-                top: page_height - margin + (margin - height) / 2,
-                scale,
-            }
-        });
+        let (credit_width, credit_height) = lettering::size(CREDIT, CREDIT_SCALE);
+        let credit = Credit {
+            left: margin + room.width - credit_width,
+            top: page_height - margin + (margin - credit_height) / 2,
+            scale: CREDIT_SCALE,
+        };
 
         Ok(Layout {
             page_width,
@@ -279,8 +274,8 @@ impl Layout {
         self.bubble_number_scale
     }
 
-    /// Where the credit is written, if the margin has room for it.
-    pub fn credit(&self) -> Option<Credit> {
+    /// Where the credit is written.
+    pub fn credit(&self) -> Credit {
         self.credit
     }
 
@@ -326,18 +321,15 @@ fn centred_above_its_legend_under_its_model(
     colours: u32,
     bubble: u32,
     room: Room,
-) -> Result<Placed, NoRoom> {
-    let grid_room = room
-        .height
-        .checked_sub(dots(GAP_ABOVE_THE_LEGEND_MM) + bubble)
-        .ok_or(NoRoom::InsideTheMargin)?;
+) -> Placed {
+    let grid_room = room.height - dots(GAP_ABOVE_THE_LEGEND_MM) - bubble;
     let roomiest_side = (room.width / size.columns()).min(grid_room / size.rows());
     let line = (roomiest_side / LINES_PER_CELL_SIDE).max(1);
     let cell_side = (room.width.saturating_sub(line) / size.columns())
         .min(grid_room.saturating_sub(line) / size.rows());
     let grid_width = cell_side * size.columns() + line;
     let grid_height = cell_side * size.rows() + line;
-    Ok(Placed {
+    Placed {
         grid: GridPlace {
             left: room.margin + (room.width - grid_width) / 2,
             top: room.margin + (grid_room - grid_height) / 2,
@@ -355,7 +347,7 @@ fn centred_above_its_legend_under_its_model(
             top: room.margin + line,
             cell_side: model_cell(cell_side),
         },
-    })
+    }
 }
 
 /// Upright, the grid as big as the room allows below a row of bubbles, one per colour, laid in the room right of the
@@ -596,8 +588,8 @@ mod tests {
     }
 
     #[test]
-    fn a_margin_is_at_least_five_millimetres_so_the_title_and_the_credit_always_fit_in_it()
-    -> Result<(), NoRoom> {
+    fn a_margin_is_at_least_five_millimetres_so_the_title_always_fits_in_it() -> Result<(), NoRoom>
+    {
         let small = colouring(4, 4, 2);
 
         let [too_thin, thinnest] = [4, 5].map(Margin::new);
@@ -605,7 +597,7 @@ mod tests {
         let layout = upright(&small, PageFormat::A5, thinnest.expect("a margin"))?
             .titled("goblin-32-8-a5.sheet.png");
         assert_eq!(too_thin, Err(MarginOutOfRange));
-        assert!(layout.title().is_some() && layout.credit().is_some());
+        assert!(layout.title().is_some());
         Ok(())
     }
 
@@ -662,26 +654,26 @@ mod tests {
     }
 
     #[test]
-    fn the_credit_sits_small_in_the_bottom_margin_flush_right_smaller_on_a_narrow_page_or_left_out_of_a_room_narrower_than_it()
+    fn the_credit_sits_small_in_the_bottom_margin_flush_right_even_inside_the_widest_margin_of_the_smallest_page()
     -> Result<(), NoRoom> {
         let small = colouring(4, 4, 2);
 
         let a4 = upright(&small, PageFormat::A4, Margin(20))?;
-        let narrow = upright(&small, PageFormat::A5, Margin(40))?;
-        let narrower = upright(&small, PageFormat::A5, Margin(58))?;
+        let a5 = upright(&small, PageFormat::A5, Margin(20))?;
 
-        let edges = a4.credit().map(|credit| {
+        let edges = |layout: &Layout| {
+            let credit = layout.credit();
             let (width, height) = lettering::size(CREDIT, credit.scale);
             (
                 credit.scale,
+                credit.left,
                 credit.left + width,
                 credit.top,
                 credit.top + height,
             )
-        });
-        assert_eq!(edges, Some((3, 2480 - 236, 3379, 3400)));
-        assert_eq!(narrow.credit().map(|credit| credit.scale), Some(2));
-        assert_eq!(narrower.credit(), None);
+        };
+        assert_eq!(edges(&a4), (3, 2480 - 236 - 1167, 2480 - 236, 3379, 3400));
+        assert_eq!(edges(&a5), (3, 1748 - 236 - 1167, 1748 - 236, 2351, 2372));
         Ok(())
     }
 
@@ -747,34 +739,21 @@ mod tests {
     }
 
     #[test]
-    fn a_margin_leaving_no_room_for_the_grid_and_its_legend_is_refused() {
-        let small = colouring(4, 4, 2);
-
-        let layouts =
-            [Margin(74), Margin(75)].map(|margin| upright(&small, PageFormat::A5, margin));
-
-        assert_eq!(
-            layouts,
-            [Err(NoRoom::InsideTheMargin), Err(NoRoom::InsideTheMargin)]
-        );
-    }
-
-    #[test]
-    fn numbers_too_big_for_their_cells_or_their_bubbles_are_refused_even_on_a_sliver_of_paper() {
+    fn numbers_too_big_for_their_cells_are_refused_either_way_up() {
         let three_hundred_columns = colouring(300, 2, 2);
-        let twelve_colours = colouring(10, 5, 12);
 
-        let layouts = [
-            upright(&three_hundred_columns, PageFormat::A5, Margin(20)),
-            upright(&twelve_colours, PageFormat::A5, Margin(63)),
-        ];
+        let layouts = [Orientation::Portrait, Orientation::Landscape].map(|orientation| {
+            Layout::of(
+                &three_hundred_columns,
+                PageFormat::A5,
+                orientation,
+                Margin(20),
+            )
+        });
 
         assert_eq!(
             layouts.map(|layout| layout.err()),
-            [
-                Some(NoRoom::ForTheNumbersInTheCells),
-                Some(NoRoom::ForTheNumbersInTheLegend)
-            ]
+            [Some(NoRoom::ForTheNumbersInTheCells); 2]
         );
     }
 

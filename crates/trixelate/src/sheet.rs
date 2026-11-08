@@ -50,9 +50,8 @@ fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout)
 }
 
 fn write_the_credit(paper: &mut Paper, layout: &Layout) {
-    if let Some(credit) = layout.credit() {
-        write_small(paper, CREDIT, (credit.left, credit.top), credit.scale);
-    }
+    let credit = layout.credit();
+    write_small(paper, CREDIT, (credit.left, credit.top), credit.scale);
 }
 
 fn write_the_title(paper: &mut Paper, layout: &Layout) {
@@ -240,15 +239,11 @@ mod tests {
             .map(|(x, y)| (x, y, sheet.pixel(x, y)))
             .filter(|&(_, _, colour)| colour != Rgb::WHITE)
             .collect();
-        let credit: BTreeSet<(u32, u32, Rgb)> = layout
-            .credit()
-            .map(|credit| {
-                lettering::ink(CREDIT, credit.scale)
-                    .into_iter()
-                    .map(|(x, y)| (credit.left + x, credit.top + y, NUMBER_GREY))
-                    .collect()
-            })
-            .unwrap_or_default();
+        let credit = layout.credit();
+        let credit: BTreeSet<(u32, u32, Rgb)> = lettering::ink(CREDIT, credit.scale)
+            .into_iter()
+            .map(|(x, y)| (credit.left + x, credit.top + y, NUMBER_GREY))
+            .collect();
         assert!(!credit.is_empty());
         assert_eq!(inked_in_the_margin, credit);
         let corners = (0..3).map(|column| layout.grid().cell(column, 0));

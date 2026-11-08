@@ -98,12 +98,8 @@ fn beyond(format: PageFormat, most: u32) -> String {
 
 fn explain(no_room: NoRoom) -> String {
     match no_room {
-        NoRoom::InsideTheMargin => "That margin ate the whole page. A thinner one, maybe?",
         NoRoom::ForTheNumbersInTheCells => {
             "The cells got too small for their numbers. Fewer cells across, or bigger paper?"
-        }
-        NoRoom::ForTheNumbersInTheLegend => {
-            "The bubbles are too squeezed for their numbers. Fewer colours, or a thinner margin?"
         }
     }
     .to_string()

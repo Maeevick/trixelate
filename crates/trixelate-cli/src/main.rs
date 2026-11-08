@@ -230,12 +230,8 @@ fn beside(picture: &Path, order: &Order) -> PathBuf {
 
 fn explain(no_room: NoRoom) -> String {
     match no_room {
-        NoRoom::InsideTheMargin => "the margin leaves no room for the grid and its legend: try a smaller --margin",
         NoRoom::ForTheNumbersInTheCells => {
             "the cells are too small for their numbers: try fewer cells with --width, or a bigger --format"
-        }
-        NoRoom::ForTheNumbersInTheLegend => {
-            "the bubbles are too small for their numbers: try fewer --colours, or a smaller --margin"
         }
     }
     .to_string()
