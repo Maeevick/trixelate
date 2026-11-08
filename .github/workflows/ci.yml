@@ -58,5 +58,12 @@ jobs:
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: trunk@0.21.14
+      - name: Keep the tools Trunk downloads, wasm-bindgen, wasm-opt and Tailwind, between runs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/trunk
+          key: trunk-tools-${{ runner.os }}-${{ hashFiles('Cargo.lock', 'crates/trixelate-web/Trunk.toml') }}
+          restore-keys: trunk-tools-${{ runner.os }}-
       - run: cargo fetch --locked
-      - run: make web-build
+      - name: Build the page, once more if a tool's download drops
+        run: make web-build || (sleep 15 && make web-build)
