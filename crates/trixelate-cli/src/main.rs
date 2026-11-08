@@ -59,10 +59,6 @@ struct Cli {
     /// Go ahead without asking when the sheet is warned of: under 16 cells across or 4 colours
     #[arg(short, long)]
     yes: bool,
-
-    /// Go beyond the most cells across the paper holds for a child: 64 on A3, 48 on A4, 32 on A5
-    #[arg(long)]
-    chaos: bool,
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -88,10 +84,10 @@ fn cells_across(cli: &Cli) -> u32 {
         .unwrap_or_else(|| layout::most_cells_across(cli.format.into()))
 }
 
-/// Refuses more cells across than the paper holds for a child, unless chaos is asked.
+/// Refuses more cells across than the paper holds for a child.
 fn within_the_limits(cli: &Cli) -> Result<(), String> {
     let most = layout::most_cells_across(cli.format.into());
-    if cli.chaos || cells_across(cli) <= most {
+    if cells_across(cli) <= most {
         return Ok(());
     }
     let paper = match cli.format {
@@ -100,7 +96,7 @@ fn within_the_limits(cli: &Cli) -> Result<(), String> {
         Format::A5 => "A5",
     };
     Err(format!(
-        "an {paper} sheet holds at most {most} cells across: try a smaller --width, a bigger --format, or --chaos to go beyond"
+        "an {paper} sheet holds at most {most} cells across: try a smaller --width or a bigger --format"
     ))
 }
 
