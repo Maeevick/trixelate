@@ -21,6 +21,12 @@ impl PageFormat {
     }
 }
 
+/// The most cells across a grid may have on a paper, for a child to colour them, half as many for each of a twin's grids.
+pub fn most_cells_across(format: PageFormat, legend: Legend) -> u32 {
+    let _ = (format, legend);
+    0
+}
+
 /// Which way up the paper lies: upright, or on its side.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Orientation {
@@ -570,6 +576,27 @@ mod tests {
                 Some(NoRoom::ForTheNumbersInTheLegend),
                 Some(NoRoom::ForTheNumbersInTheLegend)
             ]
+        );
+    }
+
+    #[test]
+    fn a_grid_has_at_most_128_cells_across_on_a3_96_on_a4_and_64_on_a5_and_half_as_many_in_a_twin()
+    {
+        let formats = [PageFormat::A3, PageFormat::A4, PageFormat::A5];
+
+        let most = formats.map(|format| {
+            [
+                Legend::Coloured(Model::None),
+                Legend::Coloured(Model::Full),
+                Legend::Freedom,
+                Legend::Coloured(Model::Twin),
+            ]
+            .map(|legend| most_cells_across(format, legend))
+        });
+
+        assert_eq!(
+            most,
+            [[128, 128, 128, 64], [96, 96, 96, 48], [64, 64, 64, 32]]
         );
     }
 
