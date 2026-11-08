@@ -63,7 +63,9 @@ impl Margin {
     pub const THINNEST: u32 = 5;
 
     pub fn new(millimetres: u32) -> Result<Margin, MarginTooThin> {
-        Ok(Margin(millimetres))
+        (millimetres >= Self::THINNEST)
+            .then_some(Margin(millimetres))
+            .ok_or(MarginTooThin)
     }
 }
 
