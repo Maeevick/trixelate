@@ -672,6 +672,99 @@ mod tests {
         Ok(())
     }
 
+    /// The right edge of a model's frame, the left of the grid and the gap between them.
+    fn model_beside_grid(layout: &Layout, columns: u32) -> (u32, u32, u32) {
+        let (line, model) = (layout.line(), layout.miniature().expect("a miniature"));
+        (
+            model.left + columns * model.cell_side + line,
+            layout.grid().cell(0, 0).left,
+            dots(5),
+        )
+    }
+
+    #[test]
+    fn on_its_side_a_one_cell_grid_its_framed_model_and_the_gap_fill_the_room_across_to_the_dot_the_legend_centred_below_the_frame()
+    -> Result<(), NoRoom> {
+        let one_cell = colouring(1, 1, 2);
+
+        let layout = model_on_its_side(&one_cell, Margin(10))?;
+
+        let (frame_right, grid_left, gap) = model_beside_grid(&layout, 1);
+        let (cell, line) = (layout.grid().cell(0, 0), layout.line());
+        let model = layout.miniature().expect("a miniature");
+        let frame_bottom = model.top + model.cell_side + line;
+        let bubble = layout.bubbles()[0];
+        let (legend_top, legend_bottom) = (
+            bubble.centre_y - bubble.diameter / 2,
+            bubble.centre_y + bubble.diameter / 2 + 1,
+        );
+        assert_eq!(line, cell.side / 16);
+        assert_eq!(frame_right + gap, grid_left);
+        assert_eq!(grid_left + cell.side + line, 3508 - 118);
+        assert!((legend_top - frame_bottom - gap).abs_diff(2480 - 118 - legend_bottom) <= 1);
+        Ok(())
+    }
+
+    #[test]
+    fn on_its_side_the_model_is_a_quarter_of_a_wide_grid_hemmed_in_by_it_and_half_of_a_tall_grid_at_most()
+    -> Result<(), NoRoom> {
+        let (wide, tall) = (colouring(3, 1, 8), colouring(36, 48, 8));
+
+        let beside_wide = model_on_its_side(&wide, Margin(10))?;
+        let beside_tall = model_on_its_side(&tall, Margin(10))?;
+
+        let model_and_grid_cells = |layout: &Layout| {
+            let model = layout.miniature().map_or(0, |model| model.cell_side);
+            (model, layout.grid().cell(0, 0).side)
+        };
+        let (model, cell) = model_and_grid_cells(&beside_wide);
+        let (frame_right, grid_left, gap) = model_beside_grid(&beside_wide, 3);
+        assert_eq!(model, cell / 4);
+        assert_eq!(frame_right + gap, grid_left);
+        let (model, cell) = model_and_grid_cells(&beside_tall);
+        assert_eq!(model, cell / 2);
+        Ok(())
+    }
+
+    #[test]
+    fn on_its_side_the_legend_rows_hold_as_many_bubbles_as_the_column_beside_the_grid_has_room_for()
+    -> Result<(), NoRoom> {
+        let twelve_colours = colouring(4, 3, 24);
+
+        let layout = model_on_its_side(&twelve_colours, Margin(10))?;
+
+        let bubbles = layout.bubbles();
+        let first_row = bubbles
+            .iter()
+            .filter(|bubble| bubble.centre_y == bubbles[0].centre_y)
+            .count();
+        assert_eq!((bubbles.len(), first_row), (12, 6));
+        assert_eq!(bubbles[1].centre_x - bubbles[0].centre_x, 93 + 23);
+        Ok(())
+    }
+
+    #[test]
+    fn on_its_side_a_grid_as_tall_as_the_room_or_a_legend_as_deep_as_the_room_below_the_model_fits_to_the_dot()
+    -> Result<(), NoRoom> {
+        let (column, many_colours) = (colouring(1, 59, 2), colouring(8, 6, 24));
+
+        let tall = model_on_its_side(&column, Margin(10))?;
+        let deep = model_on_its_side(&many_colours, Margin(60))?;
+
+        let (grid, line) = (tall.grid(), tall.line());
+        assert_eq!(
+            (grid.cell(0, 0).top, grid.cell(0, 59).top + line),
+            (118, 2480 - 118)
+        );
+        let legend_bottom = deep
+            .bubbles()
+            .iter()
+            .map(|bubble| bubble.centre_y + bubble.diameter / 2 + 1)
+            .max();
+        assert_eq!(legend_bottom, Some(2480 - dots(60)));
+        Ok(())
+    }
+
     #[test]
     fn with_no_margin_the_miniature_frame_sits_in_the_page_corner() -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
@@ -742,6 +835,7 @@ mod tests {
 
         let titled = model_upright(&square)?.titled(name);
         let long = model_upright(&square)?.titled(&long_name);
+        let thin_margin = model_on_its_side(&square, Margin(5))?.titled(name);
         let plain = upright(&square, PageFormat::A4, Margin(10))?.titled(name);
 
         let (width, height) = lettering::size(name, 5);
@@ -756,6 +850,7 @@ mod tests {
             })
         );
         assert_eq!(long.title().map(|title| title.scale), Some(1));
+        assert_eq!(thin_margin.title().map(|title| title.scale), Some(4));
         assert_eq!(plain.title(), None);
         Ok(())
     }
