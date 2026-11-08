@@ -18,6 +18,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, File, HtmlAnchorElement, HtmlInputElement, Url};
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
+/// The id of the line saying why a download is disabled, for its button to point to.
+const DOWNLOADS_REFUSED: &str = "downloads-refused";
 
 /// A picture dropped in: its file's name, its pixels, and the link the page shows it from.
 #[derive(Clone)]
@@ -323,6 +325,7 @@ pub fn App() -> impl IntoView {
             Model::Twin => twin,
         })
     };
+    let refused_download = move || refusal_of(Model::None).or_else(|| refusal_of(Model::Twin));
 
     view! {
         <section
@@ -513,6 +516,9 @@ pub fn App() -> impl IntoView {
                                         || refusal_of(model).is_some()
                                 }
                                 title=move || refusal_of(model).unwrap_or_else(|| hint.to_string())
+                                aria-describedby=move || {
+                                    refusal_of(model).map(|_| DOWNLOADS_REFUSED.to_string())
+                                }
                                 class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
                                 on:click=move |_| download(model)
                             >
@@ -523,6 +529,11 @@ pub fn App() -> impl IntoView {
                             </button>
                         }
                     })}
+                <Show when=move || refused_download().is_some()>
+                    <p id=DOWNLOADS_REFUSED class="basis-full text-center text-sm text-stone-600">
+                        {refused_download}
+                    </p>
+                </Show>
             </div>
         </section>
 
