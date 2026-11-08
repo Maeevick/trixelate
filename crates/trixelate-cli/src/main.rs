@@ -28,9 +28,9 @@ struct Cli {
     /// The PNG or JPEG picture to turn into a sheet
     picture: PathBuf,
 
-    /// Cells across the grid, the rows following from the picture's proportions
-    #[arg(long, default_value_t = 48, value_parser = clap::value_parser!(u32).range(1..))]
-    width: u32,
+    /// Cells across the grid, the rows following from the picture's proportions [default: the most the paper holds: 64 on A3, 48 on A4, 32 on A5, half in a twin]
+    #[arg(long, value_parser = clap::value_parser!(u32).range(1..))]
+    width: Option<u32>,
 
     /// Colours in the palette, from 2 to 24
     #[arg(short, long, visible_alias = "colors", default_value = "8", value_parser = colour_count)]
@@ -104,11 +104,17 @@ fn legend_of(cli: &Cli) -> layout::Legend {
     }
 }
 
+/// The cells across asked for, or else the most the paper and the look hold.
+fn cells_across(cli: &Cli) -> u32 {
+    cli.width
+        .unwrap_or_else(|| layout::most_cells_across(cli.format.into(), legend_of(cli)))
+}
+
 /// Refuses more cells across than the paper holds for a child, unless chaos is asked.
 fn within_the_limits(cli: &Cli) -> Result<(), String> {
     let legend = legend_of(cli);
     let most = layout::most_cells_across(cli.format.into(), legend);
-    if cli.chaos || cli.width <= most {
+    if cli.chaos || cells_across(cli) <= most {
         return Ok(());
     }
     let paper = match cli.format {
@@ -144,7 +150,7 @@ fn main() -> ExitCode {
             .error(ArgumentError::ValueValidation, beyond)
             .exit();
     }
-    let warnings = warnings_for(cli.width, cli.colours);
+    let warnings = warnings_for(cells_across(&cli), cli.colours);
     for warning in &warnings {
         eprintln!("warning: {}", warning.says());
     }
@@ -186,7 +192,7 @@ fn run(cli: Cli) -> Result<String, String> {
     let started = Instant::now();
     let legend = legend_of(&cli);
     let picture = read_picture(&cli.picture)?;
-    let grid = GridSize::keeping_the_proportions_of(&picture, cli.width)
+    let grid = GridSize::keeping_the_proportions_of(&picture, cells_across(&cli))
         .map_err(|_| "a grid needs at least one cell".to_string())?;
     let order = Order {
         grid,
