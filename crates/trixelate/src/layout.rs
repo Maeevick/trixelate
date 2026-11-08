@@ -318,7 +318,7 @@ impl Layout {
             .miniature
             .and(self.credit)
             .and_then(|credit| {
-                lettering::largest_scale_fitting(file_name, room_width, self.margin / 2)
+                lettering::largest_scale_fitting(file_name, room_width, self.margin)
                     .map(|scale| scale.min(credit.scale))
             })
             .map(|scale| {
@@ -420,11 +420,10 @@ fn beside_its_model(
         MiniatureSize::Half => (2, 2),
         MiniatureSize::Third => (3, 3),
     };
-    let widest_cell = ((room.width - 1) / size.columns()).min((room.height - 1) / size.rows());
-    let cell_side = (1..=widest_cell)
+    let cell_side = (1..=room.width.min(room.height))
         .rev()
         .find(|&cell_side| arranged(cell_side, (cell_side / smallest).max(1)).is_some())?;
-    ((cell_side / smallest).max(1)..=(cell_side / largest).max(1))
+    (1..=(cell_side / largest).max(1))
         .rev()
         .find_map(|model_cell_side| arranged(cell_side, model_cell_side))
 }
