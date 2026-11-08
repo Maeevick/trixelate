@@ -579,6 +579,16 @@ mod tests {
     }
 
     #[test]
+    fn upright_a_grid_too_tall_for_any_cell_to_hold_its_number_is_refused_for_the_numbers_in_its_cells()
+     {
+        let ribbon = colouring(1, 4800, 2);
+
+        let layout = upright(&ribbon, PageFormat::A4, Margin(10));
+
+        assert_eq!(layout.err(), Some(NoRoom::ForTheNumbersInTheCells));
+    }
+
+    #[test]
     fn a_margin_is_at_most_twenty_millimetres() {
         let [widest, too_wide] = [20, 21].map(Margin::new);
 
