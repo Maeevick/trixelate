@@ -645,7 +645,7 @@ pub fn App() -> impl IntoView {
                 "github.com/Maeevick/trixelate"
                 <span class="sr-only">" (opens in a new tab)"</span>
             </a>
-            ") • MIT License"
+            ") - MIT License"
         </footer>
     }
 }
