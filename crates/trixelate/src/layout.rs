@@ -72,11 +72,20 @@ pub enum Legend {
     Freedom,
 }
 
-/// The coloured-in picture to copy from: none, or a miniature in the page's top left corner, over the grid where they meet.
+/// The coloured-in picture to copy from: none, or a miniature beside the grid, its legend beside it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Model {
     None,
-    Miniature,
+    Miniature(MiniatureSize),
+}
+
+/// How big the miniature is next to its grid, three tries side by side until one is chosen.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MiniatureSize {
+    /// The grid takes the most room a miniature a quarter as big leaves, the miniature then fills what is left, up to half.
+    RoomLeft,
+    Half,
+    Third,
 }
 
 /// Where the model's miniature lies: its top left corner and its cells' side, in dots, its frame around it.
@@ -152,6 +161,7 @@ const CREDIT_SCALE_AT_MOST: u32 = 3;
 const MINIATURE_CELLS_PER_CELL: u32 = 4;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
+const GAP_AROUND_THE_MODEL_MM: u32 = 5;
 /// A bubble is at most eight millimetres wide, big enough for its number, leaving the room to the cells.
 const WIDEST_BUBBLE_TENTHS_OF_MM: u32 = 80;
 const LINES_PER_CELL_SIDE: u32 = 16;
@@ -215,7 +225,7 @@ impl Layout {
         let grid_left = margin + (content_width - grid_width) / 2;
         let grid_top = margin + (grid_room - grid_height) / 2;
         let miniature = match legend {
-            Legend::Coloured(Model::Miniature) => Some(Miniature {
+            Legend::Coloured(Model::Miniature(_)) => Some(Miniature {
                 left: margin + line,
                 top: margin + line,
                 cell_side: (cell_side / MINIATURE_CELLS_PER_CELL).max(1),
@@ -344,14 +354,52 @@ mod tests {
         )
     }
 
-    fn with_its_model(colouring: &Colouring, margin: Margin) -> Result<Layout, NoRoom> {
+    fn with_its_model(
+        colouring: &Colouring,
+        orientation: Orientation,
+        margin: Margin,
+        size: MiniatureSize,
+    ) -> Result<Layout, NoRoom> {
         Layout::of(
             colouring,
             PageFormat::A4,
-            Orientation::Portrait,
+            orientation,
             margin,
-            Legend::Coloured(Model::Miniature),
+            Legend::Coloured(Model::Miniature(size)),
         )
+    }
+
+    /// The left, right and bottom edges of the bubbles, the right and bottom ones just past them.
+    fn legend_edges(layout: &Layout) -> (u32, u32, u32, u32) {
+        let bubbles = layout.bubbles();
+        let radius = bubbles[0].diameter / 2;
+        let left = bubbles
+            .iter()
+            .map(|bubble| bubble.centre_x)
+            .min()
+            .unwrap_or(0)
+            - radius;
+        let right = bubbles
+            .iter()
+            .map(|bubble| bubble.centre_x)
+            .max()
+            .unwrap_or(0)
+            + radius
+            + 1;
+        let top = bubbles
+            .iter()
+            .map(|bubble| bubble.centre_y)
+            .min()
+            .unwrap_or(0)
+            - radius;
+        let bottom = bubbles
+            .iter()
+            .map(|bubble| bubble.centre_y)
+            .max()
+            .unwrap_or(0)
+            + radius
+            + 1;
+        (left, right, top, bottom)
     }
 
     fn free(colouring: &Colouring, format: PageFormat, margin: Margin) -> Result<Layout, NoRoom> {
@@ -365,33 +413,120 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_with_its_model_shows_it_a_quarter_of_the_grid_wide_in_the_page_top_left_corner_framed_inside_the_margin()
+    fn upright_with_its_model_the_grid_lies_at_the_top_the_model_in_the_bottom_right_corner_and_the_legend_beside_it_bottoms_aligned()
     -> Result<(), NoRoom> {
-        let square = colouring(48, 48, 8);
-        let margin = 118;
+        let square = colouring(48, 48, 24);
+        let (margin, right, bottom) = (118, 2480 - 118, 3508 - 118);
+        let gap = dots(GAP_AROUND_THE_MODEL_MM);
 
-        let with_model = with_its_model(&square, Margin(10))?;
-        let without = upright(&square, PageFormat::A4, Margin(10))?;
+        let layout = with_its_model(
+            &square,
+            Orientation::Portrait,
+            Margin(10),
+            MiniatureSize::Half,
+        )?;
 
-        let line = with_model.line();
+        let (grid, line) = (layout.grid(), layout.line());
+        let (top_left, past_the_end) = (grid.cell(0, 0), grid.cell(48, 48));
+        let miniature = layout.miniature().expect("a miniature");
+        let (legend_left, legend_right, legend_top, legend_bottom) = legend_edges(&layout);
+        let in_reading_order = layout
+            .bubbles()
+            .is_sorted_by_key(|bubble| (bubble.centre_y, bubble.centre_x));
+        assert_eq!(top_left.top, margin);
+        assert!((top_left.left - margin).abs_diff(right - past_the_end.left - line) <= 1);
+        assert_eq!(miniature.cell_side, top_left.side / 2);
         assert_eq!(
-            with_model.miniature(),
-            Some(Miniature {
-                left: margin + line,
-                top: margin + line,
-                cell_side: with_model.grid().cell(0, 0).side / 4
-            })
+            (
+                miniature.left + 48 * miniature.cell_side + line,
+                miniature.top + 48 * miniature.cell_side + line
+            ),
+            (right, bottom)
         );
-        assert_eq!(with_model.grid(), without.grid());
-        assert_eq!(without.miniature(), None);
+        assert_eq!(legend_bottom, bottom);
+        assert!(legend_top >= past_the_end.top + line + gap);
+        assert!((legend_left - margin).abs_diff(miniature.left - line - gap - legend_right) <= 1);
+        assert!(in_reading_order && legend_top < legend_bottom - layout.bubbles()[0].diameter - 1);
         Ok(())
     }
 
     #[test]
-    fn with_no_margin_the_miniature_frame_sits_at_the_page_edge() -> Result<(), NoRoom> {
+    fn on_its_side_with_its_model_the_model_lies_in_the_top_left_corner_its_legend_centred_below_it_and_the_grid_on_the_right()
+    -> Result<(), NoRoom> {
+        let square = colouring(48, 48, 24);
+        let (margin, right, bottom) = (118, 3508 - 118, 2480 - 118);
+        let gap = dots(GAP_AROUND_THE_MODEL_MM);
+
+        let layout = with_its_model(
+            &square,
+            Orientation::Landscape,
+            Margin(10),
+            MiniatureSize::Half,
+        )?;
+
+        let (grid, line) = (layout.grid(), layout.line());
+        let (top_left, past_the_end) = (grid.cell(0, 0), grid.cell(48, 48));
+        let miniature = layout.miniature().expect("a miniature");
+        let frame_right = miniature.left + 48 * miniature.cell_side + line;
+        let frame_bottom = miniature.top + 48 * miniature.cell_side + line;
+        let (legend_left, legend_right, legend_top, legend_bottom) = legend_edges(&layout);
+        let in_columns_read_downwards = layout
+            .bubbles()
+            .is_sorted_by_key(|bubble| (bubble.centre_x, bubble.centre_y));
+        assert_eq!(
+            (miniature.left, miniature.top),
+            (margin + line, margin + line)
+        );
+        assert_eq!(miniature.cell_side, top_left.side / 2);
+        assert_eq!(past_the_end.left + line, right);
+        assert!((top_left.top - margin).abs_diff(bottom - past_the_end.top - line) <= 1);
+        assert!(frame_right + gap <= top_left.left);
+        assert!((legend_left - margin).abs_diff(frame_right - legend_right) <= 1);
+        assert!((legend_top - frame_bottom - gap).abs_diff(bottom - legend_bottom) <= 1);
+        assert!(
+            in_columns_read_downwards
+                && legend_left < legend_right - layout.bubbles()[0].diameter - 1
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn the_model_is_half_or_a_third_of_the_grid_or_fills_the_room_the_grid_leaves_beyond_a_quarter_up_to_a_half()
+    -> Result<(), NoRoom> {
+        let square = colouring(48, 48, 8);
+        let content_width = 2480 - 2 * 118;
+
+        let [room_left, half, third] = [
+            MiniatureSize::RoomLeft,
+            MiniatureSize::Half,
+            MiniatureSize::Third,
+        ]
+        .map(|size| with_its_model(&square, Orientation::Portrait, Margin(10), size));
+        let (room_left, half, third) = (room_left?, half?, third?);
+
+        let cell = |layout: &Layout| layout.grid().cell(0, 0).side;
+        let model_cell = |layout: &Layout| layout.miniature().expect("a miniature").cell_side;
+        assert_eq!(model_cell(&half), cell(&half) / 2);
+        assert_eq!(model_cell(&third), cell(&third) / 3);
+        assert!(cell(&room_left) >= cell(&third) && cell(&third) > cell(&half));
+        assert!(content_width - (48 * cell(&room_left) + room_left.line()) < 48);
+        assert!(
+            model_cell(&room_left) > cell(&room_left) / 3
+                && model_cell(&room_left) <= cell(&room_left) / 2
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn with_no_margin_the_miniature_frame_sits_in_the_page_corner() -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
 
-        let layout = with_its_model(&square, Margin(0))?;
+        let layout = with_its_model(
+            &square,
+            Orientation::Landscape,
+            Margin(0),
+            MiniatureSize::RoomLeft,
+        )?;
 
         assert_eq!(
             layout

@@ -94,7 +94,9 @@ impl From<Format> for PageFormat {
 fn legend_of(cli: &Cli) -> layout::Legend {
     match (cli.freedom, cli.with_model) {
         (true, _) => layout::Legend::Freedom,
-        (false, true) => layout::Legend::Coloured(layout::Model::Miniature),
+        (false, true) => {
+            layout::Legend::Coloured(layout::Model::Miniature(layout::MiniatureSize::RoomLeft))
+        }
         (false, false) => layout::Legend::Coloured(layout::Model::None),
     }
 }

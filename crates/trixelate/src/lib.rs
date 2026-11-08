@@ -71,7 +71,7 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
     };
     let look = match order.legend {
         Legend::Coloured(Model::None) => "",
-        Legend::Coloured(Model::Miniature) => "-with-model",
+        Legend::Coloured(Model::Miniature(_)) => "-with-model",
         Legend::Freedom => "-freedom",
     };
     format!(
@@ -138,7 +138,7 @@ mod tests {
         let (portrait, landscape) = (Orientation::Portrait, Orientation::Landscape);
         let (sheet, with_model) = (
             Legend::Coloured(Model::None),
-            Legend::Coloured(Model::Miniature),
+            Legend::Coloured(Model::Miniature(layout::MiniatureSize::RoomLeft)),
         );
 
         let names = [

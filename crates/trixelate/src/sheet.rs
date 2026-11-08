@@ -187,7 +187,7 @@ impl Paper {
 mod tests {
     use super::*;
     use crate::grid::GridSize;
-    use crate::layout::{CREDIT, Legend, Margin, Model, Orientation, PageFormat};
+    use crate::layout::{CREDIT, Legend, Margin, MiniatureSize, Model, Orientation, PageFormat};
     use crate::lettering;
     use crate::palette::ColourCount;
     use std::collections::BTreeSet;
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn a_miniature_shows_each_cell_in_its_colour_without_number_or_line_framed_in_grey_over_the_grid()
      {
-        let legend = Legend::Coloured(Model::Miniature);
+        let legend = Legend::Coloured(Model::Miniature(MiniatureSize::RoomLeft));
         let (colouring, layout) = red_red_yellow_laid_out(legend);
 
         let sheet = draw(&colouring, &layout);
