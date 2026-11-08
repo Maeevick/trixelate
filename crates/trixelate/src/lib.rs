@@ -31,6 +31,16 @@ pub struct Order {
 
 /// Turns a picture into the colour-by-number sheet ordered, or says what lacks room on the page.
 pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
+    let (colouring, layout) = lay_out(picture, order)?;
+    Ok(sheet::draw(&colouring, &layout, order.legend))
+}
+
+/// Whether the sheet ordered would fit its page, told without drawing it, so a page can say so before it is asked.
+pub fn fits_on_its_page(picture: &Picture, order: Order) -> Result<(), NoRoom> {
+    lay_out(picture, order).map(|_| ())
+}
+
+fn lay_out(picture: &Picture, order: Order) -> Result<(Colouring, Layout), NoRoom> {
     let colouring = Colouring::of(picture, order.grid, order.colours);
     let layout = Layout::of(
         &colouring,
@@ -39,13 +49,7 @@ pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
         order.margin,
         order.legend,
     )?;
-    Ok(sheet::draw(&colouring, &layout, order.legend))
-}
-
-/// Whether the sheet ordered would fit its page, told without drawing it, so a page can say so before it is asked.
-pub fn fits_on_its_page(picture: &Picture, order: Order) -> Result<(), NoRoom> {
-    let _ = (picture, order);
-    Ok(())
+    Ok((colouring, layout))
 }
 
 /// What a sheet made from a picture file is called: the picture's name, without its extension, then what the sheet is.
