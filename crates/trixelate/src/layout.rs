@@ -370,22 +370,21 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_with_its_model_shows_it_an_eighth_of_the_grid_wide_over_its_top_left_corner_sticking_out_by_a_third()
+    fn a_sheet_with_its_model_shows_it_a_quarter_of_the_grid_wide_in_the_page_top_left_corner_framed_inside_the_margin()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
+        let margin = 118;
 
         let with_model = with_its_model(&square, Margin(10))?;
         let without = upright(&square, PageFormat::A4, Margin(10))?;
 
-        let corner = with_model.grid().cell(0, 0);
-        let side = corner.side / 8;
-        let sticking_out = 48 * side / 3;
+        let line = with_model.line();
         assert_eq!(
             with_model.miniature(),
             Some(Miniature {
-                left: corner.left - sticking_out,
-                top: corner.top - sticking_out,
-                cell_side: side
+                left: margin + line,
+                top: margin + line,
+                cell_side: with_model.grid().cell(0, 0).side / 4
             })
         );
         assert_eq!(with_model.grid(), without.grid());
@@ -394,15 +393,16 @@ mod tests {
     }
 
     #[test]
-    fn a_miniature_with_no_margin_to_stick_out_into_stops_at_the_page_edge_leaving_room_for_its_frame()
-    -> Result<(), NoRoom> {
+    fn with_no_margin_the_miniature_frame_sits_at_the_page_edge() -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
 
         let layout = with_its_model(&square, Margin(0))?;
 
         assert_eq!(
-            layout.miniature().map(|miniature| miniature.left),
-            Some(layout.line())
+            layout
+                .miniature()
+                .map(|miniature| (miniature.left, miniature.top)),
+            Some((layout.line(), layout.line()))
         );
         Ok(())
     }
