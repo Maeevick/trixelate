@@ -68,7 +68,7 @@ pub enum Legend {
     Freedom,
 }
 
-/// The coloured-in picture to copy from: none, or a miniature over the sheet's top left corner.
+/// The coloured-in picture to copy from: none, or a miniature in the page's top left corner, over the grid where they meet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Model {
     None,
@@ -144,10 +144,8 @@ pub struct Layout {
 
 /// The credit stays small, under two millimetres tall, and at most half as tall as the margin it sits in.
 const CREDIT_SCALE_AT_MOST: u32 = 3;
-/// How many of the miniature's cells fit across one of the grid's: the miniature is an eighth of the grid wide.
-const MINIATURE_CELLS_PER_CELL: u32 = 8;
-/// The miniature sticks out of the grid's top left corner by a third of its width, like a sticker on the sheet.
-const MINIATURE_STICKING_OUT: u32 = 3;
+/// How many of the miniature's cells fit across one of the grid's: the miniature is a quarter of the grid wide.
+const MINIATURE_CELLS_PER_CELL: u32 = 4;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
 const WIDEST_BUBBLE_MM: u32 = 15;
@@ -211,20 +209,11 @@ impl Layout {
         let grid_left = margin + (content_width - grid_width) / 2;
         let grid_top = margin + (grid_room - grid_height) / 2;
         let miniature = match legend {
-            Legend::Coloured(Model::Miniature) => {
-                let miniature_cell_side = (cell_side / MINIATURE_CELLS_PER_CELL).max(1);
-                let sticking_out = size.columns() * miniature_cell_side / MINIATURE_STICKING_OUT;
-                let room_for_its_frame = line;
-                Some(Miniature {
-                    left: grid_left
-                        .saturating_sub(sticking_out)
-                        .max(room_for_its_frame),
-                    top: grid_top
-                        .saturating_sub(sticking_out)
-                        .max(room_for_its_frame),
-                    cell_side: miniature_cell_side,
-                })
-            }
+            Legend::Coloured(Model::Miniature) => Some(Miniature {
+                left: margin + line,
+                top: margin + line,
+                cell_side: (cell_side / MINIATURE_CELLS_PER_CELL).max(1),
+            }),
             Legend::Coloured(Model::None) | Legend::Freedom => None,
         };
 
