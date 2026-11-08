@@ -154,7 +154,7 @@ pub struct Layout {
     miniature: Miniature,
 }
 
-/// The credit stays small, under two millimetres tall, and at most half as tall as the margin it sits in.
+/// The credit stays small, under two millimetres tall, which half the thinnest margin holds.
 const CREDIT_SCALE_AT_MOST: u32 = 3;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
@@ -219,16 +219,15 @@ impl Layout {
             lettering::largest_scale_fitting(&widest_number, bubble * 11 / 20, bubble * 9 / 20)
                 .ok_or(NoRoom::ForTheNumbersInTheLegend)?;
 
-        let credit =
-            lettering::largest_scale_fitting(CREDIT, room.width, margin / 2).map(|scale| {
-                let scale = scale.min(CREDIT_SCALE_AT_MOST);
-                let (width, height) = lettering::size(CREDIT, scale);
-                Credit {
-                    left: margin + room.width - width,
-                    top: page_height - margin + (margin - height) / 2,
-                    scale,
-                }
-            });
+        let credit = lettering::largest_scale_fitting(CREDIT, room.width, margin).map(|scale| {
+            let scale = scale.min(CREDIT_SCALE_AT_MOST);
+            let (width, height) = lettering::size(CREDIT, scale);
+            Credit {
+                left: margin + room.width - width,
+                top: page_height - margin + (margin - height) / 2,
+                scale,
+            }
+        });
 
         Ok(Layout {
             page_width,
