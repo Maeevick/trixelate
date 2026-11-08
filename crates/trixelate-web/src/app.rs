@@ -44,7 +44,7 @@ impl Default for Settings {
             colours: 8,
             format: PageFormat::A4,
             landscape: false,
-            margin: Margin::AROUND_A_SHEET.0,
+            margin: Margin::AROUND_A_SHEET,
         }
     }
 }

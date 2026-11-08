@@ -79,7 +79,7 @@ mod tests {
             colours: ColourCount::new(2).expect("a count"),
             format,
             orientation: Orientation::Portrait,
-            margin: Margin(20),
+            margin: Margin::new(20).expect("a margin"),
         }
     }
 
@@ -130,7 +130,7 @@ mod tests {
                 colours: ColourCount::new(colours).expect("a count"),
                 format,
                 orientation,
-                margin: Margin(20),
+                margin: Margin::new(20).expect("a margin"),
             };
             sheet_file_name(picture, &order)
         };

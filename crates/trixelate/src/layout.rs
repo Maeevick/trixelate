@@ -52,14 +52,14 @@ fn dots_of_tenths(tenths_of_millimetre: u32) -> u32 {
 
 /// The blank paper around the sheet's content, in millimetres.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Margin(pub u32);
+pub struct Margin(u32);
 
 /// A margin thinner than five millimetres, too thin for the title and the credit.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MarginTooThin;
 
 impl Margin {
-    pub const AROUND_A_SHEET: Margin = Margin(10);
+    pub const AROUND_A_SHEET: u32 = 10;
     pub const THINNEST: u32 = 5;
 
     pub fn new(millimetres: u32) -> Result<Margin, MarginTooThin> {
@@ -465,20 +465,6 @@ mod tests {
     }
 
     #[test]
-    fn with_no_margin_the_miniature_frame_sits_in_the_page_corner() -> Result<(), NoRoom> {
-        let square = colouring(48, 48, 8);
-
-        let layout = on_its_side(&square, Margin(0))?;
-
-        let miniature = layout.miniature();
-        assert_eq!(
-            (miniature.left, miniature.top),
-            (layout.line(), layout.line())
-        );
-        Ok(())
-    }
-
-    #[test]
     fn a_page_counts_its_millimetres_in_dots_at_300_dots_per_inch() {
         let small = colouring(4, 4, 2);
 
@@ -531,13 +517,13 @@ mod tests {
     }
 
     #[test]
-    fn the_credit_sits_small_in_the_bottom_margin_flush_right_smaller_on_a_narrow_page_or_left_out()
+    fn the_credit_sits_small_in_the_bottom_margin_flush_right_smaller_on_a_narrow_page_or_left_out_of_a_room_narrower_than_it()
     -> Result<(), NoRoom> {
         let small = colouring(4, 4, 2);
 
         let a4 = upright(&small, PageFormat::A4, Margin(20))?;
         let narrow = upright(&small, PageFormat::A5, Margin(40))?;
-        let thin_margin = upright(&small, PageFormat::A4, Margin(1))?;
+        let narrower = upright(&small, PageFormat::A5, Margin(58))?;
 
         let edges = a4.credit().map(|credit| {
             let (width, height) = lettering::size(CREDIT, credit.scale);
@@ -550,7 +536,7 @@ mod tests {
         });
         assert_eq!(edges, Some((3, 2480 - 236, 3379, 3400)));
         assert_eq!(narrow.credit().map(|credit| credit.scale), Some(2));
-        assert_eq!(thin_margin.credit(), None);
+        assert_eq!(narrower.credit(), None);
         Ok(())
     }
 

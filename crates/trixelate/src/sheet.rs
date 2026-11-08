@@ -217,7 +217,7 @@ mod tests {
             &colouring,
             PageFormat::A5,
             Orientation::Portrait,
-            Margin(20),
+            Margin::new(20).expect("a margin"),
         )
         .expect("room");
         (colouring, layout)
@@ -409,7 +409,7 @@ mod tests {
             &colouring,
             PageFormat::A5,
             Orientation::Portrait,
-            Margin(20),
+            Margin::new(20).expect("a margin"),
         )
         .expect("room");
 
