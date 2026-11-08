@@ -269,6 +269,30 @@ fn a_free_legend_sheet_matches_its_golden_master_its_bubbles_left_blank() {
 }
 
 #[test]
+fn a_sheet_with_its_model_beside_its_picture_matches_its_golden_master_the_miniature_over_its_corner()
+ {
+    let folder = folder("with-model");
+    let picture = a_twelve_colour_picture_in(&folder);
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "--colours",
+        "12",
+        "--format",
+        "a5",
+        "--with-model",
+    ]);
+
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert!(matches_golden(
+        &folder.join("twelve-4-12-a5-with-model.sheet.png"),
+        "twelve-a5-with-model.sheet.png"
+    ));
+}
+
+#[test]
 fn a_landscape_twin_beside_its_picture_matches_its_golden_master_model_left_sheet_right() {
     let folder = folder("twin");
     let picture = a_twelve_colour_picture_in(&folder);
@@ -426,9 +450,9 @@ fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
         &["missing.png", "--width", "4", "--colours", "25"],
         &["--width", "4"],
         &["missing.png", "--width", "4", "--height", "3"],
-        &["missing.png", "--width", "4", "--freedom", "--model"],
-        &["missing.png", "--width", "4", "--freedom", "--twin"],
-        &["missing.png", "--width", "4", "--model", "--twin"],
+        &["missing.png", "--width", "4", "--freedom", "--with-model"],
+        &["missing.png", "--width", "4", "--model"],
+        &["missing.png", "--width", "4", "--twin"],
     ];
 
     for arguments in cases {
