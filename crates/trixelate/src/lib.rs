@@ -14,12 +14,11 @@ pub mod warning;
 
 use colouring::Colouring;
 use grid::GridSize;
-use layout::{Layout, Legend, Margin, NoRoom, Orientation, PageFormat};
+use layout::{Layout, Margin, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
 
-/// What a sheet is asked to be: its grid, its number of colours, its paper, which way up it lies, its margin
-/// and its legend.
+/// What a sheet is asked to be: its grid, its number of colours, its paper, which way up it lies and its margin.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Order {
     pub grid: GridSize,
@@ -27,11 +26,10 @@ pub struct Order {
     pub format: PageFormat,
     pub orientation: Orientation,
     pub margin: Margin,
-    pub legend: Legend,
 }
 
-/// Turns a picture into the colour-by-number sheet ordered, titled with its file name when it shows its model, or says
-/// what lacks room on the page.
+/// Turns a picture into the colour-by-number sheet ordered, titled with its file name, or says what lacks room on the
+/// page.
 pub fn make_sheet(picture: &Picture, order: Order, file_name: &str) -> Result<Picture, NoRoom> {
     let (colouring, layout) = lay_out(picture, order)?;
     Ok(sheet::draw(&colouring, &layout.titled(file_name)))
@@ -44,18 +42,12 @@ pub fn fits_on_its_page(picture: &Picture, order: Order) -> Result<(), NoRoom> {
 
 fn lay_out(picture: &Picture, order: Order) -> Result<(Colouring, Layout), NoRoom> {
     let colouring = Colouring::of(picture, order.grid, order.colours);
-    let layout = Layout::of(
-        &colouring,
-        order.format,
-        order.orientation,
-        order.margin,
-        order.legend,
-    )?;
+    let layout = Layout::of(&colouring, order.format, order.orientation, order.margin)?;
     Ok((colouring, layout))
 }
 
 /// What a sheet made from a picture file is called: the picture's name, without its extension, then the cells across,
-/// the colours and the paper, then landscape or freedom when asked, so variants of one picture sit side by side
+/// the colours and the paper, then landscape when asked, so variants of one picture sit side by side
 /// without overwriting each other, then what the sheet is.
 pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
     let stem = std::path::Path::new(picture_file_name)
@@ -70,12 +62,8 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
         Orientation::Portrait => "",
         Orientation::Landscape => "-landscape",
     };
-    let look = match order.legend {
-        Legend::Coloured => "",
-        Legend::Freedom => "-freedom",
-    };
     format!(
-        "{stem}-{}-{}-{paper}{landscape}{look}.sheet.png",
+        "{stem}-{}-{}-{paper}{landscape}.sheet.png",
         order.grid.columns(),
         order.colours.get()
     )
@@ -92,7 +80,6 @@ mod tests {
             format,
             orientation: Orientation::Portrait,
             margin: Margin(20),
-            legend: Legend::Coloured,
         }
     }
 
@@ -113,21 +100,14 @@ mod tests {
     }
 
     #[test]
-    fn a_coloured_sheet_is_titled_with_the_file_name_it_is_given_and_a_free_sheet_is_not() {
+    fn a_sheet_is_titled_with_the_file_name_it_is_given() {
         let picture =
             Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
-        let free = Order {
-            legend: Legend::Freedom,
-            ..order(4, PageFormat::A4)
-        };
-        let sheets =
-            |order| ["red.png", "yellow.png"].map(|name| make_sheet(&picture, order, name));
 
-        let ([titled_red, titled_yellow], [free_red, free_yellow]) =
-            (sheets(order(4, PageFormat::A4)), sheets(free));
+        let [red, yellow] = ["red.png", "yellow.png"]
+            .map(|name| make_sheet(&picture, order(4, PageFormat::A4), name));
 
-        assert!(titled_red.is_ok() && titled_red != titled_yellow);
-        assert!(free_red.is_ok() && free_red == free_yellow);
+        assert!(red.is_ok() && red != yellow);
     }
 
     #[test]
@@ -142,33 +122,25 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_is_named_after_its_picture_then_its_cells_across_colours_paper_and_any_landscape_or_freedom_then_what_it_is()
+    fn a_sheet_is_named_after_its_picture_then_its_cells_across_colours_paper_and_any_landscape_then_what_it_is()
      {
-        let named = |picture, (columns, colours), format, orientation, legend| {
+        let named = |picture, (columns, colours), format, orientation| {
             let order = Order {
                 grid: GridSize::new(columns, 2).expect("a grid"),
                 colours: ColourCount::new(colours).expect("a count"),
                 format,
                 orientation,
                 margin: Margin(20),
-                legend,
             };
             sheet_file_name(picture, &order)
         };
         let (portrait, landscape) = (Orientation::Portrait, Orientation::Landscape);
-        let sheet = Legend::Coloured;
 
         let names = [
-            named("goblin.png", (48, 8), PageFormat::A4, portrait, sheet),
-            named("my.photo.jpeg", (64, 12), PageFormat::A3, landscape, sheet),
-            named(
-                "goblin",
-                (48, 2),
-                PageFormat::A4,
-                landscape,
-                Legend::Freedom,
-            ),
-            named("goblin.png", (32, 8), PageFormat::A5, portrait, sheet),
+            named("goblin.png", (48, 8), PageFormat::A4, portrait),
+            named("my.photo.jpeg", (64, 12), PageFormat::A3, landscape),
+            named("goblin", (48, 2), PageFormat::A4, landscape),
+            named("goblin.png", (32, 8), PageFormat::A5, portrait),
         ];
 
         assert_eq!(
@@ -176,7 +148,7 @@ mod tests {
             [
                 "goblin-48-8-a4.sheet.png",
                 "my.photo-64-12-a3-landscape.sheet.png",
-                "goblin-48-2-a4-landscape-freedom.sheet.png",
+                "goblin-48-2-a4-landscape.sheet.png",
                 "goblin-32-8-a5.sheet.png"
             ]
         );

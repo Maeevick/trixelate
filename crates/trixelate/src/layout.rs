@@ -65,14 +65,6 @@ pub enum NoRoom {
     ForTheNumbersInTheLegend,
 }
 
-/// Whether the sheet has a legend of the picture's colours, with its model in miniature in those colours and its title,
-/// or none at all, leaving the child free to pick their own, which no model could show.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Legend {
-    Coloured,
-    Freedom,
-}
-
 /// Where the model's miniature lies: its top left corner and its cells' side, in dots, its frame around it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Miniature {
@@ -148,7 +140,7 @@ pub struct Layout {
     margin: u32,
     credit: Option<Credit>,
     title: Option<Title>,
-    miniature: Option<Miniature>,
+    miniature: Miniature,
 }
 
 /// The credit stays small, under two millimetres tall, and at most half as tall as the margin it sits in.
@@ -173,12 +165,12 @@ struct Room {
     height: u32,
 }
 
-/// Where the grid, its outlines, the legend's bubbles and any miniature lie.
+/// Where the grid, its outlines, the legend's bubbles and the model's miniature lie.
 struct Placed {
     grid: GridPlace,
     line: u32,
     bubbles: Vec<Disc>,
-    miniature: Option<Miniature>,
+    miniature: Miniature,
 }
 
 impl Layout {
@@ -188,7 +180,6 @@ impl Layout {
         format: PageFormat,
         orientation: Orientation,
         margin: Margin,
-        legend: Legend,
     ) -> Result<Layout, NoRoom> {
         let (width, height) = match (orientation, format.millimetres()) {
             (Orientation::Portrait, (short, long)) => (short, long),
@@ -206,22 +197,20 @@ impl Layout {
         let colours = colouring.palette().colours().len() as u32;
         let widest_bubble = dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM);
         let odd = |diameter: u32| diameter.saturating_sub(1 - diameter % 2);
-        let (placed, bubble) = match (legend, orientation) {
-            (Legend::Coloured, Orientation::Landscape) => {
+        let (placed, bubble) = match orientation {
+            Orientation::Landscape => {
                 let bubble = odd(widest_bubble);
                 let placed =
                     beside_its_model(size, colours, bubble, room).ok_or(NoRoom::InsideTheMargin)?;
-                (placed, Some(bubble))
+                (placed, bubble)
             }
-            (Legend::Coloured, Orientation::Portrait) => {
+            Orientation::Portrait => {
                 let bubble = odd(widest_bubble.min(4 * room.width / (5 * colours - 1)));
-                let placed = above_its_legend(size, colours, Some(bubble), room)?;
                 (
-                    down_on_the_legend_under_its_model(placed, size, bubble, room),
-                    Some(bubble),
+                    on_its_legend_under_its_model(size, colours, bubble, room)?,
+                    bubble,
                 )
             }
-            (Legend::Freedom, _) => (above_its_legend(size, colours, None, room)?, None),
         };
 
         let widest_number = colours.to_string();
@@ -232,13 +221,9 @@ impl Layout {
             inside_a_cell / 2,
         )
         .ok_or(NoRoom::ForTheNumbersInTheCells)?;
-        let bubble_number_scale = bubble
-            .map(|bubble| {
-                lettering::largest_scale_fitting(&widest_number, bubble * 11 / 20, bubble * 9 / 20)
-                    .ok_or(NoRoom::ForTheNumbersInTheLegend)
-            })
-            .transpose()?
-            .unwrap_or_default();
+        let bubble_number_scale =
+            lettering::largest_scale_fitting(&widest_number, bubble * 11 / 20, bubble * 9 / 20)
+                .ok_or(NoRoom::ForTheNumbersInTheLegend)?;
 
         let credit =
             lettering::largest_scale_fitting(CREDIT, room.width, margin / 2).map(|scale| {
@@ -299,16 +284,12 @@ impl Layout {
         self.credit
     }
 
-    /// The layout with the sheet's file name as its title, centred in the top margin as big as the bubbles' numbers,
-    /// when the sheet shows its model, as every coloured sheet does.
+    /// The layout with the sheet's file name as its title, centred in the top margin as big as the bubbles' numbers, if
+    /// the margin has room for it.
     pub fn titled(self, file_name: &str) -> Layout {
         let room_width = self.page_width - 2 * self.margin;
-        let title = self
-            .miniature
-            .and_then(|_| {
-                lettering::largest_scale_fitting(file_name, room_width, self.margin / 2)
-                    .map(|scale| scale.min(self.bubble_number_scale))
-            })
+        let title = lettering::largest_scale_fitting(file_name, room_width, self.margin / 2)
+            .map(|scale| scale.min(self.bubble_number_scale))
             .map(|scale| {
                 let (width, height) = lettering::size(file_name, scale);
                 Title {
@@ -326,8 +307,8 @@ impl Layout {
         self.title.clone()
     }
 
-    /// Where the model's miniature lies, if the sheet has one.
-    pub fn miniature(&self) -> Option<Miniature> {
+    /// Where the model's miniature lies.
+    pub fn miniature(&self) -> Miniature {
         self.miniature
     }
 
@@ -337,18 +318,19 @@ impl Layout {
     }
 }
 
-/// The grid as big as the room allows above a row of bubbles, one per colour, on the room's bottom edge, centred across
-/// in the room left above them; or alone, centred, without a legend.
-fn above_its_legend(
+/// Upright, the grid as big as the room allows above a row of bubbles, one per colour, centred on the room's bottom
+/// edge, the grid centred across and set down on its legend, leaving the top left corner to its model, seven sixteenths
+/// of the grid wide, over the grid where they meet.
+fn on_its_legend_under_its_model(
     size: GridSize,
     colours: u32,
-    bubble: Option<u32>,
+    bubble: u32,
     room: Room,
 ) -> Result<Placed, NoRoom> {
-    let legend_height = bubble.map_or(0, |bubble| dots(GAP_ABOVE_THE_LEGEND_MM) + bubble);
+    let legend_top = room.margin + room.height - bubble;
     let grid_room = room
         .height
-        .checked_sub(legend_height)
+        .checked_sub(dots(GAP_ABOVE_THE_LEGEND_MM) + bubble)
         .ok_or(NoRoom::InsideTheMargin)?;
     let roomiest_side = (room.width / size.columns()).min(grid_room / size.rows());
     let line = (roomiest_side / LINES_PER_CELL_SIDE).max(1);
@@ -356,53 +338,29 @@ fn above_its_legend(
         .min(grid_room.saturating_sub(line) / size.rows());
     let grid_width = cell_side * size.columns() + line;
     let grid_height = cell_side * size.rows() + line;
-    let bubbles = bubble.map_or_else(Vec::new, |bubble| {
-        let spacing = bubble / 4;
-        let row_width = colours * bubble + (colours - 1) * spacing;
-        let row_left = room.margin + (room.width - row_width) / 2;
-        (0..colours)
+    let spacing = bubble / 4;
+    let row_width = colours * bubble + (colours - 1) * spacing;
+    let row_left = room.margin + (room.width - row_width) / 2;
+    Ok(Placed {
+        grid: GridPlace {
+            left: room.margin + (room.width - grid_width) / 2,
+            top: legend_top - dots(GAP_ABOVE_THE_LEGEND_MM) - grid_height,
+            cell_side,
+        },
+        line,
+        bubbles: (0..colours)
             .map(|index| Disc {
                 centre_x: row_left + index * (bubble + spacing) + bubble / 2,
                 centre_y: room.margin + room.height - 1 - bubble / 2,
                 diameter: bubble,
             })
-            .collect()
-    });
-    Ok(Placed {
-        grid: GridPlace {
-            left: room.margin + (room.width - grid_width) / 2,
-            top: room.margin + (grid_room - grid_height) / 2,
-            cell_side,
-        },
-        line,
-        bubbles,
-        miniature: None,
-    })
-}
-
-/// Upright, the grid moved down onto its legend, leaving the top left corner to its model, seven sixteenths of the grid
-/// wide, over the grid where they meet.
-fn down_on_the_legend_under_its_model(
-    placed: Placed,
-    size: GridSize,
-    bubble: u32,
-    room: Room,
-) -> Placed {
-    let (cell_side, line) = (placed.grid.cell_side, placed.line);
-    let grid_height = cell_side * size.rows() + line;
-    let legend_top = room.margin + room.height - bubble;
-    Placed {
-        grid: GridPlace {
-            top: legend_top - dots(GAP_ABOVE_THE_LEGEND_MM) - grid_height,
-            ..placed.grid
-        },
-        miniature: Some(Miniature {
+            .collect(),
+        miniature: Miniature {
             left: room.margin + line,
             top: room.margin + line,
             cell_side: (cell_side * MINIATURE_SIXTEENTHS_OF_A_CELL / 16).max(1),
-        }),
-        ..placed
-    }
+        },
+    })
 }
 
 /// On its side, the grid as big as the room allows on the right, beside a model in the top left corner at least a
@@ -487,11 +445,11 @@ fn on_its_side_beside_its_model(
                 diameter: bubble,
             })
             .collect(),
-        miniature: Some(Miniature {
+        miniature: Miniature {
             left: room.margin + sides.line,
             top: room.margin + sides.line,
             cell_side: sides.model_cell,
-        }),
+        },
     })
 }
 
@@ -565,34 +523,11 @@ mod tests {
         format: PageFormat,
         margin: Margin,
     ) -> Result<Layout, NoRoom> {
-        Layout::of(
-            colouring,
-            format,
-            Orientation::Portrait,
-            margin,
-            Legend::Coloured,
-        )
+        Layout::of(colouring, format, Orientation::Portrait, margin)
     }
 
     fn on_its_side(colouring: &Colouring, margin: Margin) -> Result<Layout, NoRoom> {
-        let legend = Legend::Coloured;
-        Layout::of(
-            colouring,
-            PageFormat::A4,
-            Orientation::Landscape,
-            margin,
-            legend,
-        )
-    }
-
-    fn free(colouring: &Colouring, format: PageFormat, margin: Margin) -> Result<Layout, NoRoom> {
-        Layout::of(
-            colouring,
-            format,
-            Orientation::Portrait,
-            margin,
-            Legend::Freedom,
-        )
+        Layout::of(colouring, PageFormat::A4, Orientation::Landscape, margin)
     }
 
     #[test]
@@ -609,11 +544,11 @@ mod tests {
         let legend_top = bubble.centre_y - bubble.diameter / 2;
         assert_eq!(
             layout.miniature(),
-            Some(Miniature {
+            Miniature {
                 left: margin + line,
                 top: margin + line,
                 cell_side: top_left.side * 7 / 16,
-            })
+            }
         );
         assert!(right - margin - (past_the_end.left + line - top_left.left) < 48);
         assert!((top_left.left - margin).abs_diff(right - past_the_end.left - line) <= 1);
@@ -631,7 +566,7 @@ mod tests {
 
         let (grid, line) = (layout.grid(), layout.line());
         let (top_left, past_the_end) = (grid.cell(0, 0), grid.cell(48, 48));
-        let miniature = layout.miniature().expect("a miniature");
+        let miniature = layout.miniature();
         let frame_right = miniature.left + 48 * miniature.cell_side + line;
         let frame_bottom = miniature.top + 48 * miniature.cell_side + line;
         let bubbles = layout.bubbles();
@@ -666,7 +601,7 @@ mod tests {
 
     /// The right edge of a model's frame, the left of the grid and the gap between them.
     fn model_beside_grid(layout: &Layout, columns: u32) -> (u32, u32, u32) {
-        let (line, model) = (layout.line(), layout.miniature().expect("a miniature"));
+        let (line, model) = (layout.line(), layout.miniature());
         (
             model.left + columns * model.cell_side + line,
             layout.grid().cell(0, 0).left,
@@ -683,7 +618,7 @@ mod tests {
 
         let (frame_right, grid_left, gap) = model_beside_grid(&layout, 1);
         let (cell, line) = (layout.grid().cell(0, 0), layout.line());
-        let model = layout.miniature().expect("a miniature");
+        let model = layout.miniature();
         let frame_bottom = model.top + model.cell_side + line;
         let bubble = layout.bubbles()[0];
         let (legend_top, legend_bottom) = (
@@ -706,7 +641,7 @@ mod tests {
         let beside_tall = on_its_side(&tall, Margin(10))?;
 
         let model_and_grid_cells = |layout: &Layout| {
-            let model = layout.miniature().map_or(0, |model| model.cell_side);
+            let model = layout.miniature().cell_side;
             (model, layout.grid().cell(0, 0).side)
         };
         let (model, cell) = model_and_grid_cells(&beside_wide);
@@ -763,11 +698,10 @@ mod tests {
 
         let layout = on_its_side(&square, Margin(0))?;
 
+        let miniature = layout.miniature();
         assert_eq!(
-            layout
-                .miniature()
-                .map(|miniature| (miniature.left, miniature.top)),
-            Some((layout.line(), layout.line()))
+            (miniature.left, miniature.top),
+            (layout.line(), layout.line())
         );
         Ok(())
     }
@@ -790,13 +724,7 @@ mod tests {
     fn a_landscape_page_lies_its_format_on_its_side() {
         let small = colouring(4, 4, 2);
 
-        let on_its_side = Layout::of(
-            &small,
-            PageFormat::A4,
-            Orientation::Landscape,
-            Margin(20),
-            Legend::Coloured,
-        );
+        let on_its_side = Layout::of(&small, PageFormat::A4, Orientation::Landscape, Margin(20));
 
         assert_eq!(
             on_its_side.map(|layout| (layout.page_width(), layout.page_height())),
@@ -805,22 +733,7 @@ mod tests {
     }
 
     #[test]
-    fn a_free_sheet_has_no_legend_its_grid_taking_the_room_and_no_bubble_too_small_to_refuse()
-    -> Result<(), NoRoom> {
-        let (tall, twelve_colours) = (colouring(5, 10, 12), colouring(10, 5, 12));
-
-        let with_a_legend = upright(&tall, PageFormat::A4, Margin(20))?;
-        let without = free(&tall, PageFormat::A4, Margin(20))?;
-        let on_a_narrow_page = free(&twelve_colours, PageFormat::A5, Margin(63));
-
-        assert!(without.bubbles().is_empty());
-        assert!(without.grid().cell(0, 0).side > with_a_legend.grid().cell(0, 0).side);
-        assert!(on_a_narrow_page.is_ok());
-        Ok(())
-    }
-
-    #[test]
-    fn a_coloured_sheet_is_titled_with_its_file_name_centred_in_the_top_margin_as_big_as_the_bubbles_numbers_shrinking_to_fit_a_free_one_is_not()
+    fn a_coloured_sheet_is_titled_with_its_file_name_centred_in_the_top_margin_as_big_as_the_bubbles_numbers_shrinking_to_fit()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
         let (name, long_name) = ("goblin-48-8-a4.sheet.png", "goblin-".repeat(40));
@@ -828,7 +741,6 @@ mod tests {
         let titled = upright(&square, PageFormat::A4, Margin(10))?.titled(name);
         let long = upright(&square, PageFormat::A4, Margin(10))?.titled(&long_name);
         let thin_margin = on_its_side(&square, Margin(5))?.titled(name);
-        let free = free(&square, PageFormat::A4, Margin(10))?.titled(name);
 
         let (width, height) = lettering::size(name, 5);
         assert_eq!(titled.bubble_number_scale(), 5);
@@ -843,7 +755,6 @@ mod tests {
         );
         assert_eq!(long.title().map(|title| title.scale), Some(1));
         assert_eq!(thin_margin.title().map(|title| title.scale), Some(4));
-        assert_eq!(free.title(), None);
         Ok(())
     }
 

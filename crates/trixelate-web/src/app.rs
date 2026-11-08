@@ -7,7 +7,7 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use trixelate::grid::GridSize;
-use trixelate::layout::{Legend, Margin, NoRoom, Orientation, PageFormat, most_cells_across};
+use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::warning::warnings_for;
@@ -35,7 +35,6 @@ struct Settings {
     format: PageFormat,
     landscape: bool,
     margin: u32,
-    freedom: bool,
 }
 
 impl Default for Settings {
@@ -46,25 +45,12 @@ impl Default for Settings {
             format: PageFormat::A4,
             landscape: false,
             margin: Margin::AROUND_A_SHEET.0,
-            freedom: false,
-        }
-    }
-}
-
-impl Settings {
-    /// The sheet's legend: none at all in freedom, else coloured, with its model.
-    fn legend(self) -> Legend {
-        if self.freedom {
-            Legend::Freedom
-        } else {
-            Legend::Coloured
         }
     }
 }
 
 /// The order for the sheet asked for, once sure its page has room for it, or why it would be refused.
 fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
-    let legend = settings.legend();
     let most = most_cells_across(settings.format);
     if settings.width > most {
         return Err(beyond(settings.format, most));
@@ -84,7 +70,6 @@ fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
             Orientation::Portrait
         },
         margin: Margin(settings.margin),
-        legend,
     };
     fits_on_its_page(picture, order).map_err(explain)?;
     Ok(order)
@@ -381,23 +366,6 @@ pub fn App() -> impl IntoView {
                         }
                     />
                 </label>
-                <label class="order-last flex items-start gap-2 text-sm font-medium sm:order-none sm:mt-6">
-                    <input
-                        type="checkbox"
-                        class="mt-0.5 size-4 accent-lime-600"
-                        prop:checked=move || settings.get().freedom
-                        on:change=move |event| {
-                            let freedom = event_target_checked(&event);
-                            settings.update(|settings| settings.freedom = freedom);
-                        }
-                    />
-                    <span>
-                        "Freedom"
-                        <span class="block font-normal text-stone-500">
-                            "no legend, any crayon goes"
-                        </span>
-                    </span>
-                </label>
                 <Show when=move || warning().is_some()>
                     <p
                         role="status"
@@ -533,13 +501,7 @@ pub fn App() -> impl IntoView {
 
             <figure class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
                 <figcaption class="flex h-9 items-center justify-between text-sm font-semibold text-stone-600">
-                    {move || {
-                        if settings.get().freedom {
-                            "The sheet, any crayon goes"
-                        } else {
-                            "The sheet, with its model"
-                        }
-                    }}
+                    "The sheet, with its model"
                 </figcaption>
                 <div class="relative flex min-h-80 flex-1 items-center justify-center rounded-2xl bg-stone-100 p-3">
                     {move || match (preview.get(), no_picture()) {
@@ -547,13 +509,7 @@ pub fn App() -> impl IntoView {
                             view! {
                                 <img
                                     src=link
-                                    alt=move || {
-                                        if settings.get().freedom {
-                                            "The sheet: a grid of numbered cells to colour in"
-                                        } else {
-                                            "The sheet: a grid of numbered cells to colour in, its model in miniature in the top left corner"
-                                        }
-                                    }
+                                    alt="The sheet: a grid of numbered cells to colour in, its model in miniature in the top left corner"
                                     class=move || {
                                         format!(
                                             "max-h-[70vh] w-full object-contain drop-shadow-md transition {}",

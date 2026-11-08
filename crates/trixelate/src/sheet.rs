@@ -24,9 +24,7 @@ pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
 
 /// Paints the model's miniature, a block of colour per cell, framed like the grid's lines.
 fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
-    let Some(miniature) = layout.miniature() else {
-        return;
-    };
+    let miniature = layout.miniature();
     let side = miniature.cell_side;
     let (width, height) = (
         colouring.size().columns() * side,
@@ -196,7 +194,7 @@ impl Paper {
 mod tests {
     use super::*;
     use crate::grid::GridSize;
-    use crate::layout::{CREDIT, Legend, Margin, Orientation, PageFormat};
+    use crate::layout::{CREDIT, Margin, Orientation, PageFormat};
     use crate::lettering;
     use crate::palette::ColourCount;
     use std::collections::BTreeSet;
@@ -208,10 +206,6 @@ mod tests {
     const BLACK: Rgb = Rgb(0, 0, 0);
 
     fn red_red_yellow() -> (Colouring, Layout) {
-        red_red_yellow_laid_out(Legend::Coloured)
-    }
-
-    fn red_red_yellow_laid_out(legend: Legend) -> (Colouring, Layout) {
         let picture =
             Picture::from_rgba(3, 1, [RED, RED, YELLOW].as_flattened()).expect("a picture");
         let colouring = Colouring::of(
@@ -224,7 +218,6 @@ mod tests {
             PageFormat::A5,
             Orientation::Portrait,
             Margin(20),
-            legend,
         )
         .expect("room");
         (colouring, layout)
@@ -269,8 +262,7 @@ mod tests {
 
     #[test]
     fn a_coloured_sheet_writes_its_title_in_grey_in_its_top_margin() {
-        let legend = Legend::Coloured;
-        let (colouring, layout) = red_red_yellow_laid_out(legend);
+        let (colouring, layout) = red_red_yellow();
         let layout = layout.titled("red-red-yellow.png");
         let margin = 236;
 
@@ -345,12 +337,11 @@ mod tests {
 
     #[test]
     fn a_miniature_shows_each_cell_in_its_colour_without_number_or_line_framed_in_grey() {
-        let legend = Legend::Coloured;
-        let (colouring, layout) = red_red_yellow_laid_out(legend);
+        let (colouring, layout) = red_red_yellow();
 
         let sheet = draw(&colouring, &layout);
 
-        let miniature = layout.miniature().expect("a miniature");
+        let miniature = layout.miniature();
         let side = miniature.cell_side;
         let colour_of = |column| {
             colouring
@@ -419,7 +410,6 @@ mod tests {
             PageFormat::A5,
             Orientation::Portrait,
             Margin(20),
-            Legend::Coloured,
         )
         .expect("room");
 

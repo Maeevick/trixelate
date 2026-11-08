@@ -48,11 +48,7 @@ struct Cli {
     #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET.0)]
     margin: u32,
 
-    /// No legend, no model and no title: the numbers only group the cells, and the child picks the colours [default: a legend of the picture's colours, its model in miniature in the top left corner, and the sheet's file name as its title]
-    #[arg(long)]
-    freedom: bool,
-
-    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape or -freedom before .sheet.png when asked]
+    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape before .sheet.png when asked]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -83,15 +79,6 @@ impl From<Format> for PageFormat {
             Format::A4 => PageFormat::A4,
             Format::A5 => PageFormat::A5,
         }
-    }
-}
-
-/// The legend asked for: coloured, with its model, unless free.
-fn legend_of(cli: &Cli) -> layout::Legend {
-    if cli.freedom {
-        layout::Legend::Freedom
-    } else {
-        layout::Legend::Coloured
     }
 }
 
@@ -175,7 +162,6 @@ fn sure() -> bool {
 
 fn run(cli: Cli) -> Result<String, String> {
     let started = Instant::now();
-    let legend = legend_of(&cli);
     let picture = read_picture(&cli.picture)?;
     let grid = GridSize::keeping_the_proportions_of(&picture, cells_across(&cli))
         .map_err(|_| "a grid needs at least one cell".to_string())?;
@@ -189,7 +175,6 @@ fn run(cli: Cli) -> Result<String, String> {
             layout::Orientation::Portrait
         },
         margin: Margin(cli.margin),
-        legend,
     };
     let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture, &order));
     let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();
