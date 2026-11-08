@@ -72,7 +72,7 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
     };
     let look = match order.legend {
         Legend::Coloured(Model::None) => "",
-        Legend::Coloured(Model::Miniature(_)) => "-with-model",
+        Legend::Coloured(Model::Miniature) => "-with-model",
         Legend::Freedom => "-freedom",
     };
     format!(
@@ -118,7 +118,7 @@ mod tests {
         let picture =
             Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
         let with_model = Order {
-            legend: Legend::Coloured(Model::Miniature(layout::MiniatureSize::RoomLeft)),
+            legend: Legend::Coloured(Model::Miniature),
             ..order(4, PageFormat::A4)
         };
         let sheets =
@@ -159,7 +159,7 @@ mod tests {
         let (portrait, landscape) = (Orientation::Portrait, Orientation::Landscape);
         let (sheet, with_model) = (
             Legend::Coloured(Model::None),
-            Legend::Coloured(Model::Miniature(layout::MiniatureSize::RoomLeft)),
+            Legend::Coloured(Model::Miniature),
         );
 
         let names = [

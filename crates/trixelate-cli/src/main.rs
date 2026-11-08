@@ -52,13 +52,9 @@ struct Cli {
     #[arg(long, group = "look")]
     freedom: bool,
 
-    /// Put the model in miniature in a corner of the page, the picture in its colours to copy from, its legend beside it
+    /// Put the model in miniature in the page's top left corner, the picture in its colours to copy from, and title the sheet with its file name
     #[arg(long, group = "look")]
     with_model: bool,
-
-    /// For a while, the model's size to try: 1 fills the room the grid leaves, 2 is half the grid, 3 a third
-    #[arg(long, requires = "with_model", default_value = "1", value_parser = ["1", "2", "3"])]
-    mini: String,
 
     /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape, -freedom or -with-model before .sheet.png when asked]
     #[arg(short, long)]
@@ -98,13 +94,7 @@ impl From<Format> for PageFormat {
 fn legend_of(cli: &Cli) -> layout::Legend {
     match (cli.freedom, cli.with_model) {
         (true, _) => layout::Legend::Freedom,
-        (false, true) => {
-            layout::Legend::Coloured(layout::Model::Miniature(match cli.mini.as_str() {
-                "2" => layout::MiniatureSize::Half,
-                "3" => layout::MiniatureSize::Third,
-                _ => layout::MiniatureSize::RoomLeft,
-            }))
-        }
+        (false, true) => layout::Legend::Coloured(layout::Model::Miniature),
         (false, false) => layout::Legend::Coloured(layout::Model::None),
     }
 }

@@ -8,7 +8,7 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 use trixelate::grid::GridSize;
 use trixelate::layout::{
-    Legend, Margin, MiniatureSize, Model, NoRoom, Orientation, PageFormat, most_cells_across,
+    Legend, Margin, Model, NoRoom, Orientation, PageFormat, most_cells_across,
 };
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
@@ -60,7 +60,7 @@ impl Settings {
     fn legend(self) -> Legend {
         match (self.freedom, self.with_model) {
             (true, _) => Legend::Freedom,
-            (false, true) => Legend::Coloured(Model::Miniature(MiniatureSize::RoomLeft)),
+            (false, true) => Legend::Coloured(Model::Miniature),
             (false, false) => Legend::Coloured(Model::None),
         }
     }
