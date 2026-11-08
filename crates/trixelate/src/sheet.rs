@@ -18,6 +18,7 @@ pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
     draw_the_miniature(&mut paper, colouring, layout);
     draw_the_legend(&mut paper, colouring, layout);
     write_the_credit(&mut paper, layout);
+    write_the_title(&mut paper, layout);
     paper.into_picture()
 }
 
@@ -55,6 +56,17 @@ fn write_the_credit(paper: &mut Paper, layout: &Layout) {
         lettering::ink(CREDIT, credit.scale)
             .into_iter()
             .map(move |(x, y)| (credit.left + x, credit.top + y))
+    });
+    for (x, y) in dots {
+        paper.fill(x, y, 1, 1, NUMBER_GREY);
+    }
+}
+
+fn write_the_title(paper: &mut Paper, layout: &Layout) {
+    let dots = layout.title().into_iter().flat_map(|title| {
+        lettering::ink(&title.text, title.scale)
+            .into_iter()
+            .map(move |(x, y)| (title.left + x, title.top + y))
     });
     for (x, y) in dots {
         paper.fill(x, y, 1, 1, NUMBER_GREY);

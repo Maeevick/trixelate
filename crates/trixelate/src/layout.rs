@@ -161,7 +161,9 @@ pub struct Layout {
     cell_number_scale: u32,
     bubbles: Vec<Disc>,
     bubble_number_scale: u32,
+    margin: u32,
     credit: Option<Credit>,
+    title: Option<Title>,
     miniature: Option<Miniature>,
 }
 
@@ -268,7 +270,9 @@ impl Layout {
             line: placed.line,
             cell_number_scale,
             bubble_number_scale,
+            margin,
             credit,
+            title: None,
             miniature: placed.miniature,
         })
     }
@@ -308,13 +312,30 @@ impl Layout {
 
     /// The layout with the sheet's file name as its title, centred in the top margin as small as the credit, when the
     /// sheet shows its model.
-    pub fn titled(self, _file_name: &str) -> Layout {
-        self
+    pub fn titled(self, file_name: &str) -> Layout {
+        let room_width = self.page_width - 2 * self.margin;
+        let title = self
+            .miniature
+            .and(self.credit)
+            .and_then(|credit| {
+                lettering::largest_scale_fitting(file_name, room_width, self.margin / 2)
+                    .map(|scale| scale.min(credit.scale))
+            })
+            .map(|scale| {
+                let (width, height) = lettering::size(file_name, scale);
+                Title {
+                    text: file_name.to_string(),
+                    left: self.margin + (room_width - width) / 2,
+                    top: (self.margin - height) / 2,
+                    scale,
+                }
+            });
+        Layout { title, ..self }
     }
 
     /// Where the title is written, if the sheet has one.
     pub fn title(&self) -> Option<Title> {
-        None
+        self.title.clone()
     }
 
     /// Where the model's miniature lies, if the sheet has one.
