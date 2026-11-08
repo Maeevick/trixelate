@@ -223,18 +223,13 @@ impl Layout {
             (Legend::Coloured(model), Orientation::Portrait | Orientation::Landscape) => {
                 let bubble = odd(widest_bubble.min(4 * room.width / (5 * colours - 1)));
                 let placed = above_its_legend(size, colours, Some(bubble), room)?;
-                let miniature = (model == Model::Miniature).then(|| Miniature {
-                    left: margin + placed.line,
-                    top: margin + placed.line,
-                    cell_side: (placed.grid.cell_side * MINIATURE_SIXTEENTHS_OF_A_CELL / 16).max(1),
-                });
-                (
-                    Placed {
-                        miniature,
-                        ..placed
-                    },
-                    Some(bubble),
-                )
+                let placed = match model {
+                    Model::None => placed,
+                    Model::Miniature => {
+                        down_on_the_legend_under_its_model(placed, size, bubble, room)
+                    }
+                };
+                (placed, Some(bubble))
             }
             (Legend::Freedom, _) => (above_its_legend(size, colours, None, room)?, None),
         };
@@ -393,6 +388,31 @@ fn above_its_legend(
         bubbles,
         miniature: None,
     })
+}
+
+/// Upright, the grid moved down onto its legend, leaving the top left corner to its model, seven sixteenths of the grid
+/// wide, over the grid where they meet.
+fn down_on_the_legend_under_its_model(
+    placed: Placed,
+    size: GridSize,
+    bubble: u32,
+    room: Room,
+) -> Placed {
+    let (cell_side, line) = (placed.grid.cell_side, placed.line);
+    let grid_height = cell_side * size.rows() + line;
+    let legend_top = room.margin + room.height - bubble;
+    Placed {
+        grid: GridPlace {
+            top: legend_top - dots(GAP_ABOVE_THE_LEGEND_MM) - grid_height,
+            ..placed.grid
+        },
+        miniature: Some(Miniature {
+            left: room.margin + line,
+            top: room.margin + line,
+            cell_side: (cell_side * MINIATURE_SIXTEENTHS_OF_A_CELL / 16).max(1),
+        }),
+        ..placed
+    }
 }
 
 /// On its side, the grid as big as the room allows on the right, beside a model in the top left corner at least a
