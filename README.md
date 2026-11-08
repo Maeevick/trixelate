@@ -6,7 +6,7 @@
 
 **Any picture, turned into a colour-by-number pixel sheet ready to print.**
 
-trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, finds its dominant colours and writes a page where every cell carries the number of its colour, with a legend of coloured bubbles at the bottom. The child colours each cell with the crayon its number points to, and the picture appears in pixel art.
+trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, finds its dominant colours and writes a page where every cell carries the number of its colour, with a legend of coloured bubbles. The child colours each cell with the crayon its number points to, and the picture appears in pixel art.
 
 ## Why
 
@@ -53,7 +53,7 @@ A goblin turned into a sheet to colour with `trixelate sample/goblin.png`: 48 ce
 
 | Picture | Sheet |
 | --- | --- |
-| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: a grid of numbered cells above a legend of eight coloured bubbles, the goblin in miniature and in colour in the page's top left corner, over the grid's corner, the file name on top](sample/goblin.sheet.png) |
+| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: the goblin in miniature and in colour in the page's top left corner, a legend of eight coloured bubbles beside it, the grid of numbered cells below, the file name on top](sample/goblin.sheet.png) |
 
 ## In the browser
 
@@ -74,11 +74,11 @@ make web-build  # a static site in crates/trixelate-web/dist, for any host
 2. **The grid keeps the picture's proportions**, its rows following from `--width`, and **each cell averages the pixels it covers**, so a detail too small for the grid still tints its cell; a grid finer than its picture repeats its pixels.
 3. **The palette is cut from the cells' colours**: the box of colours that spreads the most is cut through the middle of its widest channel until there are as many boxes as colours asked, and each box gives its weighted average. Far-apart colours are never merged, and colour 1 is the one used most.
 4. **Every cell takes the number of its nearest palette colour**, and a colour no cell takes is dropped, so every bubble has cells to colour.
-5. **The layout gives the cells the largest square side the page allows**, inside the margin and above the legend, and the largest digits each cell and bubble can hold.
-6. **The model sits in miniature in the page's top left corner**, inside the margin, a block of colour per cell, framed, with no number and no line. It is seven thirty-seconds of the grid's width, over the grid where they meet, the grid staying centred above the legend whichever way up the paper lies. The sheet is then titled with its file name, as big as the bubbles' numbers.
+5. **The layout gives the cells the largest square side the page allows**, inside the margin and clear of the legend, and the largest digits each cell and bubble can hold.
+6. **The model sits in miniature in the page's top left corner**, inside the margin, a block of colour per cell, framed, with no number and no line. It is seven thirty-seconds of the grid's width. Upright, the legend sits in the room right of it, centred on its middle, and the grid is centred in the room below; on its side, the grid is centred above the legend at the bottom. The model lies over the grid where they meet. The sheet is then titled with its file name, as big as the bubbles' numbers.
 7. **A small credit is written at the bottom right**, in the margin: trixelate and its licence.
 
-![A twelve-colour sheet on A5: the grid of numbered cells, the twelve colours in miniature over its top left corner, the legend below, the file name on top](crates/trixelate-cli/tests/golden/twelve-a5.sheet.png)
+![A twelve-colour sheet on A5: the twelve colours in miniature in the top left corner, the legend beside them, the grid of numbered cells below, the file name on top](crates/trixelate-cli/tests/golden/twelve-a5.sheet.png)
 
 The workspace holds the library, `crates/trixelate`, the command line, `crates/trixelate-cli`, and the page, `crates/trixelate-web`. The library takes bytes and gives bytes, with no file or terminal in it, so it can also run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
 

@@ -15,7 +15,7 @@ The words trixelate's code and docs use, read before naming anything.
 | **Page format** | The paper the sheet is drawn for, A3, A4 or A5, at 300 dots per inch. |
 | **Orientation** | Which way up the paper lies: portrait, upright, or landscape, on its side. |
 | **Margin** | The blank paper around the sheet's content, 10 mm unless asked otherwise, from 5 mm, the room the title and the credit need, to 20 mm, leaving the room to the cells. |
-| **Legend** | The row of bubbles centred at the bottom of a sheet, whichever way up the paper lies. |
+| **Legend** | The row of bubbles of a sheet: upright, right of the model and centred on its middle; on its side, centred at the bottom. |
 | **Credit** | The small line at the bottom right of every sheet, in its margin: trixelate and its licence. |
 | **Title** | The sheet's file name, centred in the top margin of every sheet, as big as the bubbles' numbers. |
 | **Bubble** | A disc filled with one palette colour, its colour number written inside. |
