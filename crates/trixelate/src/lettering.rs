@@ -40,7 +40,7 @@ const DIGITS: [[u8; GLYPH_HEIGHT as usize]; 10] = [
 ];
 
 /// The letters and signs a sheet's credit is written with, drawn like the digits.
-const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 35] = [
+const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 29] = [
     (
         'M',
         [
@@ -63,18 +63,6 @@ const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 35] = [
         'L',
         [
             0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111,
-        ],
-    ),
-    (
-        'C',
-        [
-            0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110,
-        ],
-    ),
-    (
-        'A',
-        [
-            0b01110, 0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001,
         ],
     ),
     (
@@ -156,12 +144,6 @@ const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 35] = [
         ],
     ),
     (
-        'p',
-        [
-            0b00000, 0b00000, 0b11110, 0b10001, 0b11110, 0b10000, 0b10000,
-        ],
-    ),
-    (
         'r',
         [
             0b00000, 0b00000, 0b10110, 0b11001, 0b10000, 0b10000, 0b10000,
@@ -204,12 +186,6 @@ const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 35] = [
         ],
     ),
     (
-        'y',
-        [
-            0b00000, 0b00000, 0b10001, 0b10001, 0b01111, 0b00001, 0b01110,
-        ],
-    ),
-    (
         '(',
         [
             0b00010, 0b00100, 0b01000, 0b01000, 0b01000, 0b00100, 0b00010,
@@ -231,18 +207,6 @@ const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 35] = [
         '/',
         [
             0b00000, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b00000,
-        ],
-    ),
-    (
-        '-',
-        [
-            0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000,
-        ],
-    ),
-    (
-        '|',
-        [
-            0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100,
         ],
     ),
     (
