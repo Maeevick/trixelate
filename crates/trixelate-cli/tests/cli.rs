@@ -39,6 +39,14 @@ fn trixelate(arguments: &[&str]) -> Output {
         .expect("trixelate runs")
 }
 
+/// The command run with no one at a terminal to answer it, as from a script.
+fn trixelate_asking(arguments: &[&str]) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_trixelate"))
+        .args(arguments)
+        .output()
+        .expect("the command runs")
+}
+
 fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
@@ -116,6 +124,32 @@ fn the_command_says_what_it_wrote_where_how_fast_and_how_long_a_five_year_old_wi
     assert!(sheet.contains("12 cells to colour"));
     assert!(twin.contains("12 cells to colour"));
     assert!(model.contains("Nothing to colour"));
+}
+
+#[test]
+fn a_sheet_of_few_cells_or_few_colours_is_warned_of_and_written_only_once_the_user_is_sure() {
+    let folder = folder("warned");
+    let picture = a_picture_in(&folder);
+    let picture = picture.to_str().unwrap_or_default();
+    let sheet = folder.join("sunset-4-2-a4.sheet.png");
+
+    let unanswered = trixelate_asking(&[picture, "--width", "4", "--colours", "2"]);
+    let written_unanswered = sheet.exists();
+    let sure = trixelate_asking(&[picture, "--width", "4", "--colours", "2", "-y"]);
+
+    let warned = text(&unanswered.stderr);
+    assert_eq!(unanswered.status.code(), Some(2));
+    assert!(!written_unanswered);
+    assert!(warned.contains(
+        "warning: with so few cells across, it will be more playing with big cubes than colour-by-number pixel art"
+    ));
+    assert!(warned.contains(
+        "warning: with so few colours, it will be more painting solid patches than colour-by-number pixel art"
+    ));
+    assert!(warned.contains("--yes"));
+    assert!(sure.status.success(), "{}", text(&sure.stderr));
+    assert!(text(&sure.stderr).contains("warning: with so few cells across"));
+    assert!(sheet.exists());
 }
 
 #[test]
