@@ -9,10 +9,20 @@ pub enum Warning {
     FewColours,
 }
 
+/// Below this many cells across, the cells are big cubes more than pixels.
+const FEWEST_CELLS_ACROSS_FOR_PIXEL_ART: u32 = 16;
+/// Below this many colours, the sheet is solid patches more than pixel art.
+const FEWEST_COLOURS_FOR_PIXEL_ART: usize = 4;
+
 /// The warnings a sheet's cells across and colours call for, the cells' first.
 pub fn warnings_for(cells_across: u32, colours: ColourCount) -> Vec<Warning> {
-    let _ = (cells_across, colours);
-    Vec::new()
+    [
+        (cells_across < FEWEST_CELLS_ACROSS_FOR_PIXEL_ART).then_some(Warning::FewCellsAcross),
+        (colours.get() < FEWEST_COLOURS_FOR_PIXEL_ART).then_some(Warning::FewColours),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 #[cfg(test)]
