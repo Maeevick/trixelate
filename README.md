@@ -37,7 +37,7 @@ trixelate [OPTIONS] <PICTURE>
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `<PICTURE>` | The PNG or JPEG picture to turn into a sheet, of any colour type and depth; the sheet is always a PNG | |
-| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched. At most 64 on A3, 48 on A4 and 32 on A5, half in a twin | the most the paper holds |
+| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched. At most 64 on A3, 48 on A4 and 32 on A5, half in a twin | the most a sheet on the paper holds, a twin included |
 | `-c`, `--colours` | Colours in the palette, from 2 to 24 (`--colors` works too) | 8 |
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |

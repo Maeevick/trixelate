@@ -28,7 +28,7 @@ struct Cli {
     /// The PNG or JPEG picture to turn into a sheet
     picture: PathBuf,
 
-    /// Cells across the grid, the rows following from the picture's proportions [default: the most the paper holds: 64 on A3, 48 on A4, 32 on A5, half in a twin]
+    /// Cells across the grid, the rows following from the picture's proportions [default: the most a sheet on the paper holds: 64 on A3, 48 on A4, 32 on A5]
     #[arg(long, value_parser = clap::value_parser!(u32).range(1..))]
     width: Option<u32>,
 
@@ -104,10 +104,14 @@ fn legend_of(cli: &Cli) -> layout::Legend {
     }
 }
 
-/// The cells across asked for, or else the most the paper and the look hold.
+/// The cells across asked for, or else the most a sheet on the paper holds, whatever the look: a twin never narrows it.
 fn cells_across(cli: &Cli) -> u32 {
-    cli.width
-        .unwrap_or_else(|| layout::most_cells_across(cli.format.into(), legend_of(cli)))
+    cli.width.unwrap_or_else(|| {
+        layout::most_cells_across(
+            cli.format.into(),
+            layout::Legend::Coloured(layout::Model::None),
+        )
+    })
 }
 
 /// Refuses more cells across than the paper holds for a child, unless chaos is asked.
