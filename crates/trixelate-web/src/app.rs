@@ -264,356 +264,334 @@ pub fn App() -> impl IntoView {
     let no_model = move || no_picture() || settings.get().freedom;
 
     view! {
-        <div class="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-5 py-8 sm:px-8">
-            <header class="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <h1 class="flex items-center gap-3 font-mono text-4xl font-bold tracking-tight">
-                        <span aria-hidden="true" class="grid grid-cols-2 gap-0.5">
-                            <span class="size-3.5 rounded-[3px] bg-lime-500"></span>
-                            <span class="size-3.5 rounded-[3px] bg-amber-400"></span>
-                            <span class="size-3.5 rounded-[3px] bg-rose-500"></span>
-                            <span class="size-3.5 rounded-[3px] bg-sky-500"></span>
-                        </span>
-                        "trixelate"
-                    </h1>
-                    <p class="mt-2 text-stone-600">
-                        "Any picture, turned into a colour-by-number sheet. Crayons not included."
-                    </p>
-                </div>
-                <p class="text-sm text-stone-500">
-                    "Nothing leaves your browser. Not even the goblin."
-                </p>
-            </header>
-
-            <section
-                aria-label="Your picture and how to turn it into a sheet"
-                class="grid gap-6 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200 lg:grid-cols-[1fr_1.4fr]"
+        <section
+            aria-label="Your picture and how to turn it into a sheet"
+            class="grid gap-6 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200 lg:grid-cols-[1fr_1.4fr]"
+        >
+            <label
+                class=move || {
+                    format!(
+                        "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition focus-within:ring-4 focus-within:ring-lime-300 {}",
+                        if hovering.get() {
+                            "border-lime-500 bg-lime-50"
+                        } else {
+                            "border-stone-300 hover:border-lime-400 hover:bg-lime-50/50"
+                        },
+                    )
+                }
+                on:dragover=move |event: leptos::ev::DragEvent| {
+                    event.prevent_default();
+                    hovering.set(true);
+                }
+                on:dragleave=move |_| hovering.set(false)
+                on:drop=file_dropped
             >
-                <label
-                    class=move || {
-                        format!(
-                            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition focus-within:ring-4 focus-within:ring-lime-300 {}",
-                            if hovering.get() {
-                                "border-lime-500 bg-lime-50"
-                            } else {
-                                "border-stone-300 hover:border-lime-400 hover:bg-lime-50/50"
-                            },
-                        )
-                    }
-                    on:dragover=move |event: leptos::ev::DragEvent| {
-                        event.prevent_default();
-                        hovering.set(true);
-                    }
-                    on:dragleave=move |_| hovering.set(false)
-                    on:drop=file_dropped
-                >
+                <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    class="sr-only"
+                    on:change=file_picked
+                />
+                <span aria-hidden="true" class="text-4xl">"🧌"</span>
+                <span class="text-lg font-semibold">
+                    {move || {
+                        if no_picture() {
+                            "Drop a picture here".to_string()
+                        } else {
+                            "Drop another one to swap".to_string()
+                        }
+                    }}
+                </span>
+                <span class="text-sm text-stone-500">
+                    "or click to pick one · PNG or JPEG"
+                </span>
+                <Show when=move || unreadable.get()>
+                    <span role="alert" class="text-sm font-medium text-rose-600">
+                        "That does not look like a PNG or a JPEG. Goblins only come in those two flavours."
+                    </span>
+                </Show>
+            </label>
+
+            <form
+                class="grid grid-cols-2 content-center gap-x-5 gap-y-4 sm:grid-cols-3"
+                on:submit=|event| event.prevent_default()
+            >
+                <label class="flex flex-col gap-1 text-sm font-medium">
+                    "Cells across"
                     <input
-                        type="file"
-                        accept="image/png,image/jpeg"
-                        class="sr-only"
-                        on:change=file_picked
+                        type="number"
+                        min="1"
+                        max="200"
+                        class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
+                        prop:value=move || settings.get().width.to_string()
+                        on:change=move |event| {
+                            if let Ok(width) = event_target_value(&event).parse::<u32>() {
+                                settings.update(|settings| settings.width = width.max(1));
+                            }
+                        }
                     />
-                    <span aria-hidden="true" class="text-4xl">"🧌"</span>
-                    <span class="text-lg font-semibold">
-                        {move || {
-                            if no_picture() {
-                                "Drop a picture here".to_string()
-                            } else {
-                                "Drop another one to swap".to_string()
-                            }
-                        }}
-                    </span>
-                    <span class="text-sm text-stone-500">
-                        "or click to pick one · PNG or JPEG"
-                    </span>
-                    <Show when=move || unreadable.get()>
-                        <span role="alert" class="text-sm font-medium text-rose-600">
-                            "That does not look like a PNG or a JPEG. Goblins only come in those two flavours."
-                        </span>
-                    </Show>
                 </label>
-
-                <form
-                    class="grid grid-cols-2 content-center gap-x-5 gap-y-4 sm:grid-cols-3"
-                    on:submit=|event| event.prevent_default()
-                >
-                    <label class="flex flex-col gap-1 text-sm font-medium">
-                        "Cells across"
-                        <input
-                            type="number"
-                            min="1"
-                            max="200"
-                            class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
-                            prop:value=move || settings.get().width.to_string()
-                            on:change=move |event| {
-                                if let Ok(width) = event_target_value(&event).parse::<u32>() {
-                                    settings.update(|settings| settings.width = width.max(1));
-                                }
-                            }
-                        />
-                    </label>
-                    <label class="flex flex-col gap-1 text-sm font-medium">
-                        <span>
-                            "Colours "
-                            <span class="font-mono text-lime-700">
-                                {move || settings.get().colours}
-                            </span>
+                <label class="flex flex-col gap-1 text-sm font-medium">
+                    <span>
+                        "Colours "
+                        <span class="font-mono text-lime-700">
+                            {move || settings.get().colours}
                         </span>
-                        <input
-                            type="range"
-                            min="2"
-                            max="12"
-                            class="mt-2 accent-lime-600"
-                            prop:value=move || settings.get().colours.to_string()
-                            on:input=move |event| {
-                                if let Ok(colours) = event_target_value(&event).parse::<usize>() {
-                                    settings.update(|settings| settings.colours = colours);
-                                }
-                            }
-                        />
-                    </label>
-                    <label class="order-last flex items-start gap-2 text-sm font-medium sm:order-none sm:mt-6">
-                        <input
-                            type="checkbox"
-                            class="mt-0.5 size-4 accent-lime-600"
-                            prop:checked=move || settings.get().freedom
-                            on:change=move |event| {
-                                let freedom = event_target_checked(&event);
-                                settings.update(|settings| settings.freedom = freedom);
-                            }
-                        />
-                        <span>
-                            "Freedom"
-                            <span class="block font-normal text-stone-500">
-                                "no legend, any crayon goes"
-                            </span>
-                        </span>
-                    </label>
-                    <label class="flex flex-col gap-1 text-sm font-medium">
-                        "Paper"
-                        <select
-                            class="rounded-xl border border-stone-300 bg-white px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
-                            on:change=move |event| {
-                                let format = match event_target_value(&event).as_str() {
-                                    "a3" => PageFormat::A3,
-                                    "a5" => PageFormat::A5,
-                                    _ => PageFormat::A4,
-                                };
-                                settings.update(|settings| settings.format = format);
-                            }
-                        >
-                            <option value="a3">"A3"</option>
-                            <option value="a4" selected>"A4"</option>
-                            <option value="a5">"A5"</option>
-                        </select>
-                    </label>
-                    <label class="flex flex-col gap-1 text-sm font-medium">
-                        "Margin, in mm"
-                        <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
-                            prop:value=move || settings.get().margin.to_string()
-                            on:change=move |event| {
-                                if let Ok(margin) = event_target_value(&event).parse::<u32>() {
-                                    settings.update(|settings| settings.margin = margin);
-                                }
-                            }
-                        />
-                    </label>
-                    <label class="flex items-start gap-2 text-sm font-medium sm:mt-6">
-                        <input
-                            type="checkbox"
-                            class="mt-0.5 size-4 accent-lime-600"
-                            prop:checked=move || settings.get().landscape
-                            on:change=move |event| {
-                                let landscape = event_target_checked(&event);
-                                settings.update(|settings| settings.landscape = landscape);
-                            }
-                        />
-                        <span>
-                            "Landscape"
-                            <span class="block font-normal text-stone-500">"for wide pictures"</span>
-                        </span>
-                    </label>
-                </form>
-                <div
-                    role="group"
-                    aria-label="Downloads"
-                    class="grid gap-3 border-t border-stone-100 pt-5 sm:flex sm:flex-wrap sm:items-center sm:justify-center lg:col-span-2"
-                >
-                    <span class="text-center text-sm text-stone-500">
-                        {move || if saving.get() { "Sharpening the crayons…" } else { "Download the" }}
                     </span>
-                    {[
-                        (Model::None, "Sheet", "to colour in"),
-                        (Model::Full, "Model", "to copy from"),
-                        (Model::Twin, "Twin", "both on one page"),
-                    ]
-                        .map(|(model, label, hint)| {
-                            view! {
-                                <button
-                                    type="button"
-                                    disabled=move || {
-                                        saving.get() || if model == Model::None { no_picture() } else { no_model() }
-                                    }
-                                    title=hint
-                                    class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
-                                    on:click=move |_| download(model)
-                                >
-                                    {label}
-                                    <span class="ml-1.5 font-normal text-amber-200/80 group-disabled:text-stone-400">{hint}</span>
-                                </button>
+                    <input
+                        type="range"
+                        min="2"
+                        max="12"
+                        class="mt-2 accent-lime-600"
+                        prop:value=move || settings.get().colours.to_string()
+                        on:input=move |event| {
+                            if let Ok(colours) = event_target_value(&event).parse::<usize>() {
+                                settings.update(|settings| settings.colours = colours);
                             }
-                        })}
-                </div>
-            </section>
-
-            <section aria-label="Preview" class="grid gap-6 md:grid-cols-2">
-                <figure class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
-                    <figcaption class="flex h-9 items-center justify-between text-sm font-semibold text-stone-600">
-                        "Your picture"
-                        <span class="font-mono text-xs font-normal text-stone-500">
-                            {move || {
-                                dropped
-                                    .get()
-                                    .map(|dropped| {
-                                        format!(
-                                            "{} · {} × {}",
-                                            dropped.name,
-                                            dropped.picture.width(),
-                                            dropped.picture.height(),
-                                        )
-                                    })
-                                    .unwrap_or_default()
-                            }}
+                        }
+                    />
+                </label>
+                <label class="order-last flex items-start gap-2 text-sm font-medium sm:order-none sm:mt-6">
+                    <input
+                        type="checkbox"
+                        class="mt-0.5 size-4 accent-lime-600"
+                        prop:checked=move || settings.get().freedom
+                        on:change=move |event| {
+                            let freedom = event_target_checked(&event);
+                            settings.update(|settings| settings.freedom = freedom);
+                        }
+                    />
+                    <span>
+                        "Freedom"
+                        <span class="block font-normal text-stone-500">
+                            "no legend, any crayon goes"
                         </span>
-                    </figcaption>
-                    <div class="flex min-h-80 flex-1 items-center justify-center rounded-2xl bg-stone-100 p-3">
-                        {move || match dropped.get() {
-                            Some(dropped) => {
-                                view! {
-                                    <img
-                                        src=dropped.shown_from
-                                        alt="The picture you dropped in"
-                                        class="max-h-[70vh] w-full object-contain"
-                                    />
-                                }
-                                    .into_any()
+                    </span>
+                </label>
+                <label class="flex flex-col gap-1 text-sm font-medium">
+                    "Paper"
+                    <select
+                        class="rounded-xl border border-stone-300 bg-white px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
+                        on:change=move |event| {
+                            let format = match event_target_value(&event).as_str() {
+                                "a3" => PageFormat::A3,
+                                "a5" => PageFormat::A5,
+                                _ => PageFormat::A4,
+                            };
+                            settings.update(|settings| settings.format = format);
+                        }
+                    >
+                        <option value="a3">"A3"</option>
+                        <option value="a4" selected>"A4"</option>
+                        <option value="a5">"A5"</option>
+                    </select>
+                </label>
+                <label class="flex flex-col gap-1 text-sm font-medium">
+                    "Margin, in mm"
+                    <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
+                        prop:value=move || settings.get().margin.to_string()
+                        on:change=move |event| {
+                            if let Ok(margin) = event_target_value(&event).parse::<u32>() {
+                                settings.update(|settings| settings.margin = margin);
                             }
-                            None => {
-                                view! {
-                                    <p class="text-center text-stone-600">
-                                        "No picture yet. The goblin is waiting."
-                                    </p>
+                        }
+                    />
+                </label>
+                <label class="flex items-start gap-2 text-sm font-medium sm:mt-6">
+                    <input
+                        type="checkbox"
+                        class="mt-0.5 size-4 accent-lime-600"
+                        prop:checked=move || settings.get().landscape
+                        on:change=move |event| {
+                            let landscape = event_target_checked(&event);
+                            settings.update(|settings| settings.landscape = landscape);
+                        }
+                    />
+                    <span>
+                        "Landscape"
+                        <span class="block font-normal text-stone-500">"for wide pictures"</span>
+                    </span>
+                </label>
+            </form>
+            <div
+                role="group"
+                aria-label="Downloads"
+                class="grid gap-3 border-t border-stone-100 pt-5 sm:flex sm:flex-wrap sm:items-center sm:justify-center lg:col-span-2"
+            >
+                <span class="text-center text-sm text-stone-500">
+                    {move || if saving.get() { "Sharpening the crayons…" } else { "Download the" }}
+                </span>
+                {[
+                    (Model::None, "Sheet", "to colour in"),
+                    (Model::Full, "Model", "to copy from"),
+                    (Model::Twin, "Twin", "both on one page"),
+                ]
+                    .map(|(model, label, hint)| {
+                        view! {
+                            <button
+                                type="button"
+                                disabled=move || {
+                                    saving.get() || if model == Model::None { no_picture() } else { no_model() }
                                 }
-                                    .into_any()
-                            }
+                                title=hint
+                                class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
+                                on:click=move |_| download(model)
+                            >
+                                {label}
+                                <span class="ml-1.5 font-normal text-amber-200/80 group-disabled:text-stone-400">{hint}</span>
+                            </button>
+                        }
+                    })}
+            </div>
+        </section>
+
+        <section aria-label="Preview" class="grid gap-6 md:grid-cols-2">
+            <figure class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+                <figcaption class="flex h-9 items-center justify-between text-sm font-semibold text-stone-600">
+                    "Your picture"
+                    <span class="font-mono text-xs font-normal text-stone-500">
+                        {move || {
+                            dropped
+                                .get()
+                                .map(|dropped| {
+                                    format!(
+                                        "{} · {} × {}",
+                                        dropped.name,
+                                        dropped.picture.width(),
+                                        dropped.picture.height(),
+                                    )
+                                })
+                                .unwrap_or_default()
                         }}
-                    </div>
-                </figure>
+                    </span>
+                </figcaption>
+                <div class="flex min-h-80 flex-1 items-center justify-center rounded-2xl bg-stone-100 p-3">
+                    {move || match dropped.get() {
+                        Some(dropped) => {
+                            view! {
+                                <img
+                                    src=dropped.shown_from
+                                    alt="The picture you dropped in"
+                                    class="max-h-[70vh] w-full object-contain"
+                                />
+                            }
+                                .into_any()
+                        }
+                        None => {
+                            view! {
+                                <p class="text-center text-stone-600">
+                                    "No picture yet. The goblin is waiting."
+                                </p>
+                            }
+                                .into_any()
+                        }
+                    }}
+                </div>
+            </figure>
 
-                <figure class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
-                    <figcaption class="flex h-9 items-center justify-between text-sm font-semibold text-stone-600">
-                        <span>
-                            {move || match showing() {
-                                Shown::Model => "The model, coloured in",
-                                Shown::Sheet => "The sheet, to colour in",
-                            }}
-                        </span>
-                        <div
-                            role="group"
-                            aria-label="Show the model or the sheet"
-                            class="flex rounded-full bg-stone-100 p-1 text-xs"
-                        >
-                            {[(Shown::Model, "Model"), (Shown::Sheet, "Sheet")]
-                                .map(|(choice, label)| {
-                                    view! {
-                                        <button
-                                            type="button"
-                                            aria-pressed=move || (showing() == choice).to_string()
-                                            disabled=move || choice == Shown::Model && settings.get().freedom
-                                            class=move || {
-                                                format!(
-                                                    "rounded-full px-3 py-1 font-medium transition disabled:cursor-not-allowed disabled:opacity-40 {}",
-                                                    if showing() == choice {
-                                                        "bg-white text-stone-800 shadow-sm"
-                                                    } else {
-                                                        "text-stone-600 hover:text-stone-900"
-                                                    },
-                                                )
-                                            }
-                                            on:click=move |_| shown.set(choice)
-                                        >
-                                            {label}
-                                        </button>
-                                    }
-                                })}
-                        </div>
-                    </figcaption>
-                    <div class="relative flex min-h-80 flex-1 items-center justify-center rounded-2xl bg-stone-100 p-3">
-                        {move || match (preview.get(), no_picture()) {
-                            (Some(link), false) => {
+            <figure class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
+                <figcaption class="flex h-9 items-center justify-between text-sm font-semibold text-stone-600">
+                    <span>
+                        {move || match showing() {
+                            Shown::Model => "The model, coloured in",
+                            Shown::Sheet => "The sheet, to colour in",
+                        }}
+                    </span>
+                    <div
+                        role="group"
+                        aria-label="Show the model or the sheet"
+                        class="flex rounded-full bg-stone-100 p-1 text-xs"
+                    >
+                        {[(Shown::Model, "Model"), (Shown::Sheet, "Sheet")]
+                            .map(|(choice, label)| {
                                 view! {
-                                    <img
-                                        src=link
-                                        alt=move || match showing() {
-                                            Shown::Model => "The model: the grid painted in its colours",
-                                            Shown::Sheet => "The sheet: a grid of numbered cells to colour in",
-                                        }
+                                    <button
+                                        type="button"
+                                        aria-pressed=move || (showing() == choice).to_string()
+                                        disabled=move || choice == Shown::Model && settings.get().freedom
                                         class=move || {
                                             format!(
-                                                "max-h-[70vh] w-full object-contain drop-shadow-md transition {}",
-                                                if refusal.get().is_some() { "opacity-25" } else { "" },
+                                                "rounded-full px-3 py-1 font-medium transition disabled:cursor-not-allowed disabled:opacity-40 {}",
+                                                if showing() == choice {
+                                                    "bg-white text-stone-800 shadow-sm"
+                                                } else {
+                                                    "text-stone-600 hover:text-stone-900"
+                                                },
                                             )
                                         }
-                                    />
+                                        on:click=move |_| shown.set(choice)
+                                    >
+                                        {label}
+                                    </button>
                                 }
-                                    .into_any()
-                            }
-                            _ => {
-                                view! {
-                                    <p class="text-center text-stone-600">
-                                        "Your sheet shows up here, once there is something to pixelate."
-                                    </p>
-                                }
-                                    .into_any()
-                            }
-                        }}
-                        <Show when=move || painting.get()>
-                            <p
-                                role="status"
-                                class="absolute top-5 right-5 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-stone-600 shadow-sm"
-                            >
-                                "Sharpening the crayons…"
-                            </p>
-                        </Show>
-                        <Show when=move || refusal.get().is_some()>
-                            <p
-                                role="alert"
-                                class="absolute inset-x-5 top-5 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 shadow-sm ring-1 ring-rose-200"
-                            >
-                                {move || refusal.get().unwrap_or_default()}
-                            </p>
-                        </Show>
+                            })}
                     </div>
-                </figure>
-            </section>
+                </figcaption>
+                <div class="relative flex min-h-80 flex-1 items-center justify-center rounded-2xl bg-stone-100 p-3">
+                    {move || match (preview.get(), no_picture()) {
+                        (Some(link), false) => {
+                            view! {
+                                <img
+                                    src=link
+                                    alt=move || match showing() {
+                                        Shown::Model => "The model: the grid painted in its colours",
+                                        Shown::Sheet => "The sheet: a grid of numbered cells to colour in",
+                                    }
+                                    class=move || {
+                                        format!(
+                                            "max-h-[70vh] w-full object-contain drop-shadow-md transition {}",
+                                            if refusal.get().is_some() { "opacity-25" } else { "" },
+                                        )
+                                    }
+                                />
+                            }
+                                .into_any()
+                        }
+                        _ => {
+                            view! {
+                                <p class="text-center text-stone-600">
+                                    "Your sheet shows up here, once there is something to pixelate."
+                                </p>
+                            }
+                                .into_any()
+                        }
+                    }}
+                    <Show when=move || painting.get()>
+                        <p
+                            role="status"
+                            class="absolute top-5 right-5 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-stone-600 shadow-sm"
+                        >
+                            "Sharpening the crayons…"
+                        </p>
+                    </Show>
+                    <Show when=move || refusal.get().is_some()>
+                        <p
+                            role="alert"
+                            class="absolute inset-x-5 top-5 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 shadow-sm ring-1 ring-rose-200"
+                        >
+                            {move || refusal.get().unwrap_or_default()}
+                        </p>
+                    </Show>
+                </div>
+            </figure>
+        </section>
 
-            <footer class="mt-auto text-right text-xs text-stone-500">
-                "Made with trixelate ("
-                <a
-                    href=REPOSITORY
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="font-medium text-stone-700 underline decoration-lime-500 decoration-2 underline-offset-2 hover:text-lime-700"
-                >
-                    "github.com/Maeevick/trixelate"
-                    <span class="sr-only">" (opens in a new tab)"</span>
-                </a>
-                ") • MIT License"
-            </footer>
-        </div>
+        <footer class="mt-auto text-right text-xs text-stone-500">
+            "Made with trixelate ("
+            <a
+                href=REPOSITORY
+                target="_blank"
+                rel="noopener noreferrer"
+                class="font-medium text-stone-700 underline decoration-lime-500 decoration-2 underline-offset-2 hover:text-lime-700"
+            >
+                "github.com/Maeevick/trixelate"
+                <span class="sr-only">" (opens in a new tab)"</span>
+            </a>
+            ") • MIT License"
+        </footer>
     }
 }
