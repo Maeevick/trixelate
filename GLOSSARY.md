@@ -11,12 +11,11 @@ The words trixelate's code and docs use, read before naming anything.
 | **Colour number** | A colour's place in the palette, from 1, written in every cell to paint with it. |
 | **Colouring** | A grid's cells, each with its colour number, and the palette they are numbered from. |
 | **Sheet** | The page printed for the child: the grid of numbered cells and its legend. |
-| **Model** | The picture in miniature in the page's top left corner of every sheet but a free one, a block of colour per cell with no number and no line, for the child to see what they are making. Upright, it is seven sixteenths of the grid wide, the grid set down on the legend, and over the grid where they meet; on its side, it sits beside the grid, filling the room the grid leaves, from a quarter to half the grid's width. |
+| **Model** | The picture in miniature in the page's top left corner of every sheet, a block of colour per cell with no number and no line, for the child to see what they are making. Upright, it is seven sixteenths of the grid wide, the grid set down on the legend, and over the grid where they meet; on its side, it sits beside the grid, filling the room the grid leaves, from a quarter to half the grid's width. |
 | **Page format** | The paper the sheet is drawn for, A3, A4 or A5, at 300 dots per inch. |
 | **Orientation** | Which way up the paper lies: portrait, upright, or landscape, on its side. |
 | **Margin** | The blank paper around the sheet's content, 10 mm unless asked otherwise. |
-| **Legend** | The row of bubbles at the bottom of a sheet, or the rows below the model on a landscape sheet, left out in freedom. |
-| **Freedom** | A sheet with no legend: the numbers only group the cells, and the child picks the colours; it has no model and no title. |
+| **Legend** | The row of bubbles at the bottom of a sheet, or the rows below the model on a landscape sheet. |
 | **Credit** | The small line at the bottom right of every sheet, in its margin: trixelate and its licence. |
-| **Title** | The sheet's file name, centred in the top margin of every sheet but a free one, as big as the bubbles' numbers. |
+| **Title** | The sheet's file name, centred in the top margin of every sheet, as big as the bubbles' numbers. |
 | **Bubble** | A disc filled with one palette colour, its colour number written inside. |
