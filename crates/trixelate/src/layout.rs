@@ -574,6 +574,20 @@ mod tests {
     }
 
     #[test]
+    fn two_digit_numbers_fit_the_cells_of_a_grid_sixty_four_cells_across_on_a5_within_its_usual_margin()
+     {
+        let sixty_four_by_sixty_four_in_twelve_colours = colouring(64, 64, 12);
+
+        let layout = upright(
+            &sixty_four_by_sixty_four_in_twelve_colours,
+            PageFormat::A5,
+            Margin::AROUND_A_SHEET,
+        );
+
+        assert_eq!(layout.map(|layout| layout.cell_number_scale()), Ok(1));
+    }
+
+    #[test]
     fn bubbles_are_fifteen_millimetres_wide_when_the_row_has_room_and_shrink_to_share_a_long_row()
     -> Result<(), NoRoom> {
         let (few, many) = (colouring(4, 4, 2), colouring(4, 4, 12));
