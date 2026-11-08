@@ -347,7 +347,7 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
 
 #[test]
 fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
-    let cases: [&[&str]; 9] = [
+    let cases: [&[&str]; 10] = [
         &["missing.png", "--width", "0"],
         &["missing.png", "--width", "4", "--colours", "25"],
         &["--width", "4"],
@@ -357,6 +357,7 @@ fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
         &["missing.png", "--width", "4", "--twin"],
         &["missing.png", "--width", "4", "--mini", "1"],
         &["missing.png", "--width", "4", "--freedom"],
+        &["missing.png", "--width", "4", "--margin", "4"],
     ];
 
     for arguments in cases {
