@@ -14,3 +14,12 @@ trixelate = { path = "crates/trixelate", version = "0.1.0" }
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[profile.web]
+inherits = "dev"
+
+[profile.web.package."*"]
+opt-level = 3
+
+[profile.web.package.trixelate]
+opt-level = 3

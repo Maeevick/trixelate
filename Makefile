@@ -23,7 +23,7 @@ install: ## the command line, on this machine
 	cargo install --path crates/trixelate-cli
 
 web: ## the page, served at http://127.0.0.1:8080 and rebuilt on every change
-	cd crates/trixelate-web && trunk serve
+	cd crates/trixelate-web && trunk serve --cargo-profile web
 
 web-build: ## the page, built for any static host in crates/trixelate-web/dist
 	cd crates/trixelate-web && trunk build --release
