@@ -7,9 +7,7 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use trixelate::grid::GridSize;
-use trixelate::layout::{
-    Legend, Margin, Model, NoRoom, Orientation, PageFormat, most_cells_across,
-};
+use trixelate::layout::{Legend, Margin, NoRoom, Orientation, PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::warning::warnings_for;
@@ -38,7 +36,6 @@ struct Settings {
     landscape: bool,
     margin: u32,
     freedom: bool,
-    with_model: bool,
 }
 
 impl Default for Settings {
@@ -50,24 +47,18 @@ impl Default for Settings {
             landscape: false,
             margin: Margin::AROUND_A_SHEET.0,
             freedom: false,
-            with_model: false,
         }
     }
 }
 
 impl Settings {
-    /// The sheet's legend: none at all in freedom, which has no model, else coloured, with its model if asked.
+    /// The sheet's legend: none at all in freedom, else coloured, with its model.
     fn legend(self) -> Legend {
-        match (self.freedom, self.with_model) {
-            (true, _) => Legend::Freedom,
-            (false, true) => Legend::Coloured(Model::Miniature),
-            (false, false) => Legend::Coloured(Model::None),
+        if self.freedom {
+            Legend::Freedom
+        } else {
+            Legend::Coloured
         }
-    }
-
-    /// Whether the sheet shows its model in miniature, which freedom never does.
-    fn shows_its_model(self) -> bool {
-        self.with_model && !self.freedom
     }
 }
 
@@ -488,30 +479,6 @@ pub fn App() -> impl IntoView {
                         }}
                     </span>
                 </button>
-                <label class="flex items-center justify-center gap-2 text-sm font-medium">
-                    <input
-                        type="checkbox"
-                        class="size-4 accent-lime-600 disabled:cursor-not-allowed"
-                        prop:checked=move || settings.get().shows_its_model()
-                        disabled=move || settings.get().freedom
-                        on:change=move |event| {
-                            let with_model = event_target_checked(&event);
-                            settings.update(|settings| settings.with_model = with_model);
-                        }
-                    />
-                    <span>
-                        "with its model "
-                        <span class="font-normal text-stone-500">
-                            {move || {
-                                if settings.get().freedom {
-                                    "freedom has none"
-                                } else {
-                                    "in the corner"
-                                }
-                            }}
-                        </span>
-                    </span>
-                </label>
                 <Show when=move || refused.get().is_some()>
                     <p id=DOWNLOADS_REFUSED class="basis-full text-center text-sm text-stone-600">
                         {move || refused.get()}
@@ -567,10 +534,10 @@ pub fn App() -> impl IntoView {
             <figure class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
                 <figcaption class="flex h-9 items-center justify-between text-sm font-semibold text-stone-600">
                     {move || {
-                        if settings.get().shows_its_model() {
-                            "The sheet, with its model"
+                        if settings.get().freedom {
+                            "The sheet, any crayon goes"
                         } else {
-                            "The sheet, to colour in"
+                            "The sheet, with its model"
                         }
                     }}
                 </figcaption>
@@ -581,10 +548,10 @@ pub fn App() -> impl IntoView {
                                 <img
                                     src=link
                                     alt=move || {
-                                        if settings.get().shows_its_model() {
-                                            "The sheet: a grid of numbered cells to colour in, its model in miniature in the top left corner"
-                                        } else {
+                                        if settings.get().freedom {
                                             "The sheet: a grid of numbered cells to colour in"
+                                        } else {
+                                            "The sheet: a grid of numbered cells to colour in, its model in miniature in the top left corner"
                                         }
                                     }
                                     class=move || {

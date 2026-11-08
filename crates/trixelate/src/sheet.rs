@@ -196,7 +196,7 @@ impl Paper {
 mod tests {
     use super::*;
     use crate::grid::GridSize;
-    use crate::layout::{CREDIT, Legend, Margin, Model, Orientation, PageFormat};
+    use crate::layout::{CREDIT, Legend, Margin, Orientation, PageFormat};
     use crate::lettering;
     use crate::palette::ColourCount;
     use std::collections::BTreeSet;
@@ -208,7 +208,7 @@ mod tests {
     const BLACK: Rgb = Rgb(0, 0, 0);
 
     fn red_red_yellow() -> (Colouring, Layout) {
-        red_red_yellow_laid_out(Legend::Coloured(Model::None))
+        red_red_yellow_laid_out(Legend::Coloured)
     }
 
     fn red_red_yellow_laid_out(legend: Legend) -> (Colouring, Layout) {
@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn a_sheet_with_its_model_writes_its_title_in_grey_in_its_top_margin() {
-        let legend = Legend::Coloured(Model::Miniature);
+        let legend = Legend::Coloured;
         let (colouring, layout) = red_red_yellow_laid_out(legend);
         let layout = layout.titled("red-red-yellow.png");
         let margin = 236;
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn a_miniature_shows_each_cell_in_its_colour_without_number_or_line_framed_in_grey() {
-        let legend = Legend::Coloured(Model::Miniature);
+        let legend = Legend::Coloured;
         let (colouring, layout) = red_red_yellow_laid_out(legend);
 
         let sheet = draw(&colouring, &layout);
@@ -419,7 +419,7 @@ mod tests {
             PageFormat::A5,
             Orientation::Portrait,
             Margin(20),
-            Legend::Coloured(Model::None),
+            Legend::Coloured,
         )
         .expect("room");
 

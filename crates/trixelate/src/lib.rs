@@ -14,7 +14,7 @@ pub mod warning;
 
 use colouring::Colouring;
 use grid::GridSize;
-use layout::{Layout, Legend, Margin, Model, NoRoom, Orientation, PageFormat};
+use layout::{Layout, Legend, Margin, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
 
@@ -71,8 +71,7 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
         Orientation::Landscape => "-landscape",
     };
     let look = match order.legend {
-        Legend::Coloured(Model::None) => "",
-        Legend::Coloured(Model::Miniature) => "-with-model",
+        Legend::Coloured => "",
         Legend::Freedom => "-freedom",
     };
     format!(
@@ -93,7 +92,7 @@ mod tests {
             format,
             orientation: Orientation::Portrait,
             margin: Margin(20),
-            legend: Legend::Coloured(Model::None),
+            legend: Legend::Coloured,
         }
     }
 
@@ -114,21 +113,21 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_with_its_model_is_titled_with_the_file_name_it_is_given_and_a_plain_sheet_is_not() {
+    fn a_coloured_sheet_is_titled_with_the_file_name_it_is_given_and_a_free_sheet_is_not() {
         let picture =
             Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
-        let with_model = Order {
-            legend: Legend::Coloured(Model::Miniature),
+        let free = Order {
+            legend: Legend::Freedom,
             ..order(4, PageFormat::A4)
         };
         let sheets =
             |order| ["red.png", "yellow.png"].map(|name| make_sheet(&picture, order, name));
 
-        let ([titled_red, titled_yellow], [plain_red, plain_yellow]) =
-            (sheets(with_model), sheets(order(4, PageFormat::A4)));
+        let ([titled_red, titled_yellow], [free_red, free_yellow]) =
+            (sheets(order(4, PageFormat::A4)), sheets(free));
 
         assert!(titled_red.is_ok() && titled_red != titled_yellow);
-        assert!(plain_red.is_ok() && plain_red == plain_yellow);
+        assert!(free_red.is_ok() && free_red == free_yellow);
     }
 
     #[test]
@@ -143,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_is_named_after_its_picture_then_its_cells_across_colours_paper_and_any_landscape_freedom_or_model_then_what_it_is()
+    fn a_sheet_is_named_after_its_picture_then_its_cells_across_colours_paper_and_any_landscape_or_freedom_then_what_it_is()
      {
         let named = |picture, (columns, colours), format, orientation, legend| {
             let order = Order {
@@ -157,10 +156,7 @@ mod tests {
             sheet_file_name(picture, &order)
         };
         let (portrait, landscape) = (Orientation::Portrait, Orientation::Landscape);
-        let (sheet, with_model) = (
-            Legend::Coloured(Model::None),
-            Legend::Coloured(Model::Miniature),
-        );
+        let sheet = Legend::Coloured;
 
         let names = [
             named("goblin.png", (48, 8), PageFormat::A4, portrait, sheet),
@@ -172,7 +168,7 @@ mod tests {
                 landscape,
                 Legend::Freedom,
             ),
-            named("goblin.png", (32, 8), PageFormat::A5, portrait, with_model),
+            named("goblin.png", (32, 8), PageFormat::A5, portrait, sheet),
         ];
 
         assert_eq!(
@@ -181,7 +177,7 @@ mod tests {
                 "goblin-48-8-a4.sheet.png",
                 "my.photo-64-12-a3-landscape.sheet.png",
                 "goblin-48-2-a4-landscape-freedom.sheet.png",
-                "goblin-32-8-a5-with-model.sheet.png"
+                "goblin-32-8-a5.sheet.png"
             ]
         );
     }

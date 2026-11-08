@@ -48,15 +48,11 @@ struct Cli {
     #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET.0)]
     margin: u32,
 
-    /// No legend: the numbers only group the cells, and the child picks the colours
-    #[arg(long, group = "look")]
+    /// No legend, no model and no title: the numbers only group the cells, and the child picks the colours [default: a legend of the picture's colours, its model in miniature in the top left corner, and the sheet's file name as its title]
+    #[arg(long)]
     freedom: bool,
 
-    /// Put the model in miniature in the page's top left corner, the picture in its colours to copy from, and title the sheet with its file name
-    #[arg(long, group = "look")]
-    with_model: bool,
-
-    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape, -freedom or -with-model before .sheet.png when asked]
+    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape or -freedom before .sheet.png when asked]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -90,12 +86,12 @@ impl From<Format> for PageFormat {
     }
 }
 
-/// The legend asked for, coloured unless free, with the model asked for, if any; clap lets one through at most.
+/// The legend asked for: coloured, with its model, unless free.
 fn legend_of(cli: &Cli) -> layout::Legend {
-    match (cli.freedom, cli.with_model) {
-        (true, _) => layout::Legend::Freedom,
-        (false, true) => layout::Legend::Coloured(layout::Model::Miniature),
-        (false, false) => layout::Legend::Coloured(layout::Model::None),
+    if cli.freedom {
+        layout::Legend::Freedom
+    } else {
+        layout::Legend::Coloured
     }
 }
 

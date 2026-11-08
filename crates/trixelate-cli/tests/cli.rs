@@ -108,21 +108,14 @@ fn the_command_says_what_it_wrote_where_how_fast_and_how_long_a_five_year_old_wi
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
 
-    let reports = [&[][..], &["--with-model"][..]]
-        .map(|look| text(&trixelate(&[&[picture, "--width", "4"][..], look].concat()).stdout));
+    let sheet = text(&trixelate(&[picture, "--width", "4"]).stdout);
 
-    let [sheet, with_model] = &reports;
     assert!(sheet.starts_with(&format!(
         "Sheet written to {} in ",
         folder.join("sunset-4-8-a4.sheet.png").display()
     )));
-    assert!(with_model.starts_with(&format!(
-        "Sheet written to {} in ",
-        folder.join("sunset-4-8-a4-with-model.sheet.png").display()
-    )));
     assert!(sheet.contains(" s\n"));
     assert!(sheet.contains("12 cells to colour"));
-    assert!(with_model.contains("12 cells to colour"));
 }
 
 #[test]
@@ -149,31 +142,6 @@ fn a_sheet_of_few_cells_or_few_colours_is_warned_of_and_written_only_once_the_us
     assert!(sure.status.success(), "{}", text(&sure.stderr));
     assert!(text(&sure.stderr).contains("warning: with so few cells across"));
     assert!(sheet.exists());
-}
-
-#[test]
-fn a_sheet_with_its_model_is_written_beside_the_picture_apart_from_its_plain_sheet() {
-    let folder = folder("model");
-    let picture = a_picture_in(&folder);
-
-    let run = trixelate(&[
-        picture.to_str().unwrap_or_default(),
-        "--width",
-        "4",
-        "--with-model",
-    ]);
-
-    let sheet_path = folder.join("sunset-4-8-a4-with-model.sheet.png");
-    let sheet = fs::read(&sheet_path)
-        .ok()
-        .and_then(|bytes| png_file::read(&bytes).ok());
-    assert!(run.status.success(), "{}", text(&run.stderr));
-    assert_eq!(
-        sheet.map(|sheet| (sheet.width(), sheet.height())),
-        Some((2480, 3508))
-    );
-    assert!(text(&run.stdout).contains(&sheet_path.display().to_string()));
-    assert!(!folder.join("sunset-4-8-a4.sheet.png").exists());
 }
 
 #[test]
@@ -227,7 +195,8 @@ fn matches_golden(sheet: &Path, golden: &str) -> bool {
 }
 
 #[test]
-fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot() {
+fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot_its_model_in_the_corner_and_its_title_on_top()
+ {
     let folder = folder("golden");
     let picture = a_twelve_colour_picture_in(&folder);
     let sheet = folder.join("twelve.sheet.png");
@@ -267,30 +236,6 @@ fn a_free_legend_sheet_matches_its_golden_master_its_bubbles_left_blank() {
 
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert!(matches_golden(&sheet, "twelve-a5-freedom.sheet.png"));
-}
-
-#[test]
-fn a_sheet_with_its_model_beside_its_picture_matches_its_golden_master_the_miniature_in_its_corner_and_the_title_on_top()
- {
-    let folder = folder("with-model");
-    let picture = a_twelve_colour_picture_in(&folder);
-
-    let run = trixelate(&[
-        picture.to_str().unwrap_or_default(),
-        "--width",
-        "4",
-        "--colours",
-        "12",
-        "--format",
-        "a5",
-        "--with-model",
-    ]);
-
-    assert!(run.status.success(), "{}", text(&run.stderr));
-    assert!(matches_golden(
-        &folder.join("twelve-4-12-a5-with-model.sheet.png"),
-        "twelve-a5-with-model.sheet.png"
-    ));
 }
 
 #[test]
@@ -377,19 +322,18 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
 }
 
 #[test]
-fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds_with_or_without_its_model()
-{
+fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds() {
     let folder = folder("default-width");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
 
+    let on_a4 = trixelate(&[picture]);
     let on_a5 = trixelate(&[picture, "--format", "a5"]);
-    let with_model = trixelate(&[picture, "--with-model"]);
 
+    assert!(on_a4.status.success(), "{}", text(&on_a4.stderr));
     assert!(on_a5.status.success(), "{}", text(&on_a5.stderr));
-    assert!(with_model.status.success(), "{}", text(&with_model.stderr));
+    assert!(folder.join("sunset-48-8-a4.sheet.png").exists());
     assert!(folder.join("sunset-32-8-a5.sheet.png").exists());
-    assert!(folder.join("sunset-48-8-a4-with-model.sheet.png").exists());
 }
 
 #[test]
@@ -400,7 +344,7 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
     let chaotic = folder.join("chaotic.png");
 
     let on_a4 = trixelate(&[picture, "--width", "49"]);
-    let with_model_on_a5 = trixelate(&[picture, "--width", "33", "--format", "a5", "--with-model"]);
+    let on_a5 = trixelate(&[picture, "--width", "33", "--format", "a5"]);
     let chaos = trixelate(&[
         picture,
         "--width",
@@ -411,11 +355,11 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_
     ]);
 
     assert_eq!(
-        [&on_a4, &with_model_on_a5].map(|run| run.status.code()),
+        [&on_a4, &on_a5].map(|run| run.status.code()),
         [Some(2), Some(2)]
     );
     assert!(text(&on_a4.stderr).contains("an A4 sheet holds at most 48 cells across"));
-    assert!(text(&with_model_on_a5.stderr).contains("an A5 sheet holds at most 32 cells across"));
+    assert!(text(&on_a5.stderr).contains("an A5 sheet holds at most 32 cells across"));
     assert!(text(&on_a4.stderr).contains("--chaos"));
     assert!(chaos.status.success(), "{}", text(&chaos.stderr));
 }
@@ -427,10 +371,10 @@ fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
         &["missing.png", "--width", "4", "--colours", "25"],
         &["--width", "4"],
         &["missing.png", "--width", "4", "--height", "3"],
-        &["missing.png", "--width", "4", "--freedom", "--with-model"],
+        &["missing.png", "--width", "4", "--with-model"],
         &["missing.png", "--width", "4", "--model"],
         &["missing.png", "--width", "4", "--twin"],
-        &["missing.png", "--width", "4", "--with-model", "--mini", "1"],
+        &["missing.png", "--width", "4", "--mini", "1"],
     ];
 
     for arguments in cases {
