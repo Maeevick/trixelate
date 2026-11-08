@@ -166,7 +166,7 @@ fn run(cli: Cli) -> Result<String, String> {
         legend,
     };
     let sheet = make_sheet(&picture, order).map_err(explain)?;
-    let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture, legend));
+    let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture, &order));
     let bytes = png_file::write(&sheet)
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
@@ -200,9 +200,9 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
 }
 
 /// Where a sheet goes when no output is given: beside its picture, named after it.
-fn beside(picture: &Path, legend: layout::Legend) -> PathBuf {
+fn beside(picture: &Path, order: &Order) -> PathBuf {
     let name = picture.file_name().unwrap_or_default().to_string_lossy();
-    picture.with_file_name(sheet_file_name(&name, legend))
+    picture.with_file_name(sheet_file_name(&name, order))
 }
 
 fn explain(no_room: NoRoom) -> String {

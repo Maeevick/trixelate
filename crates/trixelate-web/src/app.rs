@@ -96,9 +96,8 @@ fn ready(picture: &Picture, settings: Settings, model: Model) -> Result<Order, S
     Ok(order)
 }
 
-/// The sheet, model or twin asked for, as PNG bytes, or why it cannot be made.
-fn paint(picture: &Picture, settings: Settings, model: Model) -> Result<Vec<u8>, String> {
-    let order = ready(picture, settings, model)?;
+/// The sheet, model or twin ordered, as PNG bytes, or why it cannot be made.
+fn paint(picture: &Picture, order: Order) -> Result<Vec<u8>, String> {
     let sheet = make_sheet(picture, order).map_err(explain)?;
     png_file::write(&sheet)
         .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
@@ -239,7 +238,7 @@ pub fn App() -> impl IntoView {
             if latest.get_value() != this {
                 return;
             }
-            match paint(&picture, settings, model) {
+            match ready(&picture, settings, model).and_then(|order| paint(&picture, order)) {
                 Ok(png) => {
                     let previous = preview.get_untracked();
                     preview.set(png_link(&png));
@@ -261,11 +260,10 @@ pub fn App() -> impl IntoView {
         let settings = settings.get_untracked();
         saving.set(true);
         after_the_next_paint(move || {
-            match paint(&dropped.picture, settings, model) {
-                Ok(png) => save(
-                    &png,
-                    &sheet_file_name(&dropped.name, settings.legend(model)),
-                ),
+            let painted = ready(&dropped.picture, settings, model)
+                .and_then(|order| Ok((paint(&dropped.picture, order)?, order)));
+            match painted {
+                Ok((png, order)) => save(&png, &sheet_file_name(&dropped.name, &order)),
                 Err(why) => refusal.set(Some(why)),
             }
             saving.set(false);
