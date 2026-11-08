@@ -28,19 +28,6 @@ Sheet written to sample/goblin-48-8-a4.sheet.png in 0.05 s
 2,304 cells to colour: at 3 a minute, a five-year-old needs about 12 h 48 min, or 26 afternoons of half an hour, snack breaks not included.
 ```
 
-## In the browser
-
-The same sheets without a command line or a server: drop a picture in, set the sheet up, look at its model or its sheet beside your picture, then download the sheet, the model or the twin. The picture never leaves the browser.
-
-```sh
-rustup target add wasm32-unknown-unknown
-cargo install trunk
-make web        # served at http://127.0.0.1:8080, rebuilt on every change
-make web-build  # a static site in crates/trixelate-web/dist, for any host
-```
-
-![The page: the goblin dropped in on the left, its model coloured in on the right, the settings and the download buttons above](docs/web.png)
-
 ## The command line
 
 ```
@@ -65,7 +52,24 @@ trixelate [OPTIONS] <PICTURE>
 
 Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, or the answer to a warning was no, `2` the arguments are wrong, two of `--freedom`, `--model` and `--twin` together, too many cells across, or a warning with nobody at a terminal to answer it and no `--yes` included. Errors go to stderr and say what to try.
 
-![A twin on A5 landscape: the model painted in twelve colours on the left, the grid to colour on the right, the legend below](crates/trixelate-cli/tests/golden/twelve-a5-landscape.twin.png)
+A goblin turned into a sheet to colour with `trixelate sample/goblin.png`, and into its model with `trixelate sample/goblin.png --model`: 48 cells wide, 8 colours, on A4.
+
+| Picture | Sheet | Model |
+| --- | --- | --- |
+| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: a grid of numbered cells above a legend of eight coloured bubbles](sample/goblin.sheet.png) | ![The goblin's model: the same grid painted in its eight colours, the numbers still readable](sample/goblin.model.png) |
+
+## In the browser
+
+The same sheets without a command line or a server: drop a picture in, set the sheet up, look at its model or its sheet beside your picture, then download the sheet, the model or the twin. The picture never leaves the browser.
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install trunk
+make web        # served at http://127.0.0.1:8080, rebuilt on every change
+make web-build  # a static site in crates/trixelate-web/dist, for any host
+```
+
+![The page: the goblin dropped in on the left, its model coloured in on the right, the settings and the download buttons above](docs/web.png)
 
 ## How a sheet is made
 
@@ -76,6 +80,8 @@ Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, or th
 5. **The layout gives the cells the largest square side the page allows**, inside the margin and above the legend, and the largest digits each cell and bubble can hold. A twin shares that room between its two grids, 10 mm apart.
 6. **A model paints each cell in its colour**, its number in black or white, whichever reads better, as in the legend.
 7. **A small credit is written at the bottom right**, in the margin: trixelate and its licence.
+
+![A twin on A5 landscape: the model painted in twelve colours on the left, the grid to colour on the right, the legend below](crates/trixelate-cli/tests/golden/twelve-a5-landscape.twin.png)
 
 The workspace holds the library, `crates/trixelate`, the command line, `crates/trixelate-cli`, and the page, `crates/trixelate-web`. The library takes bytes and gives bytes, with no file or terminal in it, so it can also run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
 
@@ -95,11 +101,3 @@ The sheet's drawing is pinned by golden masters in `crates/trixelate-cli/tests/g
 ## License
 
 [MIT](LICENSE) © 2026 Aurel | Maeevick
-
-## Example
-
-A goblin turned into a sheet to colour with `trixelate sample/goblin.png`, and into its model with `trixelate sample/goblin.png --model`: 48 cells wide, 8 colours, on A4.
-
-| Picture | Sheet | Model |
-| --- | --- | --- |
-| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: a grid of numbered cells above a legend of eight coloured bubbles](sample/goblin.sheet.png) | ![The goblin's model: the same grid painted in its eight colours, the numbers still readable](sample/goblin.model.png) |
