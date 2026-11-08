@@ -22,9 +22,39 @@ pub fn draw(colouring: &Colouring, layout: &Layout, legend: Legend) -> Picture {
         outline_the_cells(&mut paper, colouring, layout, place);
         fill_in_the_cells(&mut paper, colouring, layout, place, cells);
     }
+    draw_the_miniature(&mut paper, colouring, layout);
     draw_the_legend(&mut paper, colouring, layout);
     write_the_credit(&mut paper, layout);
     paper.into_picture()
+}
+
+/// Paints the model's miniature over the grid, a block of colour per cell, framed like the grid's lines.
+fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+    let Some(miniature) = layout.miniature() else {
+        return;
+    };
+    let side = miniature.cell_side;
+    let (width, height) = (
+        colouring.size().columns() * side,
+        colouring.size().rows() * side,
+    );
+    let line = layout.line();
+    paper.fill(
+        miniature.left - line,
+        miniature.top - line,
+        width + 2 * line,
+        height + 2 * line,
+        LINE_GREY,
+    );
+    for (column, row, number) in colouring.numbered_cells() {
+        paper.fill(
+            miniature.left + column * side,
+            miniature.top + row * side,
+            side,
+            side,
+            colouring.palette().colour_of(number),
+        );
+    }
 }
 
 fn write_the_credit(paper: &mut Paper, layout: &Layout) {
