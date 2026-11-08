@@ -597,7 +597,7 @@ mod tests {
     }
 
     #[test]
-    fn upright_a_sheet_with_its_model_keeps_the_grid_and_legend_of_a_plain_sheet_its_model_seven_sixteenths_of_the_grid_wide_in_the_top_left_corner_over_the_grid()
+    fn upright_a_sheet_with_its_model_keeps_a_plain_sheets_cells_and_legend_its_grid_down_on_the_legend_and_its_model_seven_sixteenths_of_the_grid_wide_in_the_top_left_corner_over_the_grid()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
         let margin = 118;
@@ -614,10 +614,14 @@ mod tests {
                 cell_side: with_model.grid().cell(0, 0).side * 7 / 16,
             })
         );
-        assert_eq!(
-            (with_model.grid(), with_model.bubbles()),
-            (plain.grid(), plain.bubbles())
-        );
+        let (grid, plain_grid) = (with_model.grid(), plain.grid());
+        let bubble = with_model.bubbles()[0];
+        let legend_top = bubble.centre_y - bubble.diameter / 2;
+        assert_eq!(with_model.bubbles(), plain.bubbles());
+        assert_eq!(grid.cell(0, 0).left, plain_grid.cell(0, 0).left);
+        assert_eq!(grid.cell(0, 0).side, plain_grid.cell(0, 0).side);
+        assert_eq!(grid.cell(0, 48).top + line, legend_top - dots(10));
+        assert!(plain_grid.cell(0, 48).top + line < legend_top - dots(10));
         assert_eq!(plain.miniature(), None);
         Ok(())
     }
