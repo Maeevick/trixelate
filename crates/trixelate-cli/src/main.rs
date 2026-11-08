@@ -3,7 +3,7 @@
 mod report;
 
 use std::fs;
-use std::io::{ErrorKind, Write};
+use std::io::{BufRead, ErrorKind, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Instant;
@@ -14,6 +14,7 @@ use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
+use trixelate::warning::warnings_for;
 use trixelate::{Order, make_sheet, picture_file, png_file, sheet_file_name};
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -66,6 +67,10 @@ struct Cli {
     /// Overwrite the sheet if it already exists
     #[arg(long)]
     force: bool,
+
+    /// Go ahead without asking when the sheet is warned of: under 16 cells across or 4 colours
+    #[arg(short, long)]
+    yes: bool,
 
     /// Go beyond the most cells across the paper holds for a child: 128 on A3, 96 on A4, 64 on A5, half in a twin
     #[arg(long)]
@@ -139,6 +144,24 @@ fn main() -> ExitCode {
             .error(ArgumentError::ValueValidation, beyond)
             .exit();
     }
+    let warnings = warnings_for(cli.width, cli.colours);
+    for warning in &warnings {
+        eprintln!("warning: {}", warning.says());
+    }
+    if !warnings.is_empty() && !cli.yes {
+        if !std::io::stdin().is_terminal() {
+            Cli::command()
+                .error(
+                    ArgumentError::MissingRequiredArgument,
+                    "nobody is at a terminal to say whether to go ahead: pass --yes to go ahead without asking",
+                )
+                .exit();
+        }
+        if !sure() {
+            eprintln!("Nothing written.");
+            return ExitCode::FAILURE;
+        }
+    }
     match run(cli) {
         Ok(written) => {
             println!("{written}");
@@ -149,6 +172,14 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// Asks whether to go ahead, yes only when answered so.
+fn sure() -> bool {
+    eprint!("Are you sure? [y/N] ");
+    let mut answer = String::new();
+    std::io::stdin().lock().read_line(&mut answer).is_ok()
+        && matches!(answer.trim().to_lowercase().as_str(), "y" | "yes")
 }
 
 fn run(cli: Cli) -> Result<String, String> {

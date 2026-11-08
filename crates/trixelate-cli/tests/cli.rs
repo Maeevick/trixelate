@@ -32,11 +32,9 @@ fn a_picture_in(folder: &Path) -> PathBuf {
     path
 }
 
+/// The command run as from a script that already said yes to any warning, the warnings not being what most tests are about.
 fn trixelate(arguments: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_trixelate"))
-        .args(arguments)
-        .output()
-        .expect("trixelate runs")
+    trixelate_asking(&[arguments, &["--yes"]].concat())
 }
 
 /// The command run with no one at a terminal to answer it, as from a script.
@@ -362,7 +360,13 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
         let run = trixelate(arguments);
 
         assert_eq!(run.status.code(), Some(1), "{arguments:?}");
-        assert!(text(&run.stderr).starts_with("error: "), "{arguments:?}");
+        assert!(
+            text(&run.stderr)
+                .lines()
+                .last()
+                .is_some_and(|last| last.starts_with("error: ")),
+            "{arguments:?}"
+        );
         assert!(
             text(&run.stderr).contains(hint),
             "{arguments:?}: {}",

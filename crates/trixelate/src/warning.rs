@@ -9,6 +9,20 @@ pub enum Warning {
     FewColours,
 }
 
+impl Warning {
+    /// What the warning says, starting lower case, for a page or a terminal to set as it likes.
+    pub fn says(self) -> &'static str {
+        match self {
+            Warning::FewCellsAcross => {
+                "with so few cells across, it will be more playing with big cubes than colour-by-number pixel art. Still interesting for the youngest."
+            }
+            Warning::FewColours => {
+                "with so few colours, it will be more painting solid patches than colour-by-number pixel art. Still interesting for the youngest."
+            }
+        }
+    }
+}
+
 /// Below this many cells across, the cells are big cubes more than pixels.
 const FEWEST_CELLS_ACROSS_FOR_PIXEL_ART: u32 = 16;
 /// Below this many colours, the sheet is solid patches more than pixel art.

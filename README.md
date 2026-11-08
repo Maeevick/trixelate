@@ -62,9 +62,10 @@ trixelate [OPTIONS] <PICTURE>
 | `--twin` | The model and the sheet on one page, one above the other in portrait, side by side in landscape | |
 | `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-64-24-a5-landscape.twin.png`, `goblin-48-8-a4-freedom.sheet.png` |
 | `--force` | Overwrite the sheet if it already exists | |
+| `-y`, `--yes` | Go ahead without being asked when warned: under 16 cells across it is big cubes, under 4 colours solid patches, more than pixel art | asks |
 | `--chaos` | Go beyond the most cells across, to try what the limits refuse | |
 
-Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, `2` the arguments are wrong, two of `--freedom`, `--model` and `--twin` together or too many cells across included. Errors go to stderr and say what to try.
+Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, or the answer to a warning was no, `2` the arguments are wrong, two of `--freedom`, `--model` and `--twin` together, too many cells across, or a warning with nobody at a terminal to answer it and no `--yes` included. Errors go to stderr and say what to try.
 
 ![A twin on A5 landscape: the model painted in twelve colours on the left, the grid to colour on the right, the legend below](crates/trixelate-cli/tests/golden/twelve-a5-landscape.twin.png)
 
