@@ -211,7 +211,7 @@ impl Layout {
                 (placed, bubble)
             }
             Orientation::Portrait => beside_its_model_above_its_grid(size, colours, room)
-                .ok_or(NoRoom::InsideTheMargin)?,
+                .ok_or(NoRoom::ForTheNumbersInTheCells)?,
         };
 
         let widest_number = colours.to_string();

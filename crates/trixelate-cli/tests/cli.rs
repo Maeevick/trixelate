@@ -250,11 +250,18 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
     let folder = folder("failures");
     let not_a_png = folder.join("drawing.txt");
     fs::write(&not_a_png, "a drawing described in words").expect("a text file");
-    let cases: [(&[&str], &str); 2] = [
+    let a_ribbon = folder.join("ribbon.png");
+    let ribbon = Picture::from_rgba(1, 100, &RED.repeat(100)).expect("a picture");
+    fs::write(&a_ribbon, png_file::write(&ribbon).expect("a PNG")).expect("the picture on disk");
+    let cases: [(&[&str], &str); 3] = [
         (&["missing.png", "--width", "4"], "cannot read missing.png"),
         (
             &[not_a_png.to_str().unwrap_or_default(), "--width", "4"],
             "is not a PNG or JPEG picture",
+        ),
+        (
+            &[a_ribbon.to_str().unwrap_or_default(), "--width", "48"],
+            "try fewer cells with --width",
         ),
     ];
 
