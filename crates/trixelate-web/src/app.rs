@@ -552,13 +552,13 @@ pub fn App() -> impl IntoView {
             </figure>
         </section>
 
-        <footer class="mt-auto text-right text-xs text-stone-500">
+        <footer class="mt-auto text-right text-xs text-stone-400">
             "Made with trixelate ("
             <a
                 href=REPOSITORY
                 target="_blank"
                 rel="noopener noreferrer"
-                class="font-medium text-stone-700 underline decoration-lime-500 decoration-2 underline-offset-2 hover:text-lime-700"
+                class="font-medium text-stone-200 underline decoration-lime-500 decoration-2 underline-offset-2 hover:text-lime-400"
             >
                 "github.com/Maeevick/trixelate"
                 <span class="sr-only">" (opens in a new tab)"</span>
