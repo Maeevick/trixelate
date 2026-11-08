@@ -41,7 +41,7 @@ trixelate [OPTIONS] <PICTURE>
 | `-c`, `--colours` | Colours in the palette, from 2 to 24 (`--colors` works too) | 8 |
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |
-| `-m`, `--margin` | The blank paper around the sheet, in millimetres | 20 |
+| `-m`, `--margin` | The blank paper around the sheet, in millimetres | 10 |
 | `--freedom` | No legend: the numbers only group the cells, and the child picks the colours | |
 | `--model` | The sheet painted in its colours, a model to copy from | |
 | `--twin` | The model and the sheet on one page, one above the other in portrait, side by side in landscape | |

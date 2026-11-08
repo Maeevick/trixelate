@@ -54,7 +54,7 @@ fn dots(millimetres: u32) -> u32 {
 pub struct Margin(pub u32);
 
 impl Margin {
-    pub const AROUND_A_SHEET: Margin = Margin(20);
+    pub const AROUND_A_SHEET: Margin = Margin(10);
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
