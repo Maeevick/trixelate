@@ -376,6 +376,21 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
 }
 
 #[test]
+fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_and_look_hold() {
+    let folder = folder("default-width");
+    let picture = a_picture_in(&folder);
+    let picture = picture.to_str().unwrap_or_default();
+
+    let on_a5 = trixelate(&[picture, "--format", "a5"]);
+    let twin = trixelate(&[picture, "--twin"]);
+
+    assert!(on_a5.status.success(), "{}", text(&on_a5.stderr));
+    assert!(twin.status.success(), "{}", text(&twin.stderr));
+    assert!(folder.join("sunset-32-8-a5.sheet.png").exists());
+    assert!(folder.join("sunset-24-8-a4.twin.png").exists());
+}
+
+#[test]
 fn more_cells_across_than_the_paper_holds_are_refused_as_misuse_unless_chaos_is_asked() {
     let folder = folder("chaos");
     let picture = a_picture_in(&folder);
