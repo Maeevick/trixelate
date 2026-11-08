@@ -10,6 +10,7 @@ pub mod picture;
 pub mod picture_file;
 pub mod png_file;
 pub mod sheet;
+pub mod warning;
 
 use colouring::Colouring;
 use grid::GridSize;
