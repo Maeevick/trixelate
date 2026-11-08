@@ -1,5 +1,7 @@
 //! The command line: reads a PNG picture, makes its colour-by-number sheet and writes it as a PNG.
 
+mod report;
+
 use std::fs;
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
