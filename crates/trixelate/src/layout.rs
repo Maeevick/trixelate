@@ -54,20 +54,20 @@ fn dots_of_tenths(tenths_of_millimetre: u32) -> u32 {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Margin(u32);
 
-/// A margin thinner than five millimetres, too thin for the title and the credit.
+/// A margin under five millimetres, too thin for the title and the credit, or over twenty, eating the cells' room.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct MarginTooThin;
+pub struct MarginOutOfRange;
 
 impl Margin {
     pub const AROUND_A_SHEET: u32 = 10;
     pub const THINNEST: u32 = 5;
     pub const WIDEST: u32 = 20;
 
-    pub fn new(millimetres: u32) -> Result<Margin, MarginTooThin> {
+    pub fn new(millimetres: u32) -> Result<Margin, MarginOutOfRange> {
         (Self::THINNEST..=Self::WIDEST)
             .contains(&millimetres)
             .then_some(Margin(millimetres))
-            .ok_or(MarginTooThin)
+            .ok_or(MarginOutOfRange)
     }
 }
 
@@ -467,7 +467,7 @@ mod tests {
 
         let layout = upright(&small, PageFormat::A5, thinnest.expect("a margin"))?
             .titled("goblin-32-8-a5.sheet.png");
-        assert_eq!(too_thin, Err(MarginTooThin));
+        assert_eq!(too_thin, Err(MarginOutOfRange));
         assert!(layout.title().is_some() && layout.credit().is_some());
         Ok(())
     }
