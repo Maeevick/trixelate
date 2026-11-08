@@ -358,6 +358,16 @@ mod tests {
     }
 
     #[test]
+    fn a_bullet_is_inked_as_a_dot_in_the_middle_of_the_line() {
+        let dots = ink("•", 1);
+
+        assert_eq!(
+            drawn(&dots, 5, 7),
+            [".....", ".....", ".###.", ".###.", ".###.", ".....", "....."]
+        );
+    }
+
+    #[test]
     fn a_number_takes_the_largest_scale_that_fits_its_box_and_none_when_even_the_smallest_does_not()
     {
         let scales = [
