@@ -205,8 +205,9 @@ fn run(cli: Cli) -> Result<String, String> {
         margin: Margin(cli.margin),
         legend,
     };
-    let sheet = make_sheet(&picture, order).map_err(explain)?;
     let sheet_path = cli.output.unwrap_or_else(|| beside(&cli.picture, &order));
+    let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();
+    let sheet = make_sheet(&picture, order, &file_name).map_err(explain)?;
     let bytes = png_file::write(&sheet)
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;

@@ -30,8 +30,9 @@ pub struct Order {
     pub legend: Legend,
 }
 
-/// Turns a picture into the colour-by-number sheet ordered, or says what lacks room on the page.
-pub fn make_sheet(picture: &Picture, order: Order) -> Result<Picture, NoRoom> {
+/// Turns a picture into the colour-by-number sheet ordered, titled with its file name when it shows its model, or says
+/// what lacks room on the page.
+pub fn make_sheet(picture: &Picture, order: Order, _file_name: &str) -> Result<Picture, NoRoom> {
     let (colouring, layout) = lay_out(picture, order)?;
     Ok(sheet::draw(&colouring, &layout))
 }
@@ -101,13 +102,33 @@ mod tests {
         let picture =
             Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
 
-        let sheets = [order(4, PageFormat::A4), order(400, PageFormat::A5)]
-            .map(|order| make_sheet(&picture, order).map(|sheet| (sheet.width(), sheet.height())));
+        let sheets = [order(4, PageFormat::A4), order(400, PageFormat::A5)].map(|order| {
+            make_sheet(&picture, order, "red-yellow.png")
+                .map(|sheet| (sheet.width(), sheet.height()))
+        });
 
         assert_eq!(
             sheets,
             [Ok((2480, 3508)), Err(NoRoom::ForTheNumbersInTheCells)]
         );
+    }
+
+    #[test]
+    fn a_sheet_with_its_model_is_titled_with_the_file_name_it_is_given_and_a_plain_sheet_is_not() {
+        let picture =
+            Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
+        let with_model = Order {
+            legend: Legend::Coloured(Model::Miniature(layout::MiniatureSize::RoomLeft)),
+            ..order(4, PageFormat::A4)
+        };
+        let sheets =
+            |order| ["red.png", "yellow.png"].map(|name| make_sheet(&picture, order, name));
+
+        let ([titled_red, titled_yellow], [plain_red, plain_yellow]) =
+            (sheets(with_model), sheets(order(4, PageFormat::A4)));
+
+        assert!(titled_red.is_ok() && titled_red != titled_yellow);
+        assert!(plain_red.is_ok() && plain_red == plain_yellow);
     }
 
     #[test]

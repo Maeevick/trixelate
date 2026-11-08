@@ -99,9 +99,9 @@ fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
     Ok(order)
 }
 
-/// The sheet ordered, as PNG bytes, or why it cannot be made.
-fn paint(picture: &Picture, order: Order) -> Result<Vec<u8>, String> {
-    let sheet = make_sheet(picture, order).map_err(explain)?;
+/// The sheet ordered, as PNG bytes, titled with the name it is saved under, or why it cannot be made.
+fn paint(picture: &Picture, name: &str, order: Order) -> Result<Vec<u8>, String> {
+    let sheet = make_sheet(picture, order, &sheet_file_name(name, &order)).map_err(explain)?;
     png_file::write(&sheet)
         .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
 }
@@ -219,8 +219,11 @@ pub fn App() -> impl IntoView {
     };
 
     Effect::new(move |_| {
-        let Some(picture) = dropped.with(|dropped| dropped.as_ref().map(|d| d.picture.clone()))
-        else {
+        let Some((picture, name)) = dropped.with(|dropped| {
+            dropped
+                .as_ref()
+                .map(|d| (d.picture.clone(), d.name.clone()))
+        }) else {
             return;
         };
         let settings = settings.get();
@@ -232,7 +235,7 @@ pub fn App() -> impl IntoView {
             if latest.get_value() != this {
                 return;
             }
-            match ready(&picture, settings).and_then(|order| paint(&picture, order)) {
+            match ready(&picture, settings).and_then(|order| paint(&picture, &name, order)) {
                 Ok(png) => {
                     let previous = preview.get_untracked();
                     preview.set(png_link(&png));
@@ -255,7 +258,7 @@ pub fn App() -> impl IntoView {
         saving.set(true);
         after_the_next_paint(move || {
             let painted = ready(&dropped.picture, settings)
-                .and_then(|order| Ok((paint(&dropped.picture, order)?, order)));
+                .and_then(|order| Ok((paint(&dropped.picture, &dropped.name, order)?, order)));
             match painted {
                 Ok((png, order)) => save(&png, &sheet_file_name(&dropped.name, &order)),
                 Err(why) => refusal.set(Some(why)),
