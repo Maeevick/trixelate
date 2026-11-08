@@ -54,7 +54,9 @@ fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_c
 {
     let folder = folder("beside");
     let picture = a_picture_in(&folder);
-    let forty_eight_wide = folder.join("forty-eight.png");
+    let explicit = folder.join("explicit");
+    let forty_eight_wide = explicit.join("sunset-48-8-a4.sheet.png");
+    fs::create_dir_all(&explicit).unwrap_or_default();
 
     let run = trixelate(&[picture.to_str().unwrap_or_default()]);
     trixelate(&[

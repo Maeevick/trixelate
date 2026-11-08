@@ -207,10 +207,17 @@ impl Layout {
         let widest_bubble = dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM);
         let odd = |diameter: u32| diameter.saturating_sub(1 - diameter % 2);
         let (placed, bubble) = match (legend, orientation) {
-            (Legend::Coloured, _) => {
+            (Legend::Coloured, Orientation::Landscape) => {
+                let bubble = odd(widest_bubble);
+                let placed =
+                    beside_its_model(size, colours, bubble, room).ok_or(NoRoom::InsideTheMargin)?;
+                (placed, Some(bubble))
+            }
+            (Legend::Coloured, Orientation::Portrait) => {
                 let bubble = odd(widest_bubble.min(4 * room.width / (5 * colours - 1)));
+                let placed = above_its_legend(size, colours, Some(bubble), room)?;
                 (
-                    above_its_legend(size, colours, Some(bubble), room)?,
+                    down_on_the_legend_under_its_model(placed, size, bubble, room),
                     Some(bubble),
                 )
             }
