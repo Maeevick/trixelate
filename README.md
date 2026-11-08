@@ -8,8 +8,6 @@
 
 trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, finds its dominant colours and writes a page where every cell carries the number of its colour, with a legend of coloured bubbles at the bottom. The child colours each cell with the crayon its number points to, and the picture appears in pixel art.
 
-![A twelve-colour sheet on A5: a grid of numbered cells above a row of twelve coloured bubbles](crates/trixelate-cli/tests/golden/twelve-a5.sheet.png)
-
 ## Why
 
 - **Made for children**: big square cells outlined in light grey, numbers in dark grey rather than black, and a legend whose numbers stay readable on dark and light bubbles.
