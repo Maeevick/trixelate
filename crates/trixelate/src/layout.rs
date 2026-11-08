@@ -204,10 +204,15 @@ impl Layout {
         };
         let size = colouring.size();
         let colours = colouring.palette().colours().len() as u32;
-        let widest_bubble = dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM);
-        let odd = |diameter: u32| diameter.saturating_sub(1 - diameter % 2);
-        let bubble = odd(widest_bubble.min(4 * room.width / (5 * colours - 1)));
-        let placed = centred_above_its_legend_under_its_model(size, colours, bubble, room)?;
+        let (placed, bubble) = match orientation {
+            Orientation::Landscape => {
+                let bubble = bubble_sharing(room.width, colours);
+                let placed = centred_above_its_legend_under_its_model(size, colours, bubble, room)?;
+                (placed, bubble)
+            }
+            Orientation::Portrait => beside_its_model_above_its_grid(size, colours, room)
+                .ok_or(NoRoom::InsideTheMargin)?,
+        };
 
         let widest_number = colours.to_string();
         let inside_a_cell = placed.grid.cell_side.saturating_sub(placed.line);
@@ -332,9 +337,6 @@ fn centred_above_its_legend_under_its_model(
         .min(grid_room.saturating_sub(line) / size.rows());
     let grid_width = cell_side * size.columns() + line;
     let grid_height = cell_side * size.rows() + line;
-    let spacing = bubble / 4;
-    let row_width = colours * bubble + (colours - 1) * spacing;
-    let row_left = room.margin + (room.width - row_width) / 2;
     Ok(Placed {
         grid: GridPlace {
             left: room.margin + (room.width - grid_width) / 2,
@@ -342,19 +344,98 @@ fn centred_above_its_legend_under_its_model(
             cell_side,
         },
         line,
-        bubbles: (0..colours)
-            .map(|index| Disc {
-                centre_x: row_left + index * (bubble + spacing) + bubble / 2,
-                centre_y: room.margin + room.height - 1 - bubble / 2,
-                diameter: bubble,
-            })
-            .collect(),
+        bubbles: row_of_bubbles(
+            colours,
+            bubble,
+            (room.margin, room.width),
+            room.margin + room.height - 1 - bubble / 2,
+        ),
         miniature: Miniature {
             left: room.margin + line,
             top: room.margin + line,
-            cell_side: (cell_side * MINIATURE_THIRTY_SECONDS_OF_A_CELL / 32).max(1),
+            cell_side: model_cell(cell_side),
         },
     })
+}
+
+/// Upright, the grid as big as the room allows below a row of bubbles, one per colour, laid in the room right of the
+/// model in the top left corner, centred across it and on the model's middle, the grid centred both ways in the room
+/// below the legend and the model seven thirty-seconds of the grid wide, over the grid where they meet. The legend's
+/// bubbles share that room, as big as the legend allows.
+fn beside_its_model_above_its_grid(
+    size: GridSize,
+    colours: u32,
+    room: Room,
+) -> Option<(Placed, u32)> {
+    let gap = dots(GAP_ABOVE_THE_LEGEND_MM);
+    (1..=room.width / size.columns())
+        .rev()
+        .find_map(|cell_side| {
+            let line = (cell_side / LINES_PER_CELL_SIDE).max(1);
+            let model_cell = model_cell(cell_side);
+            let model_width = size.columns() * model_cell + 2 * line;
+            let model_height = size.rows() * model_cell + 2 * line;
+            let column = room.width.checked_sub(model_width + gap)?;
+            let bubble = bubble_sharing(column, colours);
+            let legend_top = room.margin + model_height.saturating_sub(bubble) / 2;
+            let below_the_legend = legend_top + bubble + gap;
+            let grid_room = (room.margin + room.height).checked_sub(below_the_legend)?;
+            let grid_width = cell_side * size.columns() + line;
+            let grid_height = cell_side * size.rows() + line;
+            (grid_width <= room.width && grid_height <= grid_room).then(|| {
+                let placed = Placed {
+                    grid: GridPlace {
+                        left: room.margin + (room.width - grid_width) / 2,
+                        top: below_the_legend + (grid_room - grid_height) / 2,
+                        cell_side,
+                    },
+                    line,
+                    bubbles: row_of_bubbles(
+                        colours,
+                        bubble,
+                        (room.margin + model_width + gap, column),
+                        legend_top + bubble / 2,
+                    ),
+                    miniature: Miniature {
+                        left: room.margin + line,
+                        top: room.margin + line,
+                        cell_side: model_cell,
+                    },
+                };
+                (placed, bubble)
+            })
+        })
+}
+
+/// A model's cell: seven thirty-seconds of the grid's.
+fn model_cell(cell_side: u32) -> u32 {
+    (cell_side * MINIATURE_THIRTY_SECONDS_OF_A_CELL / 32).max(1)
+}
+
+/// The widest bubble a row of them, one per colour, a quarter of a bubble apart, shares in a width, odd so that it has
+/// a middle dot.
+fn bubble_sharing(width: u32, colours: u32) -> u32 {
+    let widest = dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM).min(4 * width / (5 * colours - 1));
+    widest.saturating_sub(1 - widest % 2)
+}
+
+/// A row of bubbles, one per colour, a quarter of a bubble apart, centred across a span from its left edge.
+fn row_of_bubbles(
+    colours: u32,
+    bubble: u32,
+    (left, width): (u32, u32),
+    centre_y: u32,
+) -> Vec<Disc> {
+    let spacing = bubble / 4;
+    let row_width = colours * bubble + (colours - 1) * spacing;
+    let row_left = left + (width - row_width) / 2;
+    (0..colours)
+        .map(|index| Disc {
+            centre_x: row_left + index * (bubble + spacing) + bubble / 2,
+            centre_y,
+            diameter: bubble,
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -479,14 +560,20 @@ mod tests {
     }
 
     #[test]
-    fn upright_a_tall_grid_grows_as_tall_as_the_room_above_its_legend_and_no_taller()
+    fn a_tall_grid_grows_as_tall_as_the_room_below_its_legend_upright_or_above_it_on_its_side_and_no_taller()
     -> Result<(), NoRoom> {
         let tall = colouring(10, 40, 8);
         let margin = 118;
 
-        let layout = upright(&tall, PageFormat::A4, Margin(10))?;
+        let upright = upright(&tall, PageFormat::A4, Margin(10))?;
+        let on_its_side = on_its_side(&tall, Margin(10))?;
 
-        let top = layout.grid().cell(0, 0).top;
+        let bottom = upright.grid().cell(0, 40).top + upright.line();
+        let top = on_its_side.grid().cell(0, 0).top;
+        assert!(
+            bottom <= 3508 - margin && 3508 - margin - bottom < 40,
+            "{bottom}"
+        );
         assert!(top >= margin && top - margin < 40, "{top}");
         Ok(())
     }
@@ -613,12 +700,12 @@ mod tests {
     }
 
     #[test]
-    fn the_legend_lines_up_one_bubble_per_colour_on_the_bottom_margins_edge_below_a_tall_grid()
+    fn on_its_side_the_legend_lines_up_one_bubble_per_colour_on_the_bottom_margins_edge_below_a_tall_grid()
     -> Result<(), NoRoom> {
         let tall = colouring(5, 10, 12);
         let margin = 236;
 
-        let layout = upright(&tall, PageFormat::A4, Margin(20))?;
+        let layout = on_its_side(&tall, Margin(20))?;
 
         let bubbles = layout.bubbles();
         assert_eq!(bubbles.len(), 12);
@@ -641,10 +728,10 @@ mod tests {
                 .windows(2)
                 .all(|pair| pair[1].centre_x - pair[0].centre_x > first.diameter)
         );
-        assert!(row_left >= margin && row_right < 2480 - margin);
-        assert!((row_left - margin).abs_diff(2480 - margin - 1 - row_right) <= 1);
+        assert!(row_left >= margin && row_right < 3508 - margin);
+        assert!((row_left - margin).abs_diff(3508 - margin - 1 - row_right) <= 1);
         assert_eq!(first.diameter % 2, 1, "a bubble has a centre dot");
-        assert_eq!(first.centre_y + first.diameter / 2, 3508 - margin - 1);
+        assert_eq!(first.centre_y + first.diameter / 2, 2480 - margin - 1);
         assert!(grid_bottom < first.centre_y - first.diameter / 2);
         Ok(())
     }
@@ -666,19 +753,16 @@ mod tests {
     fn numbers_too_big_for_their_cells_or_their_bubbles_are_refused_even_on_a_sliver_of_paper() {
         let three_hundred_columns = colouring(300, 2, 2);
         let twelve_colours = colouring(10, 5, 12);
-        let one_column_of_twelve_colours = colouring(1, 12, 12);
 
         let layouts = [
             upright(&three_hundred_columns, PageFormat::A5, Margin(20)),
             upright(&twelve_colours, PageFormat::A5, Margin(63)),
-            upright(&one_column_of_twelve_colours, PageFormat::A5, Margin(73)),
         ];
 
         assert_eq!(
             layouts.map(|layout| layout.err()),
             [
                 Some(NoRoom::ForTheNumbersInTheCells),
-                Some(NoRoom::ForTheNumbersInTheLegend),
                 Some(NoRoom::ForTheNumbersInTheLegend)
             ]
         );
@@ -713,8 +797,8 @@ mod tests {
         let (few, many) = (colouring(4, 4, 2), colouring(6, 4, 24));
         let content_width = 2480 - 2 * 236;
 
-        let roomy = upright(&few, PageFormat::A4, Margin(20))?;
-        let crowded = upright(&many, PageFormat::A4, Margin(20))?;
+        let roomy = on_its_side(&few, Margin(20))?;
+        let crowded = Layout::of(&many, PageFormat::A5, Orientation::Landscape, Margin(20))?;
 
         let bubbles = crowded.bubbles();
         let (first, last) = (bubbles[0], bubbles[bubbles.len() - 1]);
