@@ -372,6 +372,23 @@ pub fn App() -> impl IntoView {
                             }
                         />
                     </label>
+                    <label class="order-last flex items-start gap-2 text-sm font-medium sm:order-none sm:mt-6">
+                        <input
+                            type="checkbox"
+                            class="mt-0.5 size-4 accent-lime-600"
+                            prop:checked=move || settings.get().freedom
+                            on:change=move |event| {
+                                let freedom = event_target_checked(&event);
+                                settings.update(|settings| settings.freedom = freedom);
+                            }
+                        />
+                        <span>
+                            "Freedom"
+                            <span class="block font-normal text-stone-500">
+                                "no legend, any crayon goes"
+                            </span>
+                        </span>
+                    </label>
                     <label class="flex flex-col gap-1 text-sm font-medium">
                         "Paper"
                         <select
@@ -418,23 +435,6 @@ pub fn App() -> impl IntoView {
                         <span>
                             "Landscape"
                             <span class="block font-normal text-stone-500">"for wide pictures"</span>
-                        </span>
-                    </label>
-                    <label class="flex items-start gap-2 text-sm font-medium sm:mt-6">
-                        <input
-                            type="checkbox"
-                            class="mt-0.5 size-4 accent-lime-600"
-                            prop:checked=move || settings.get().freedom
-                            on:change=move |event| {
-                                let freedom = event_target_checked(&event);
-                                settings.update(|settings| settings.freedom = freedom);
-                            }
-                        />
-                        <span>
-                            "Freedom"
-                            <span class="block font-normal text-stone-500">
-                                "no legend, any crayon goes"
-                            </span>
                         </span>
                     </label>
                 </form>
