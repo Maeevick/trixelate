@@ -776,6 +776,52 @@ mod tests {
     }
 
     #[test]
+    fn beside_its_model_a_grid_fills_the_room_across_upright_or_down_on_its_side_to_the_dot()
+    -> Result<(), NoRoom> {
+        let (row, column) = (colouring(59, 1, 2), colouring(1, 59, 2));
+
+        let upright = model_upright(&row, MiniatureSize::RoomLeft)?;
+        let on_its_side = model_on_its_side(&column, Margin(10), MiniatureSize::RoomLeft)?;
+
+        let line = upright.line();
+        assert_eq!(
+            (
+                upright.grid().cell(0, 0).left,
+                upright.grid().cell(59, 0).left + line
+            ),
+            (118, 2480 - 118)
+        );
+        let line = on_its_side.line();
+        assert_eq!(
+            (
+                on_its_side.grid().cell(0, 0).top,
+                on_its_side.grid().cell(0, 59).top + line
+            ),
+            (118, 2480 - 118)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_one_cell_grid_and_its_model_half_its_size_fill_the_page_to_the_dot_upright_and_on_its_side()
+    -> Result<(), NoRoom> {
+        let one_cell = colouring(1, 1, 2);
+
+        let upright = model_upright(&one_cell, MiniatureSize::Half)?;
+        let on_its_side = model_on_its_side(&one_cell, Margin(10), MiniatureSize::Half)?;
+
+        let gap = dots(GAP_AROUND_THE_MODEL_MM);
+        let lengths = |layout: &Layout| {
+            let (cell, line) = (layout.grid().cell(0, 0).side, layout.line());
+            let model = layout.miniature().map_or(0, |model| model.cell_side);
+            (cell, cell + line + gap + model + 2 * line)
+        };
+        assert_eq!(lengths(&upright), (1904, 3508 - 2 * 118));
+        assert_eq!(lengths(&on_its_side), (1904, 3508 - 2 * 118));
+        Ok(())
+    }
+
+    #[test]
     fn with_no_margin_the_miniature_frame_sits_in_the_page_corner() -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
 
