@@ -800,12 +800,14 @@ mod tests {
     }
 
     #[test]
-    fn cell_outlines_are_a_sixteenth_of_a_cells_side_thick_either_way_up() -> Result<(), NoRoom> {
-        let tall = colouring(5, 10, 2);
+    fn cell_outlines_are_a_sixteenth_of_a_cells_side_thick_either_way_up_on_a_tall_or_a_wide_grid()
+    -> Result<(), NoRoom> {
+        let (tall, wide) = (colouring(5, 10, 2), colouring(20, 2, 2));
 
         let layouts = [
             upright(&tall, PageFormat::A4, Margin(20))?,
             on_its_side(&tall, Margin(20))?,
+            on_its_side(&wide, Margin(20))?,
         ];
 
         for layout in layouts {
