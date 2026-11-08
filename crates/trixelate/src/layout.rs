@@ -800,12 +800,17 @@ mod tests {
     }
 
     #[test]
-    fn cell_outlines_are_a_sixteenth_of_a_cells_side_thick() -> Result<(), NoRoom> {
+    fn cell_outlines_are_a_sixteenth_of_a_cells_side_thick_either_way_up() -> Result<(), NoRoom> {
         let tall = colouring(5, 10, 2);
 
-        let layout = upright(&tall, PageFormat::A4, Margin(20))?;
+        let layouts = [
+            upright(&tall, PageFormat::A4, Margin(20))?,
+            on_its_side(&tall, Margin(20))?,
+        ];
 
-        assert_eq!(layout.line(), layout.grid().cell(0, 0).side / 16);
+        for layout in layouts {
+            assert_eq!(layout.line(), layout.grid().cell(0, 0).side / 16);
+        }
         Ok(())
     }
 
