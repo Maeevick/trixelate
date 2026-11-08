@@ -1,4 +1,4 @@
-//! The browser page: a picture dropped in, a sheet, a model or a twin out, with nothing sent anywhere.
+//! The browser page: a picture dropped in, a sheet out, with its model if asked, with nothing sent anywhere.
 
 mod app;
 

@@ -56,7 +56,7 @@ struct Cli {
     #[arg(long, group = "look")]
     with_model: bool,
 
-    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, .model.png or .twin.png, with -landscape and -freedom when asked]
+    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape, -freedom or -with-model before .sheet.png when asked]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -68,7 +68,7 @@ struct Cli {
     #[arg(short, long)]
     yes: bool,
 
-    /// Go beyond the most cells across the paper holds for a child: 64 on A3, 48 on A4, 32 on A5, half in a twin
+    /// Go beyond the most cells across the paper holds for a child: 64 on A3, 48 on A4, 32 on A5
     #[arg(long)]
     chaos: bool,
 }
