@@ -446,40 +446,78 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_with_its_model_keeps_the_grid_and_legend_of_a_plain_sheet_its_model_seven_sixteenths_of_the_grid_wide_in_the_top_left_corner_over_the_grid()
+    fn upright_a_sheet_with_its_model_keeps_the_grid_and_legend_of_a_plain_sheet_its_model_seven_sixteenths_of_the_grid_wide_in_the_top_left_corner_over_the_grid()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
         let margin = 118;
 
-        let upright_with_model = model_upright(&square)?;
-        let upright_plain = upright(&square, PageFormat::A4, Margin(10))?;
-        let lying_with_model = model_on_its_side(&square, Margin(10))?;
+        let with_model = model_upright(&square)?;
+        let plain = upright(&square, PageFormat::A4, Margin(10))?;
+
+        let line = with_model.line();
+        assert_eq!(
+            with_model.miniature(),
+            Some(Miniature {
+                left: margin + line,
+                top: margin + line,
+                cell_side: with_model.grid().cell(0, 0).side * 7 / 16,
+            })
+        );
+        assert_eq!(
+            (with_model.grid(), with_model.bubbles()),
+            (plain.grid(), plain.bubbles())
+        );
+        assert_eq!(plain.miniature(), None);
+        Ok(())
+    }
+
+    #[test]
+    fn on_its_side_with_its_model_the_model_lies_in_the_top_left_corner_its_legend_in_rows_centred_below_it_and_the_grid_on_the_right_bigger_than_a_plain_sheets()
+    -> Result<(), NoRoom> {
+        let square = colouring(48, 48, 24);
+        let (margin, right, bottom, gap) = (118, 3508 - 118, 2480 - 118, dots(5));
         let (a4, landscape, plain) = (
             PageFormat::A4,
             Orientation::Landscape,
             Legend::Coloured(Model::None),
         );
-        let lying_plain = Layout::of(&square, a4, landscape, Margin(10), plain)?;
 
-        for (with_model, plain) in [
-            (&upright_with_model, &upright_plain),
-            (&lying_with_model, &lying_plain),
-        ] {
-            let line = with_model.line();
-            assert_eq!(
-                with_model.miniature(),
-                Some(Miniature {
-                    left: margin + line,
-                    top: margin + line,
-                    cell_side: with_model.grid().cell(0, 0).side * 7 / 16,
-                })
-            );
-            assert_eq!(
-                (with_model.grid(), with_model.bubbles()),
-                (plain.grid(), plain.bubbles())
-            );
-            assert_eq!(plain.miniature(), None);
-        }
+        let layout = model_on_its_side(&square, Margin(10))?;
+        let plain = Layout::of(&square, a4, landscape, Margin(10), plain)?;
+
+        let (grid, line) = (layout.grid(), layout.line());
+        let (top_left, past_the_end) = (grid.cell(0, 0), grid.cell(48, 48));
+        let miniature = layout.miniature().expect("a miniature");
+        let frame_right = miniature.left + 48 * miniature.cell_side + line;
+        let frame_bottom = miniature.top + 48 * miniature.cell_side + line;
+        let bubbles = layout.bubbles();
+        let radius = bubbles[0].diameter / 2;
+        let xs = bubbles.iter().map(|bubble| bubble.centre_x);
+        let ys = bubbles.iter().map(|bubble| bubble.centre_y);
+        let (legend_left, legend_right) = (
+            xs.clone().min().unwrap_or(0) - radius,
+            xs.max().unwrap_or(0) + radius + 1,
+        );
+        let (legend_top, legend_bottom) = (
+            ys.clone().min().unwrap_or(0) - radius,
+            ys.max().unwrap_or(0) + radius + 1,
+        );
+        let in_rows = bubbles.is_sorted_by_key(|bubble| (bubble.centre_y, bubble.centre_x));
+        assert_eq!(
+            (miniature.left, miniature.top),
+            (margin + line, margin + line)
+        );
+        assert!(
+            miniature.cell_side >= top_left.side / 4 && miniature.cell_side <= top_left.side / 2
+        );
+        assert!(top_left.side > plain.grid().cell(0, 0).side);
+        assert_eq!(past_the_end.left + line, right);
+        assert!((top_left.top - margin).abs_diff(bottom - past_the_end.top - line) <= 1);
+        assert!(frame_right + gap <= top_left.left);
+        assert!((legend_left - margin).abs_diff(top_left.left - gap - legend_right) <= 1);
+        assert!((legend_top - frame_bottom - gap).abs_diff(bottom - legend_bottom) <= 1);
+        assert!(in_rows && legend_top < legend_bottom - 2 * radius - 1);
+        assert_eq!(bubbles[0].diameter, 93);
         Ok(())
     }
 
