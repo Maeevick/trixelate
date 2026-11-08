@@ -378,6 +378,16 @@ mod tests {
         )
     }
 
+    fn with_its_model(colouring: &Colouring, margin: Margin) -> Result<Layout, NoRoom> {
+        Layout::of(
+            colouring,
+            PageFormat::A4,
+            Orientation::Portrait,
+            margin,
+            Legend::Coloured(Model::Miniature),
+        )
+    }
+
     fn free(colouring: &Colouring, format: PageFormat, margin: Margin) -> Result<Layout, NoRoom> {
         Layout::of(
             colouring,
@@ -393,13 +403,7 @@ mod tests {
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
 
-        let with_model = Layout::of(
-            &square,
-            PageFormat::A4,
-            Orientation::Portrait,
-            Margin(10),
-            Legend::Coloured(Model::Miniature),
-        )?;
+        let with_model = with_its_model(&square, Margin(10))?;
         let without = upright(&square, PageFormat::A4, Margin(10))?;
 
         let corner = with_model.grids()[0].cell(0, 0);
@@ -423,13 +427,7 @@ mod tests {
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
 
-        let layout = Layout::of(
-            &square,
-            PageFormat::A4,
-            Orientation::Portrait,
-            Margin(0),
-            Legend::Coloured(Model::Miniature),
-        )?;
+        let layout = with_its_model(&square, Margin(0))?;
 
         assert_eq!(
             layout.miniature().map(|miniature| miniature.left),
