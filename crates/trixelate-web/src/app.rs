@@ -7,10 +7,12 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use trixelate::grid::GridSize;
-use trixelate::layout::{Legend, Margin, Model, NoRoom, Orientation, PageFormat};
+use trixelate::layout::{
+    Legend, Margin, Model, NoRoom, Orientation, PageFormat, most_cells_across,
+};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
-use trixelate::{Order, make_sheet, picture_file, png_file, sheet_file_name};
+use trixelate::{Order, fits_on_its_page, make_sheet, picture_file, png_file, sheet_file_name};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, File, HtmlAnchorElement, HtmlInputElement, Url};
 
@@ -66,12 +68,18 @@ enum Shown {
     Sheet,
 }
 
-/// The sheet, model or twin asked for, as PNG bytes, or why it cannot be made.
-fn paint(picture: &Picture, settings: Settings, model: Model) -> Result<Vec<u8>, &'static str> {
+/// The order for the sheet, model or twin asked for, once sure its page has room for it, or why it would be refused.
+fn ready(picture: &Picture, settings: Settings, model: Model) -> Result<Order, String> {
+    let legend = settings.legend(model);
+    let most = most_cells_across(settings.format, legend);
+    if settings.width > most {
+        return Err(beyond(settings.format, legend, most));
+    }
     let grid = GridSize::keeping_the_proportions_of(picture, settings.width)
-        .map_err(|_| "A grid needs at least one cell across.")?;
-    let colours = ColourCount::new(settings.colours)
-        .map_err(|_| "A sheet holds from 2 to 24 colours, like a big box of crayons.")?;
+        .map_err(|_| "A grid needs at least one cell across.".to_string())?;
+    let colours = ColourCount::new(settings.colours).map_err(|_| {
+        "A sheet holds from 2 to 24 colours, like a big box of crayons.".to_string()
+    })?;
     let order = Order {
         grid,
         colours,
@@ -82,14 +90,37 @@ fn paint(picture: &Picture, settings: Settings, model: Model) -> Result<Vec<u8>,
             Orientation::Portrait
         },
         margin: Margin(settings.margin),
-        legend: settings.legend(model),
+        legend,
     };
-    let sheet = make_sheet(picture, order).map_err(explain)?;
-    png_file::write(&sheet)
-        .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.")
+    fits_on_its_page(picture, order).map_err(explain)?;
+    Ok(order)
 }
 
-fn explain(no_room: NoRoom) -> &'static str {
+/// The sheet, model or twin asked for, as PNG bytes, or why it cannot be made.
+fn paint(picture: &Picture, settings: Settings, model: Model) -> Result<Vec<u8>, String> {
+    let order = ready(picture, settings, model)?;
+    let sheet = make_sheet(picture, order).map_err(explain)?;
+    png_file::write(&sheet)
+        .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
+}
+
+fn beyond(format: PageFormat, legend: Legend, most: u32) -> String {
+    let paper = match format {
+        PageFormat::A3 => "A3",
+        PageFormat::A4 => "A4",
+        PageFormat::A5 => "A5",
+    };
+    let kind = match legend {
+        Legend::Coloured(Model::None) | Legend::Freedom => "sheet",
+        Legend::Coloured(Model::Full) => "model",
+        Legend::Coloured(Model::Twin) => "twin",
+    };
+    format!(
+        "An {paper} {kind} holds at most {most} cells across, or little fingers give up. Fewer cells, or bigger paper?"
+    )
+}
+
+fn explain(no_room: NoRoom) -> String {
     match no_room {
         NoRoom::InsideTheMargin => "That margin ate the whole page. A thinner one, maybe?",
         NoRoom::ForTheNumbersInTheCells => {
@@ -99,6 +130,7 @@ fn explain(no_room: NoRoom) -> &'static str {
             "The bubbles are too squeezed for their numbers. Fewer colours, or a thinner margin?"
         }
     }
+    .to_string()
 }
 
 /// A link to PNG bytes held by the browser, for an image to show or a file to save.
@@ -153,7 +185,7 @@ pub fn App() -> impl IntoView {
     let shown = RwSignal::new(Shown::Model);
     let preview = RwSignal::new(None::<String>);
     let painting = RwSignal::new(false);
-    let refusal = RwSignal::new(None::<&'static str>);
+    let refusal = RwSignal::new(None::<String>);
     let saving = RwSignal::new(false);
     let latest = StoredValue::new(0_u64);
 
@@ -262,6 +294,21 @@ pub fn App() -> impl IntoView {
 
     let no_picture = move || dropped.with(Option::is_none);
     let no_model = move || no_picture() || settings.get().freedom;
+    let refusals = Memo::new(move |_| {
+        let picture = dropped.with(|dropped| dropped.as_ref().map(|d| d.picture.clone()))?;
+        let settings = settings.get();
+        Some(
+            [Model::None, Model::Full, Model::Twin]
+                .map(|model| ready(&picture, settings, model).err()),
+        )
+    });
+    let refusal_of = move |model: Model| {
+        refusals.get().and_then(|[sheet, full, twin]| match model {
+            Model::None => sheet,
+            Model::Full => full,
+            Model::Twin => twin,
+        })
+    };
 
     view! {
         <section
@@ -321,7 +368,10 @@ pub fn App() -> impl IntoView {
                     <input
                         type="number"
                         min="1"
-                        max="200"
+                        max=move || {
+                            most_cells_across(settings.get().format, Legend::Coloured(Model::None))
+                                .to_string()
+                        }
                         class="rounded-xl border border-stone-300 px-3 py-2 font-normal focus:border-lime-500 focus:outline-none focus:ring-2 focus:ring-lime-300"
                         prop:value=move || settings.get().width.to_string()
                         on:change=move |event| {
@@ -435,14 +485,18 @@ pub fn App() -> impl IntoView {
                             <button
                                 type="button"
                                 disabled=move || {
-                                    saving.get() || if model == Model::None { no_picture() } else { no_model() }
+                                    saving.get()
+                                        || if model == Model::None { no_picture() } else { no_model() }
+                                        || refusal_of(model).is_some()
                                 }
-                                title=hint
+                                title=move || refusal_of(model).unwrap_or_else(|| hint.to_string())
                                 class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
                                 on:click=move |_| download(model)
                             >
                                 {label}
-                                <span class="ml-1.5 font-normal text-amber-200/80 group-disabled:text-stone-400">{hint}</span>
+                                <span class="ml-1.5 font-normal text-amber-200/80 group-disabled:text-stone-400">
+                                    {move || if refusal_of(model).is_some() { "doesn't fit" } else { hint }}
+                                </span>
                             </button>
                         }
                     })}
