@@ -1,11 +1,9 @@
 @import "tailwindcss";
 @source "./src";
 
-/* Trix's colours, from maeevick.com, with deeper shades where small text or a control's edge needs the contrast. */
+/* The lore's colours for the logo: Trix, Grimble and Veil from maeevick.com, and the goblins' green. */
 @theme {
   --color-trix: #ff6b2c;
-  --color-trix-edge: #f2551a;
-  --color-trix-ink: #c2410c;
   --color-grimble: #00a1de;
   --color-veil: #e22fbd;
   --color-goblin: #84cc16;
