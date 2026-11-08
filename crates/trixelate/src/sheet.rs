@@ -361,6 +361,45 @@ mod tests {
     }
 
     #[test]
+    fn a_miniature_shows_each_cell_in_its_colour_without_number_or_line_framed_in_grey_over_the_grid()
+     {
+        let legend = Legend::Coloured(Model::Miniature);
+        let (colouring, layout) = red_red_yellow_laid_out(legend);
+
+        let sheet = draw(&colouring, &layout, legend);
+
+        let miniature = layout.miniature().expect("a miniature");
+        let side = miniature.cell_side;
+        let colour_of = |column| {
+            colouring
+                .numbered_cells()
+                .find(|&(cell_column, _, _)| cell_column == column)
+                .map(|(_, _, number)| colouring.palette().colour_of(number))
+        };
+        let inked = |column: u32| -> BTreeSet<Rgb> {
+            let left = miniature.left + column * side;
+            (miniature.top..miniature.top + side)
+                .flat_map(|y| (left..left + side).map(move |x| (x, y)))
+                .map(|(x, y)| sheet.pixel(x, y))
+                .collect()
+        };
+        assert_eq!(
+            (0..3).map(inked).collect::<Vec<_>>(),
+            (0..3)
+                .map(|column| colour_of(column).into_iter().collect())
+                .collect::<Vec<BTreeSet<Rgb>>>()
+        );
+        let line = layout.line();
+        let frame = [
+            (miniature.left - line, miniature.top),
+            (miniature.left + 3 * side, miniature.top),
+            (miniature.left, miniature.top - line),
+            (miniature.left, miniature.top + side),
+        ];
+        assert!(frame.iter().all(|&(x, y)| sheet.pixel(x, y) == LINE_GREY));
+    }
+
+    #[test]
     fn a_bubbles_number_is_written_in_white_on_a_dark_colour_and_in_black_on_a_light_one() {
         let (colouring, layout) = red_red_yellow();
 
