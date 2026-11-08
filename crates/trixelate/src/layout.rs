@@ -150,12 +150,8 @@ const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
 /// A bubble is at most eight millimetres wide, big enough for its number, leaving the room to the cells.
 const WIDEST_BUBBLE_TENTHS_OF_MM: u32 = 80;
 const LINES_PER_CELL_SIDE: u32 = 16;
-/// How many sixteenths of a grid's cell a miniature's cell is, upright: the miniature is seven sixteenths of the grid wide.
-const MINIATURE_SIXTEENTHS_OF_A_CELL: u32 = 7;
-/// On its side, the miniature is at least a quarter as wide as the grid, and at most half.
-const GRID_CELLS_PER_MODEL_CELL_AT_MOST: u32 = 4;
-const GRID_CELLS_PER_MODEL_CELL_AT_LEAST: u32 = 2;
-const GAP_AROUND_THE_MODEL_MM: u32 = 5;
+/// How many thirty-seconds of a grid's cell a miniature's cell is: the miniature is seven thirty-seconds of the grid wide.
+const MINIATURE_THIRTY_SECONDS_OF_A_CELL: u32 = 7;
 
 /// The room inside the margin, in dots, from the margin's inner edge.
 #[derive(Clone, Copy)]
@@ -197,21 +193,8 @@ impl Layout {
         let colours = colouring.palette().colours().len() as u32;
         let widest_bubble = dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM);
         let odd = |diameter: u32| diameter.saturating_sub(1 - diameter % 2);
-        let (placed, bubble) = match orientation {
-            Orientation::Landscape => {
-                let bubble = odd(widest_bubble);
-                let placed =
-                    beside_its_model(size, colours, bubble, room).ok_or(NoRoom::InsideTheMargin)?;
-                (placed, bubble)
-            }
-            Orientation::Portrait => {
-                let bubble = odd(widest_bubble.min(4 * room.width / (5 * colours - 1)));
-                (
-                    on_its_legend_under_its_model(size, colours, bubble, room)?,
-                    bubble,
-                )
-            }
-        };
+        let bubble = odd(widest_bubble.min(4 * room.width / (5 * colours - 1)));
+        let placed = centred_above_its_legend_under_its_model(size, colours, bubble, room)?;
 
         let widest_number = colours.to_string();
         let inside_a_cell = placed.grid.cell_side.saturating_sub(placed.line);
@@ -318,16 +301,15 @@ impl Layout {
     }
 }
 
-/// Upright, the grid as big as the room allows above a row of bubbles, one per colour, centred on the room's bottom
-/// edge, the grid centred across and set down on its legend, leaving the top left corner to its model, seven sixteenths
-/// of the grid wide, over the grid where they meet.
-fn on_its_legend_under_its_model(
+/// The grid as big as the room allows above a row of bubbles, one per colour, centred on the room's bottom edge, the grid
+/// centred both ways in the room left above them, and its model in the top left corner, seven thirty-seconds of the grid
+/// wide, over the grid where they meet.
+fn centred_above_its_legend_under_its_model(
     size: GridSize,
     colours: u32,
     bubble: u32,
     room: Room,
 ) -> Result<Placed, NoRoom> {
-    let legend_top = room.margin + room.height - bubble;
     let grid_room = room
         .height
         .checked_sub(dots(GAP_ABOVE_THE_LEGEND_MM) + bubble)
@@ -344,7 +326,7 @@ fn on_its_legend_under_its_model(
     Ok(Placed {
         grid: GridPlace {
             left: room.margin + (room.width - grid_width) / 2,
-            top: legend_top - dots(GAP_ABOVE_THE_LEGEND_MM) - grid_height,
+            top: room.margin + (grid_room - grid_height) / 2,
             cell_side,
         },
         line,
@@ -358,142 +340,9 @@ fn on_its_legend_under_its_model(
         miniature: Miniature {
             left: room.margin + line,
             top: room.margin + line,
-            cell_side: (cell_side * MINIATURE_SIXTEENTHS_OF_A_CELL / 16).max(1),
+            cell_side: (cell_side * MINIATURE_THIRTY_SECONDS_OF_A_CELL / 32).max(1),
         },
     })
-}
-
-/// On its side, the grid as big as the room allows on the right, beside a model in the top left corner at least a
-/// quarter of the grid wide, the model then filling the room the grid leaves up to half its width, and the legend in rows
-/// centred below the model.
-fn beside_its_model(size: GridSize, colours: u32, bubble: u32, room: Room) -> Option<Placed> {
-    let arranged = |cell_side: u32, model_cell_side: u32| {
-        let sides = Sides {
-            size,
-            line: (cell_side / LINES_PER_CELL_SIDE).max(1),
-            cell: cell_side,
-            model_cell: model_cell_side,
-        };
-        on_its_side_beside_its_model(sides, colours, bubble, room)
-    };
-    let smallest_model_cell =
-        |cell_side: u32| (cell_side / GRID_CELLS_PER_MODEL_CELL_AT_MOST).max(1);
-    let cell_side = (1..=room.width.min(room.height))
-        .rev()
-        .find(|&cell_side| arranged(cell_side, smallest_model_cell(cell_side)).is_some())?;
-    (1..=(cell_side / GRID_CELLS_PER_MODEL_CELL_AT_LEAST).max(1))
-        .rev()
-        .find_map(|model_cell_side| arranged(cell_side, model_cell_side))
-}
-
-/// The sides of a grid's cells, of its outlines and of its model's cells, in dots.
-#[derive(Clone, Copy)]
-struct Sides {
-    size: GridSize,
-    line: u32,
-    cell: u32,
-    model_cell: u32,
-}
-
-impl Sides {
-    fn grid(self) -> (u32, u32) {
-        (
-            self.cell * self.size.columns() + self.line,
-            self.cell * self.size.rows() + self.line,
-        )
-    }
-
-    /// The model's width and height, its frame included.
-    fn model(self) -> (u32, u32) {
-        (
-            self.model_cell * self.size.columns() + 2 * self.line,
-            self.model_cell * self.size.rows() + 2 * self.line,
-        )
-    }
-}
-
-fn on_its_side_beside_its_model(
-    sides: Sides,
-    colours: u32,
-    bubble: u32,
-    room: Room,
-) -> Option<Placed> {
-    let gap = dots(GAP_AROUND_THE_MODEL_MM);
-    let ((grid_width, grid_height), (model_width, model_height)) = (sides.grid(), sides.model());
-    let column = room.width.checked_sub(grid_width + gap)?;
-    let below_the_model = room.height.checked_sub(model_height + gap)?;
-    let legend = BubbleRows::fitting(colours, bubble, column)?;
-    if grid_height > room.height || model_width > column || legend.height() > below_the_model {
-        return None;
-    }
-    let (legend_left, legend_top) = (
-        room.margin + (column - legend.width()) / 2,
-        room.margin + model_height + gap + (below_the_model - legend.height()) / 2,
-    );
-    Some(Placed {
-        grid: GridPlace {
-            left: room.margin + column + gap,
-            top: room.margin + (room.height - grid_height) / 2,
-            cell_side: sides.cell,
-        },
-        line: sides.line,
-        bubbles: legend
-            .centres(colours)
-            .map(|(x, y)| Disc {
-                centre_x: legend_left + x,
-                centre_y: legend_top + y,
-                diameter: bubble,
-            })
-            .collect(),
-        miniature: Miniature {
-            left: room.margin + sides.line,
-            top: room.margin + sides.line,
-            cell_side: sides.model_cell,
-        },
-    })
-}
-
-/// A legend's bubbles in as few rows as a width holds, all as long as the first but the last, read row after row.
-struct BubbleRows {
-    bubble: u32,
-    spacing: u32,
-    rows: u32,
-    per_row: u32,
-}
-
-impl BubbleRows {
-    fn fitting(colours: u32, bubble: u32, width: u32) -> Option<BubbleRows> {
-        let spacing = bubble / 4;
-        let most_per_row = (width + spacing) / (bubble + spacing);
-        (most_per_row > 0).then(|| {
-            let rows = colours.div_ceil(most_per_row);
-            BubbleRows {
-                bubble,
-                spacing,
-                rows,
-                per_row: colours.div_ceil(rows),
-            }
-        })
-    }
-
-    fn width(&self) -> u32 {
-        self.per_row * (self.bubble + self.spacing) - self.spacing
-    }
-
-    fn height(&self) -> u32 {
-        self.rows * (self.bubble + self.spacing) - self.spacing
-    }
-
-    /// Each bubble's centre, from the legend's top left corner.
-    fn centres(&self, colours: u32) -> impl Iterator<Item = (u32, u32)> {
-        let (step, per_row, radius) = (self.bubble + self.spacing, self.per_row, self.bubble / 2);
-        (0..colours).map(move |index| {
-            (
-                index % per_row * step + radius,
-                index / per_row * step + radius,
-            )
-        })
-    }
 }
 
 #[cfg(test)]
