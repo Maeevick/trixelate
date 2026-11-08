@@ -557,6 +557,19 @@ mod tests {
     }
 
     #[test]
+    fn upright_a_tall_grid_grows_as_tall_as_the_room_above_its_legend_and_no_taller()
+    -> Result<(), NoRoom> {
+        let tall = colouring(10, 40, 8);
+        let margin = 118;
+
+        let layout = upright(&tall, PageFormat::A4, Margin(10))?;
+
+        let top = layout.grid().cell(0, 0).top;
+        assert!(top >= margin && top - margin < 40, "{top}");
+        Ok(())
+    }
+
+    #[test]
     fn on_its_side_a_sheet_lays_its_model_in_the_top_left_corner_its_legend_in_rows_centred_below_it_and_the_grid_on_the_right()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 24);
