@@ -40,7 +40,7 @@ const DIGITS: [[u8; GLYPH_HEIGHT as usize]; 10] = [
 ];
 
 /// The letters and signs a sheet's credit is written with, drawn like the digits.
-const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 29] = [
+const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 30] = [
     (
         'M',
         [
@@ -207,6 +207,12 @@ const LETTERS: [(char, [u8; GLYPH_HEIGHT as usize]); 29] = [
         '/',
         [
             0b00000, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b00000,
+        ],
+    ),
+    (
+        '-',
+        [
+            0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000,
         ],
     ),
     (
