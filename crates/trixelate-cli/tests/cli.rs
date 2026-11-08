@@ -96,6 +96,29 @@ fn a_jpeg_photo_becomes_a_sheet_beside_it_as_a_png() {
 }
 
 #[test]
+fn the_command_says_what_it_wrote_where_how_fast_and_how_long_a_five_year_old_will_take_to_colour_it()
+ {
+    let folder = folder("report");
+    let picture = a_picture_in(&folder);
+    let picture = picture.to_str().unwrap_or_default();
+
+    let reports = [&[][..], &["--model"][..], &["--twin"][..]]
+        .map(|look| text(&trixelate(&[&[picture, "--width", "4"][..], look].concat()).stdout));
+
+    let [sheet, model, twin] = &reports;
+    assert!(sheet.starts_with(&format!(
+        "Sheet written to {} in ",
+        folder.join("sunset-4-8-a4.sheet.png").display()
+    )));
+    assert!(model.starts_with("Model written to "));
+    assert!(twin.starts_with("Twin written to "));
+    assert!(sheet.contains(" s\n"));
+    assert!(sheet.contains("16 cells to colour"));
+    assert!(twin.contains("16 cells to colour"));
+    assert!(model.contains("Nothing to colour"));
+}
+
+#[test]
 fn a_full_model_is_written_beside_the_picture_apart_from_its_sheet() {
     let folder = folder("model");
     let picture = a_picture_in(&folder);
