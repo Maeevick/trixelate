@@ -64,6 +64,11 @@ impl Picture {
     pub fn pixel(&self, x: u32, y: u32) -> Rgb {
         self.pixels[(y * self.width + x) as usize]
     }
+
+    /// Every pixel, row after row, as the picture holds them.
+    pub(crate) fn pixels(&self) -> &[Rgb] {
+        &self.pixels
+    }
 }
 
 fn laid_on_white_paper(red: u8, green: u8, blue: u8, alpha: u8) -> Rgb {

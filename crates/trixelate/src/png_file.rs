@@ -46,9 +46,10 @@ pub fn read(bytes: &[u8]) -> Result<Picture, NotAPng> {
 
 /// Writes a sheet as an RGB PNG that tells printers its 300 dots per inch.
 pub fn write(sheet: &Picture) -> Result<Vec<u8>, CannotWritePng> {
-    let rgb: Vec<u8> = (0..sheet.height())
-        .flat_map(|y| (0..sheet.width()).map(move |x| sheet.pixel(x, y)))
-        .flat_map(|Rgb(red, green, blue)| [red, green, blue])
+    let rgb: Vec<u8> = sheet
+        .pixels()
+        .iter()
+        .flat_map(|&Rgb(red, green, blue)| [red, green, blue])
         .collect();
     let mut bytes = Vec::new();
     let mut encoder = Encoder::new(&mut bytes, sheet.width(), sheet.height());
