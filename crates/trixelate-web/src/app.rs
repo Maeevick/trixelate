@@ -441,9 +441,9 @@ pub fn App() -> impl IntoView {
                 <div
                     role="group"
                     aria-label="Downloads"
-                    class="flex flex-wrap items-center justify-center gap-3 border-t border-stone-100 pt-5 lg:col-span-2"
+                    class="grid gap-3 border-t border-stone-100 pt-5 sm:flex sm:flex-wrap sm:items-center sm:justify-center lg:col-span-2"
                 >
-                    <span class="text-sm text-stone-500">
+                    <span class="text-center text-sm text-stone-500">
                         {move || if saving.get() { "Sharpening the crayons…" } else { "Download the" }}
                     </span>
                     {[
@@ -459,7 +459,7 @@ pub fn App() -> impl IntoView {
                                         saving.get() || if model == Model::None { no_picture() } else { no_model() }
                                     }
                                     title=hint
-                                    class="group rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none"
+                                    class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
                                     on:click=move |_| download(model)
                                 >
                                     {label}
