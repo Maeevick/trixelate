@@ -32,9 +32,9 @@ pub struct Order {
 
 /// Turns a picture into the colour-by-number sheet ordered, titled with its file name when it shows its model, or says
 /// what lacks room on the page.
-pub fn make_sheet(picture: &Picture, order: Order, _file_name: &str) -> Result<Picture, NoRoom> {
+pub fn make_sheet(picture: &Picture, order: Order, file_name: &str) -> Result<Picture, NoRoom> {
     let (colouring, layout) = lay_out(picture, order)?;
-    Ok(sheet::draw(&colouring, &layout))
+    Ok(sheet::draw(&colouring, &layout.titled(file_name)))
 }
 
 /// Whether the sheet ordered would fit its page, told without drawing it, so a page can say so before it is asked.
