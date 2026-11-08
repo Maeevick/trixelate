@@ -59,7 +59,7 @@ fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_c
         forty_eight_wide.to_str().unwrap_or_default(),
     ]);
 
-    let sheet_path = folder.join("sunset.sheet.png");
+    let sheet_path = folder.join("sunset-48-8-a4.sheet.png");
     let sheet = fs::read(&sheet_path)
         .ok()
         .and_then(|bytes| png_file::read(&bytes).ok());
@@ -85,7 +85,7 @@ fn a_jpeg_photo_becomes_a_sheet_beside_it_as_a_png() {
 
     let run = trixelate(&[photo.to_str().unwrap_or_default(), "--width", "8"]);
 
-    let sheet = fs::read(folder.join("photo.sheet.png"))
+    let sheet = fs::read(folder.join("photo-8-8-a4.sheet.png"))
         .ok()
         .and_then(|bytes| png_file::read(&bytes).ok());
     assert!(run.status.success(), "{}", text(&run.stderr));
@@ -107,7 +107,7 @@ fn a_full_model_is_written_beside_the_picture_apart_from_its_sheet() {
         "--model",
     ]);
 
-    let model_path = folder.join("sunset.model.png");
+    let model_path = folder.join("sunset-4-8-a4.model.png");
     let model = fs::read(&model_path)
         .ok()
         .and_then(|bytes| png_file::read(&bytes).ok());
@@ -117,7 +117,7 @@ fn a_full_model_is_written_beside_the_picture_apart_from_its_sheet() {
         Some((2480, 3508))
     );
     assert!(text(&run.stdout).contains(&model_path.display().to_string()));
-    assert!(!folder.join("sunset.sheet.png").exists());
+    assert!(!folder.join("sunset-4-8-a4.sheet.png").exists());
 }
 
 #[test]
@@ -132,7 +132,7 @@ fn a_landscape_sheet_lies_on_its_side() {
         "--landscape",
     ]);
 
-    let sheet = fs::read(folder.join("sunset.sheet.png"))
+    let sheet = fs::read(folder.join("sunset-4-8-a4-landscape.sheet.png"))
         .ok()
         .and_then(|bytes| png_file::read(&bytes).ok());
     assert_eq!(
@@ -196,7 +196,7 @@ fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot() {
 fn a_free_legend_sheet_matches_its_golden_master_its_bubbles_left_blank() {
     let folder = folder("freedom");
     let picture = a_twelve_colour_picture_in(&folder);
-    let sheet = folder.join("twelve.sheet.png");
+    let sheet = folder.join("twelve-4-12-a5-freedom.sheet.png");
 
     let run = trixelate(&[
         picture.to_str().unwrap_or_default(),
@@ -232,7 +232,7 @@ fn a_landscape_twin_beside_its_picture_matches_its_golden_master_model_left_shee
 
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert!(matches_golden(
-        &folder.join("twelve.twin.png"),
+        &folder.join("twelve-4-12-a5-landscape.twin.png"),
         "twelve-a5-landscape.twin.png"
     ));
 }
@@ -241,7 +241,7 @@ fn a_landscape_twin_beside_its_picture_matches_its_golden_master_model_left_shee
 fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
     let folder = folder("overwrite");
     let picture = a_picture_in(&folder);
-    let sheet = folder.join("sunset.sheet.png");
+    let sheet = folder.join("sunset-4-8-a4.sheet.png");
     fs::write(&sheet, "a sheet already coloured in").expect("an existing sheet");
     let arguments = [picture.to_str().unwrap_or_default(), "--width", "4"];
 

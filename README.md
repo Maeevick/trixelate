@@ -26,7 +26,7 @@ trixelate sample/goblin.png
 ```
 
 ```
-Sheet written to sample/goblin.sheet.png
+Sheet written to sample/goblin-48-8-a4.sheet.png
 ```
 
 ## In the browser
@@ -59,7 +59,7 @@ trixelate [OPTIONS] <PICTURE>
 | `--freedom` | No legend: the numbers only group the cells, and the child picks the colours | |
 | `--model` | The sheet painted in its colours, a model to copy from | |
 | `--twin` | The model and the sheet on one page, one above the other in portrait, side by side in landscape | |
-| `-o`, `--output` | Where to write the sheet | beside the picture, as `<picture>.sheet.png`, `.model.png` or `.twin.png` |
+| `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-64-24-a5-landscape.twin.png`, `goblin-48-8-a4-freedom.sheet.png` |
 | `--force` | Overwrite the sheet if it already exists | |
 | `--chaos` | Go beyond the most cells across, to try what the limits refuse | |
 

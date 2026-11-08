@@ -23,6 +23,10 @@ impl ColourCount {
             .then_some(ColourCount(count))
             .ok_or(ColourCountOutOfRange)
     }
+
+    pub fn get(self) -> usize {
+        self.0
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

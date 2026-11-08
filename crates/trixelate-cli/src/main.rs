@@ -56,7 +56,7 @@ struct Cli {
     #[arg(long, group = "look")]
     twin: bool,
 
-    /// Where to write the sheet [default: beside the picture, as <picture>.sheet.png, .model.png or .twin.png]
+    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, .model.png or .twin.png, with -landscape and -freedom when asked]
     #[arg(short, long)]
     output: Option<PathBuf>,
 

@@ -52,7 +52,9 @@ fn lay_out(picture: &Picture, order: Order) -> Result<(Colouring, Layout), NoRoo
     Ok((colouring, layout))
 }
 
-/// What a sheet made from a picture file is called: the picture's name, without its extension, then what the sheet is.
+/// What a sheet made from a picture file is called: the picture's name, without its extension, then the cells across,
+/// the colours and the paper, then landscape or freedom when asked, so variants of one picture sit side by side
+/// without overwriting each other, then what the sheet is.
 pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
     let stem = std::path::Path::new(picture_file_name)
         .file_stem()
@@ -62,7 +64,24 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
         Legend::Coloured(Model::Full) => "model",
         Legend::Coloured(Model::Twin) => "twin",
     };
-    format!("{stem}.{kind}.png")
+    let paper = match order.format {
+        PageFormat::A3 => "a3",
+        PageFormat::A4 => "a4",
+        PageFormat::A5 => "a5",
+    };
+    let landscape = match order.orientation {
+        Orientation::Portrait => "",
+        Orientation::Landscape => "-landscape",
+    };
+    let freedom = match order.legend {
+        Legend::Coloured(_) => "",
+        Legend::Freedom => "-freedom",
+    };
+    format!(
+        "{stem}-{}-{}-{paper}{landscape}{freedom}.{kind}.png",
+        order.grid.columns(),
+        order.colours.get()
+    )
 }
 
 #[cfg(test)]
