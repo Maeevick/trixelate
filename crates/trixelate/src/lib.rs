@@ -60,6 +60,16 @@ fn lay_out(picture: &Picture, order: Order) -> Result<(Colouring, Layout), NoRoo
 /// the colours and the paper, then landscape when asked, so variants of one picture sit side by side
 /// without overwriting each other, then what the sheet is.
 pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
+    named_after(picture_file_name, order, "sheet")
+}
+
+/// What a sheet's preview made from a picture file is called: named like its sheet, as a preview, so the two sit side
+/// by side.
+pub fn preview_file_name(picture_file_name: &str, order: &Order) -> String {
+    named_after(picture_file_name, order, "preview")
+}
+
+fn named_after(picture_file_name: &str, order: &Order, what: &str) -> String {
     let stem = std::path::Path::new(picture_file_name)
         .file_stem()
         .map_or(picture_file_name.into(), |stem| stem.to_string_lossy());
@@ -73,18 +83,10 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
         Orientation::Landscape => "-landscape",
     };
     format!(
-        "{stem}-{}-{}-{paper}{landscape}.sheet.png",
+        "{stem}-{}-{}-{paper}{landscape}.{what}.png",
         order.grid.columns(),
         order.colours.get()
     )
-}
-
-/// What a sheet's preview made from a picture file is called: named like its sheet, as a preview, so the two sit side
-/// by side.
-pub fn preview_file_name(picture_file_name: &str, order: &Order) -> String {
-    let sheet = sheet_file_name(picture_file_name, order);
-    let named = sheet.strip_suffix(".sheet.png").unwrap_or(&sheet);
-    format!("{named}.preview.png")
 }
 
 #[cfg(test)]
