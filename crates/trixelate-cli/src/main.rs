@@ -203,6 +203,7 @@ fn run(cli: Cli) -> Result<String, String> {
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
     Ok(report::written(
+        report::Written::Sheet,
         &sheet_path,
         started.elapsed(),
         grid.columns() * grid.rows(),
