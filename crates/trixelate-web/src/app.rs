@@ -11,9 +11,11 @@ use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_acro
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::warning::warnings_for;
-use trixelate::{Order, fits_on_its_page, make_sheet, picture_file, png_file, sheet_file_name};
+use trixelate::{
+    Order, fits_on_its_page, make_preview, make_sheet, picture_file, png_file, sheet_file_name,
+};
 use wasm_bindgen::JsCast;
-use web_sys::{Blob, BlobPropertyBag, File, HtmlAnchorElement, HtmlInputElement, Url};
+use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
 /// The id of the line saying why the download is disabled, for its button to point to.
@@ -78,9 +80,13 @@ fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
     Ok(order)
 }
 
-/// The sheet ordered, as PNG bytes, titled with the name it is saved under, or why it cannot be made.
-fn paint(picture: &Picture, name: &str, order: Order) -> Result<Vec<u8>, String> {
-    let sheet = make_sheet(picture, order, &sheet_file_name(name, &order)).map_err(explain)?;
+/// How a sheet or its preview is drawn from a picture, its order and the name it is titled with.
+type Making = fn(&Picture, Order, &str) -> Result<Picture, NoRoom>;
+
+/// The sheet ordered, or its preview, as PNG bytes, both titled with the name the sheet is saved under so that only
+/// their cells differ, or why it cannot be made.
+fn paint(picture: &Picture, name: &str, order: Order, make: Making) -> Result<Vec<u8>, String> {
+    let sheet = make(picture, order, &sheet_file_name(name, &order)).map_err(explain)?;
     png_file::write(&sheet)
         .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
 }
@@ -152,6 +158,24 @@ async fn bytes_of(file: &File) -> Option<Vec<u8>> {
     Some(js_sys::Uint8Array::new(&buffer).to_vec())
 }
 
+/// Shows PNG bytes from a new link, letting the browser forget the link shown before.
+fn show(shown: RwSignal<Option<String>>, png: &[u8]) {
+    let previous = shown.get_untracked();
+    shown.set(png_link(png));
+    if let Some(previous) = previous {
+        forget(&previous);
+    }
+}
+
+/// How far across an element a pointer is, from 0 at its left edge to 100 at its right edge.
+fn across(element: &Element, client_x: i32) -> f64 {
+    let edges = element.get_bounding_client_rect();
+    if edges.width() <= 0.0 {
+        return 0.0;
+    }
+    ((f64::from(client_x) - edges.left()) / edges.width() * 100.0).clamp(0.0, 100.0)
+}
+
 /// Runs heavy work after the browser has painted the page once more, so a "busy" note shows first.
 fn after_the_next_paint(work: impl FnOnce() + 'static) {
     request_animation_frame(move || request_animation_frame(work));
@@ -163,7 +187,10 @@ pub fn App() -> impl IntoView {
     let unreadable = RwSignal::new(false);
     let hovering = RwSignal::new(false);
     let settings = RwSignal::new(Settings::default());
-    let preview = RwSignal::new(None::<String>);
+    let sheet_shown = RwSignal::new(None::<String>);
+    let coloured_in_shown = RwSignal::new(None::<String>);
+    let coloured_in = RwSignal::new(0.0_f64);
+    let sliding = RwSignal::new(false);
     let painting = RwSignal::new(false);
     let refusal = RwSignal::new(None::<String>);
     let saving = RwSignal::new(false);
@@ -210,13 +237,16 @@ pub fn App() -> impl IntoView {
             if latest.get_value() != this {
                 return;
             }
-            match ready(&picture, settings).and_then(|order| paint(&picture, &name, order)) {
-                Ok(png) => {
-                    let previous = preview.get_untracked();
-                    preview.set(png_link(&png));
-                    if let Some(previous) = previous {
-                        forget(&previous);
-                    }
+            let painted = ready(&picture, settings).and_then(|order| {
+                Ok((
+                    paint(&picture, &name, order, make_sheet)?,
+                    paint(&picture, &name, order, make_preview)?,
+                ))
+            });
+            match painted {
+                Ok((sheet, preview)) => {
+                    show(sheet_shown, &sheet);
+                    show(coloured_in_shown, &preview);
                     refusal.set(None);
                 }
                 Err(why) => refusal.set(Some(why)),
@@ -232,8 +262,12 @@ pub fn App() -> impl IntoView {
         let settings = settings.get_untracked();
         saving.set(true);
         after_the_next_paint(move || {
-            let painted = ready(&dropped.picture, settings)
-                .and_then(|order| Ok((paint(&dropped.picture, &dropped.name, order)?, order)));
+            let painted = ready(&dropped.picture, settings).and_then(|order| {
+                Ok((
+                    paint(&dropped.picture, &dropped.name, order, make_sheet)?,
+                    order,
+                ))
+            });
             match painted {
                 Ok((png, order)) => save(&png, &sheet_file_name(&dropped.name, &order)),
                 Err(why) => refusal.set(Some(why)),
@@ -269,6 +303,14 @@ pub fn App() -> impl IntoView {
             .and_then(|colours| warnings_for(settings.width, colours).first().copied())
     };
     let no_picture = move || dropped.with(Option::is_none);
+    let slide = move |event: &leptos::ev::PointerEvent| {
+        if let Some(element) = event
+            .current_target()
+            .and_then(|target| target.dyn_into::<Element>().ok())
+        {
+            coloured_in.set(across(&element, event.client_x()));
+        }
+    };
     let refused = Memo::new(move |_| {
         let picture = dropped.with(|dropped| dropped.as_ref().map(|d| d.picture.clone()))?;
         ready(&picture, settings.get()).err()
@@ -501,21 +543,97 @@ pub fn App() -> impl IntoView {
             <figure class="flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-stone-200">
                 <figcaption class="flex h-9 items-center justify-between text-sm font-semibold text-stone-600">
                     "The sheet, with its model"
+                    <Show when=move || coloured_in_shown.with(Option::is_some) && !no_picture()>
+                        <span class="text-xs font-normal text-stone-500">
+                            "Slide the line to colour it in"
+                        </span>
+                    </Show>
                 </figcaption>
                 <div class="relative flex min-h-80 flex-1 items-center justify-center rounded-2xl bg-stone-100 p-3">
-                    {move || match (preview.get(), no_picture()) {
+                    {move || match (sheet_shown.get(), no_picture()) {
                         (Some(link), false) => {
                             view! {
-                                <img
-                                    src=link
-                                    alt="The sheet: a grid of numbered cells to colour in, its model in miniature in the top left corner"
+                                <div
                                     class=move || {
                                         format!(
-                                            "max-h-[70vh] w-full object-contain drop-shadow-md transition {}",
+                                            "relative w-fit max-w-full cursor-ew-resize touch-pan-y select-none transition {}",
                                             if refusal.get().is_some() { "opacity-25" } else { "" },
                                         )
                                     }
-                                />
+                                    on:pointerdown=move |event| {
+                                        if let Some(element) = event
+                                            .current_target()
+                                            .and_then(|target| target.dyn_into::<Element>().ok())
+                                        {
+                                            let _ = element.set_pointer_capture(event.pointer_id());
+                                        }
+                                        sliding.set(true);
+                                        slide(&event);
+                                    }
+                                    on:pointermove=move |event| {
+                                        if sliding.get_untracked() {
+                                            slide(&event);
+                                        }
+                                    }
+                                    on:pointerup=move |_| sliding.set(false)
+                                    on:pointercancel=move |_| sliding.set(false)
+                                >
+                                    <img
+                                        src=link
+                                        alt="The sheet: a grid of numbered cells to colour in, its model in miniature in the top left corner"
+                                        draggable="false"
+                                        class="block max-h-[70vh] w-auto max-w-full drop-shadow-md"
+                                    />
+                                    {move || {
+                                        coloured_in_shown
+                                            .get()
+                                            .map(|link| {
+                                                view! {
+                                                    <img
+                                                        src=link
+                                                        alt=""
+                                                        draggable="false"
+                                                        class="pointer-events-none absolute inset-0 size-full"
+                                                        style=move || {
+                                                            format!(
+                                                                "clip-path: inset(0 {:.2}% 0 0)",
+                                                                100.0 - coloured_in.get(),
+                                                            )
+                                                        }
+                                                    />
+                                                }
+                                            })
+                                    }}
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        step="5"
+                                        aria-label="How much of the sheet is shown coloured in"
+                                        aria-valuetext=move || {
+                                            format!("{:.0}% coloured in", coloured_in.get())
+                                        }
+                                        class="peer sr-only"
+                                        prop:value=move || format!("{:.0}", coloured_in.get())
+                                        on:input=move |event| {
+                                            if let Ok(share) = event_target_value(&event).parse::<f64>() {
+                                                coloured_in.set(share);
+                                            }
+                                        }
+                                    />
+                                    <span
+                                        aria-hidden="true"
+                                        class="pointer-events-none absolute inset-y-0 w-0.5 -translate-x-1/2 bg-lime-500 shadow-sm"
+                                        style=move || format!("left: {:.2}%", coloured_in.get())
+                                    ></span>
+                                    <span
+                                        aria-hidden="true"
+                                        class="pointer-events-none absolute top-1/2 grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-stone-800 text-amber-50 shadow-md ring-lime-500 peer-focus-visible:ring-4"
+                                        style=move || format!("left: {:.2}%", coloured_in.get())
+                                    >
+                                        "⇆"
+                                    </span>
+                                </div>
                             }
                                 .into_any()
                         }

@@ -19,10 +19,13 @@ web-sys = { version = "0.3", features = [
   "Blob",
   "BlobPropertyBag",
   "DataTransfer",
+  "DomRect",
   "DragEvent",
+  "Element",
   "File",
   "FileList",
   "HtmlAnchorElement",
   "HtmlInputElement",
+  "PointerEvent",
   "Url",
 ] }
