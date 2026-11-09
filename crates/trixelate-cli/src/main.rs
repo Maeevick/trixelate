@@ -10,6 +10,7 @@ use std::time::Instant;
 
 use clap::error::ErrorKind as ArgumentError;
 use clap::{CommandFactory, Parser, ValueEnum};
+use report::Written;
 use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
@@ -173,6 +174,11 @@ fn sure() -> bool {
         && matches!(answer.trim().to_lowercase().as_str(), "y" | "yes")
 }
 
+/// How the command draws what it writes, from a picture, its order and its file name.
+type Making = fn(&Picture, Order, &str) -> Result<Picture, NoRoom>;
+/// How the command names what it writes, from its picture's file name and its order.
+type Naming = fn(&str, &Order) -> String;
+
 fn run(cli: Cli) -> Result<String, String> {
     let started = Instant::now();
     let picture = read_picture(&cli.picture)?;
@@ -189,25 +195,25 @@ fn run(cli: Cli) -> Result<String, String> {
         },
         margin: cli.margin,
     };
+    let what = if cli.preview {
+        Written::Preview
+    } else {
+        Written::Sheet
+    };
+    let (make, named): (Making, Naming) = match what {
+        Written::Sheet => (make_sheet, sheet_file_name),
+        Written::Preview => (make_preview, preview_file_name),
+    };
     let sheet_path = cli
         .output
-        .unwrap_or_else(|| beside(&cli.picture, &order, cli.preview));
+        .unwrap_or_else(|| beside(&cli.picture, &order, named));
     let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();
-    let make = if cli.preview {
-        make_preview
-    } else {
-        make_sheet
-    };
     let sheet = make(&picture, order, &file_name).map_err(explain)?;
     let bytes = png_file::write(&sheet)
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
     Ok(report::written(
-        if cli.preview {
-            report::Written::Preview
-        } else {
-            report::Written::Sheet
-        },
+        what,
         &sheet_path,
         started.elapsed(),
         grid.columns() * grid.rows(),
@@ -241,13 +247,8 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
 }
 
 /// Where a sheet or its preview goes when no output is given: beside its picture, named after it.
-fn beside(picture: &Path, order: &Order, preview: bool) -> PathBuf {
+fn beside(picture: &Path, order: &Order, named: Naming) -> PathBuf {
     let name = picture.file_name().unwrap_or_default().to_string_lossy();
-    let named = if preview {
-        preview_file_name
-    } else {
-        sheet_file_name
-    };
     picture.with_file_name(named(&name, order))
 }
 
