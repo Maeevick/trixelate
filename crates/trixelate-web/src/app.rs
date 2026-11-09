@@ -418,6 +418,9 @@ pub fn App() -> impl IntoView {
                         class="rounded-xl border border-stone-300 bg-white px-3 py-2 font-normal focus:border-lime-600 focus:outline-none focus:ring-2 focus:ring-lime-600"
                         on:change=move |event| {
                             let format = match event_target_value(&event).as_str() {
+                                "a0" => PageFormat::A0,
+                                "a1" => PageFormat::A1,
+                                "a2" => PageFormat::A2,
                                 "a3" => PageFormat::A3,
                                 "a5" => PageFormat::A5,
                                 _ => PageFormat::A4,
@@ -425,9 +428,16 @@ pub fn App() -> impl IntoView {
                             settings.update(|settings| settings.format = format);
                         }
                     >
-                        <option value="a3">"A3"</option>
-                        <option value="a4" selected>"A4"</option>
-                        <option value="a5">"A5"</option>
+                        <optgroup label="Sheets, 300 dpi">
+                            <option value="a3">"A3"</option>
+                            <option value="a4" selected>"A4"</option>
+                            <option value="a5">"A5"</option>
+                        </optgroup>
+                        <optgroup label="Posters, 150 dpi">
+                            <option value="a2">"A2"</option>
+                            <option value="a1">"A1"</option>
+                            <option value="a0">"A0"</option>
+                        </optgroup>
                     </select>
                 </label>
                 <label class="flex flex-col gap-1 text-sm font-medium">
