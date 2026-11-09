@@ -52,6 +52,10 @@ struct Cli {
     #[arg(short, long)]
     output: Option<PathBuf>,
 
+    /// Write the sheet's preview instead: the sheet as it looks once coloured in, every cell filled with its colour
+    #[arg(long)]
+    preview: bool,
+
     /// Overwrite the sheet if it already exists
     #[arg(long)]
     force: bool,

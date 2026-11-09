@@ -220,6 +220,29 @@ fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot_its_model_i
 }
 
 #[test]
+fn asked_for_a_preview_the_command_writes_the_sheet_coloured_in_beside_its_picture_named_as_a_preview()
+ {
+    let folder = folder("preview");
+    let picture = a_twelve_colour_picture_in(&folder);
+    let preview = folder.join("twelve-4-12-a5.preview.png");
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "--colours",
+        "12",
+        "--format",
+        "a5",
+        "--preview",
+    ]);
+
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert!(text(&run.stdout).contains(&preview.display().to_string()));
+    assert!(matches_golden(&preview, "twelve-a5.preview.png"));
+}
+
+#[test]
 fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
     let folder = folder("overwrite");
     let picture = a_picture_in(&folder);
