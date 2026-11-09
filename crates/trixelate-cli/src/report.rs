@@ -17,9 +17,13 @@ pub enum Written {
 }
 
 /// The report of a sheet or its preview written to a path, after the time it took, its grid holding a number of cells.
-pub fn written(_what: Written, path: &Path, took: Duration, cells: u32) -> String {
+pub fn written(what: Written, path: &Path, took: Duration, cells: u32) -> String {
+    let what = match what {
+        Written::Sheet => "Sheet",
+        Written::Preview => "Preview",
+    };
     format!(
-        "Sheet written to {} in {:.2} s\n{}",
+        "{what} written to {} in {:.2} s\n{}",
         path.display(),
         took.as_secs_f64(),
         how_long_to_colour(cells)
