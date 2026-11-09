@@ -673,6 +673,32 @@ mod tests {
     }
 
     #[test]
+    fn a_posters_bubbles_grow_to_sixteen_millimetres_wide_twice_a_sheets_for_a_legend_seen_from_further()
+     {
+        let small = colouring(4, 4, 2);
+        let papers = [
+            PageFormat::A0,
+            PageFormat::A1,
+            PageFormat::A2,
+            PageFormat::A3,
+            PageFormat::A4,
+            PageFormat::A5,
+        ];
+
+        let tenths_of_millimetre_wide = papers.map(|format| {
+            upright(&small, format, Margin(10)).map(|layout| {
+                layout.bubbles()[0].diameter * TENTHS_OF_MILLIMETRE_PER_INCH
+                    / format.dots_per_inch()
+            })
+        });
+
+        assert_eq!(
+            tenths_of_millimetre_wide,
+            [Ok(157), Ok(157), Ok(157), Ok(78), Ok(78), Ok(78)]
+        );
+    }
+
+    #[test]
     fn a_landscape_page_lies_its_format_on_its_side() {
         let small = colouring(4, 4, 2);
 
