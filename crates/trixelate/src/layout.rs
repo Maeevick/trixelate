@@ -37,6 +37,15 @@ impl PageFormat {
         }
     }
 
+    /// How wide a legend's bubble may grow, in tenths of a millimetre: eight millimetres on a sheet held in hand, big
+    /// enough for its number and leaving the room to the cells, sixteen on a poster seen from further.
+    fn widest_bubble_tenths_of_mm(self) -> u32 {
+        match self {
+            PageFormat::A0 | PageFormat::A1 | PageFormat::A2 => 160,
+            PageFormat::A3 | PageFormat::A4 | PageFormat::A5 => 80,
+        }
+    }
+
     fn millimetres(self) -> (u32, u32) {
         match self {
             PageFormat::A0 => (841, 1189),
@@ -188,8 +197,6 @@ pub struct Layout {
 const CREDIT_UNDER_TENTHS_OF_MM: u32 = 20;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
-/// A bubble is at most eight millimetres wide, big enough for its number, leaving the room to the cells.
-const WIDEST_BUBBLE_TENTHS_OF_MM: u32 = 80;
 const LINES_PER_CELL_SIDE: u32 = 16;
 /// How many thirty-seconds of a grid's cell a miniature's cell is: the miniature is seven thirty-seconds of the grid wide.
 const MINIATURE_THIRTY_SECONDS_OF_A_CELL: u32 = 7;
@@ -201,6 +208,7 @@ struct Room {
     width: u32,
     height: u32,
     dots_per_inch: u32,
+    widest_bubble: u32,
 }
 
 /// Where the grid, its outlines, the legend's bubbles and the model's miniature lie.
@@ -231,12 +239,13 @@ impl Layout {
             width: page_width - 2 * margin,
             height: page_height - 2 * margin,
             dots_per_inch,
+            widest_bubble: dots_of_tenths(format.widest_bubble_tenths_of_mm(), dots_per_inch),
         };
         let size = colouring.size();
         let colours = colouring.palette().colours().len() as u32;
         let (placed, bubble) = match orientation {
             Orientation::Landscape => {
-                let bubble = bubble_sharing(room.width, colours, dots_per_inch);
+                let bubble = bubble_sharing(room.width, colours, room.widest_bubble);
                 let placed = centred_above_its_legend_under_its_model(size, colours, bubble, room);
                 (placed, bubble)
             }
@@ -403,7 +412,7 @@ fn beside_its_model_above_its_grid(
             let model_width = size.columns() * model_cell + 2 * line;
             let model_height = size.rows() * model_cell + 2 * line;
             let column = room.width.checked_sub(model_width + gap)?;
-            let bubble = bubble_sharing(column, colours, room.dots_per_inch);
+            let bubble = bubble_sharing(column, colours, room.widest_bubble);
             let legend_top = room.margin + model_height.saturating_sub(bubble) / 2;
             let below_the_legend = legend_top + bubble + gap;
             let grid_room = (room.margin + room.height).checked_sub(below_the_legend)?;
@@ -439,11 +448,10 @@ fn model_cell(cell_side: u32) -> u32 {
     (cell_side * MINIATURE_THIRTY_SECONDS_OF_A_CELL / 32).max(1)
 }
 
-/// The widest bubble a row of them, one per colour, a quarter of a bubble apart, shares in a width, odd so that it has
-/// a middle dot.
-fn bubble_sharing(width: u32, colours: u32, dots_per_inch: u32) -> u32 {
-    let widest = dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM, dots_per_inch)
-        .min(4 * width / (5 * colours - 1));
+/// The widest bubble, up to the paper's widest, a row of them, one per colour, a quarter of a bubble apart, shares in a
+/// width, odd so that it has a middle dot.
+fn bubble_sharing(width: u32, colours: u32, widest_bubble: u32) -> u32 {
+    let widest = widest_bubble.min(4 * width / (5 * colours - 1));
     widest.saturating_sub(1 - widest % 2)
 }
 
