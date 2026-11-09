@@ -82,7 +82,9 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
 /// What a sheet's preview made from a picture file is called: named like its sheet, as a preview, so the two sit side
 /// by side.
 pub fn preview_file_name(picture_file_name: &str, order: &Order) -> String {
-    sheet_file_name(picture_file_name, order)
+    let sheet = sheet_file_name(picture_file_name, order);
+    let named = sheet.strip_suffix(".sheet.png").unwrap_or(&sheet);
+    format!("{named}.preview.png")
 }
 
 #[cfg(test)]
