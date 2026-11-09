@@ -51,7 +51,7 @@ struct Cli {
     #[arg(short, long, default_value = "10", value_parser = margin)]
     margin: Margin,
 
-    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape before .sheet.png when asked]
+    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape before .sheet.png when asked, and .preview.png for a preview]
     #[arg(short, long)]
     output: Option<PathBuf>,
 

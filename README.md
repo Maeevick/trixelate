@@ -11,7 +11,7 @@ trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, find
 ## Why
 
 - **Made for children**: big square cells outlined in light grey, numbers in dark grey rather than black, and a legend whose numbers stay readable on dark and light bubbles.
-- **A model to copy from**: every sheet shows the picture in miniature in the page's top left corner, in its colours and without numbers, for the youngest to see what they are making, and is titled with its file name.
+- **A model to copy from**: every sheet shows the picture in miniature in the page's top left corner, in its colours and without numbers, for the youngest to see what they are making, and is titled with its file name. Its preview shows the whole sheet coloured in, before a single crayon is out.
 - **Ready to print**: A3, A4 or A5, portrait or landscape, at 300 dots per inch, the resolution written in the PNG so the printer keeps the paper's size.
 - **Safe by default**: a sheet that would not fit, cells too small for their numbers or a margin outside 5 to 20 mm is refused with what to try instead; an existing sheet is never overwritten without `--force`.
 - **Small**: the library needs only `png` and `zune-jpeg`, the command line adds `clap`, the page adds Leptos; the digits and letters are drawn from a five-by-seven pixel font, with no font file.
@@ -43,6 +43,7 @@ trixelate [OPTIONS] <PICTURE>
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres, from 5 for the title and the credit to 20, leaving the room to the cells | 10 |
 | `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-32-24-a5-landscape.sheet.png` |
+| `--preview` | Write the sheet's preview instead: the sheet as it looks once coloured in, every cell filled with its colour, named `….preview.png` | the sheet to colour in |
 | `--force` | Overwrite the sheet if it already exists | |
 | `-y`, `--yes` | Go ahead without being asked when warned: under 16 cells across it is big cubes, under 4 colours solid patches, more than pixel art | asks |
 
