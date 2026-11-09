@@ -308,6 +308,28 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
     }
 }
 
+/// The dots per metre a PNG tells printers, read from its pHYs chunk.
+fn dots_per_metre(png: &[u8]) -> Option<u32> {
+    let chunk = png.windows(4).position(|name| name == b"pHYs")?;
+    let across = png.get(chunk + 4..chunk + 8)?;
+    Some(u32::from_be_bytes(across.try_into().ok()?))
+}
+
+#[test]
+fn a_poster_on_a2_takes_80_cells_across_on_a_page_printed_at_150_dots_per_inch() {
+    let folder = folder("poster");
+    let picture = a_picture_in(&folder);
+    let poster = folder.join("sunset-80-8-a2.sheet.png");
+
+    let run = trixelate(&[picture.to_str().unwrap_or_default(), "--format", "a2"]);
+
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    let bytes = fs::read(&poster).unwrap_or_default();
+    let page = png_file::read(&bytes).map(|sheet| (sheet.width(), sheet.height()));
+    assert_eq!(page.ok(), Some((2480, 3508)));
+    assert_eq!(dots_per_metre(&bytes), Some(5906));
+}
+
 #[test]
 fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds() {
     let folder = folder("default-width");
