@@ -1,4 +1,4 @@
-//! Where everything lies on the sheet's paper, in dots at 300 dots per inch.
+//! Where everything lies on the sheet's paper, in dots at its paper's dots per inch.
 
 use crate::colouring::Colouring;
 use crate::grid::GridSize;
@@ -25,6 +25,15 @@ impl PageFormat {
             PageFormat::A3 => "A3",
             PageFormat::A4 => "A4",
             PageFormat::A5 => "A5",
+        }
+    }
+
+    /// How finely the paper is printed: 300 dots per inch for a sheet held in hand, 150 for a poster seen from further,
+    /// which keeps a poster's page as light as a sheet's.
+    pub fn dots_per_inch(self) -> u32 {
+        match self {
+            PageFormat::A0 | PageFormat::A1 | PageFormat::A2 => 150,
+            PageFormat::A3 | PageFormat::A4 | PageFormat::A5 => 300,
         }
     }
 
@@ -59,15 +68,14 @@ pub enum Orientation {
     Landscape,
 }
 
-const DOTS_PER_INCH: u32 = 300;
 const TENTHS_OF_MILLIMETRE_PER_INCH: u32 = 254;
 
-fn dots(millimetres: u32) -> u32 {
-    dots_of_tenths(millimetres * 10)
+fn dots(millimetres: u32, dots_per_inch: u32) -> u32 {
+    dots_of_tenths(millimetres * 10, dots_per_inch)
 }
 
-fn dots_of_tenths(tenths_of_millimetre: u32) -> u32 {
-    (tenths_of_millimetre * DOTS_PER_INCH + TENTHS_OF_MILLIMETRE_PER_INCH / 2)
+fn dots_of_tenths(tenths_of_millimetre: u32, dots_per_inch: u32) -> u32 {
+    (tenths_of_millimetre * dots_per_inch + TENTHS_OF_MILLIMETRE_PER_INCH / 2)
         / TENTHS_OF_MILLIMETRE_PER_INCH
 }
 
@@ -192,6 +200,7 @@ struct Room {
     margin: u32,
     width: u32,
     height: u32,
+    dots_per_inch: u32,
 }
 
 /// Where the grid, its outlines, the legend's bubbles and the model's miniature lie.
@@ -214,18 +223,20 @@ impl Layout {
             (Orientation::Portrait, (short, long)) => (short, long),
             (Orientation::Landscape, (short, long)) => (long, short),
         };
-        let (page_width, page_height) = (dots(width), dots(height));
-        let margin = dots(margin.0);
+        let dots_per_inch = format.dots_per_inch();
+        let (page_width, page_height) = (dots(width, dots_per_inch), dots(height, dots_per_inch));
+        let margin = dots(margin.0, dots_per_inch);
         let room = Room {
             margin,
             width: page_width - 2 * margin,
             height: page_height - 2 * margin,
+            dots_per_inch,
         };
         let size = colouring.size();
         let colours = colouring.palette().colours().len() as u32;
         let (placed, bubble) = match orientation {
             Orientation::Landscape => {
-                let bubble = bubble_sharing(room.width, colours);
+                let bubble = bubble_sharing(room.width, colours, dots_per_inch);
                 let placed = centred_above_its_legend_under_its_model(size, colours, bubble, room);
                 (placed, bubble)
             }
@@ -343,7 +354,7 @@ fn centred_above_its_legend_under_its_model(
     bubble: u32,
     room: Room,
 ) -> Placed {
-    let grid_room = room.height - dots(GAP_ABOVE_THE_LEGEND_MM) - bubble;
+    let grid_room = room.height - dots(GAP_ABOVE_THE_LEGEND_MM, room.dots_per_inch) - bubble;
     let roomiest_side = (room.width / size.columns()).min(grid_room / size.rows());
     let line = (roomiest_side / LINES_PER_CELL_SIDE).max(1);
     let cell_side = (room.width.saturating_sub(line) / size.columns())
@@ -380,7 +391,7 @@ fn beside_its_model_above_its_grid(
     colours: u32,
     room: Room,
 ) -> Option<(Placed, u32)> {
-    let gap = dots(GAP_ABOVE_THE_LEGEND_MM);
+    let gap = dots(GAP_ABOVE_THE_LEGEND_MM, room.dots_per_inch);
     (1..=room.width / size.columns())
         .rev()
         .find_map(|cell_side| {
@@ -389,7 +400,7 @@ fn beside_its_model_above_its_grid(
             let model_width = size.columns() * model_cell + 2 * line;
             let model_height = size.rows() * model_cell + 2 * line;
             let column = room.width.checked_sub(model_width + gap)?;
-            let bubble = bubble_sharing(column, colours);
+            let bubble = bubble_sharing(column, colours, room.dots_per_inch);
             let legend_top = room.margin + model_height.saturating_sub(bubble) / 2;
             let below_the_legend = legend_top + bubble + gap;
             let grid_room = (room.margin + room.height).checked_sub(below_the_legend)?;
@@ -427,8 +438,9 @@ fn model_cell(cell_side: u32) -> u32 {
 
 /// The widest bubble a row of them, one per colour, a quarter of a bubble apart, shares in a width, odd so that it has
 /// a middle dot.
-fn bubble_sharing(width: u32, colours: u32) -> u32 {
-    let widest = dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM).min(4 * width / (5 * colours - 1));
+fn bubble_sharing(width: u32, colours: u32, dots_per_inch: u32) -> u32 {
+    let widest = dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM, dots_per_inch)
+        .min(4 * width / (5 * colours - 1));
     widest.saturating_sub(1 - widest % 2)
 }
 
@@ -503,7 +515,7 @@ mod tests {
             let legend_left = bubbles[0].centre_x - radius;
             let legend_right = bubbles[bubbles.len() - 1].centre_x + radius + 1;
             let legend_top = bubbles[0].centre_y - radius;
-            let above_the_legend = legend_top - dots(10);
+            let above_the_legend = legend_top - dots(10, 300);
             assert_eq!(
                 layout.miniature(),
                 Miniature {
@@ -533,7 +545,7 @@ mod tests {
     fn upright_a_sheet_lays_its_legend_in_the_room_right_of_its_model_centred_on_its_middle_and_centres_its_grid_in_the_room_below()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
-        let (margin, right, bottom, gap) = (118, 2480 - 118, 3508 - 118, dots(10));
+        let (margin, right, bottom, gap) = (118, 2480 - 118, 3508 - 118, dots(10, 300));
 
         let layout = upright(&square, PageFormat::A4, Margin(10))?;
 
