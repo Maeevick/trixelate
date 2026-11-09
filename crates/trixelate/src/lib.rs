@@ -79,6 +79,12 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
     )
 }
 
+/// What a sheet's preview made from a picture file is called: named like its sheet, as a preview, so the two sit side
+/// by side.
+pub fn preview_file_name(picture_file_name: &str, order: &Order) -> String {
+    sheet_file_name(picture_file_name, order)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -149,6 +155,21 @@ mod tests {
             .map(|order| fits_on_its_page(&picture, order));
 
         assert_eq!(fits, [Ok(()), Err(NoRoom::ForTheNumbersInTheCells)]);
+    }
+
+    #[test]
+    fn a_preview_is_named_like_its_sheet_as_a_preview() {
+        let order = order(48, PageFormat::A4);
+
+        let names = [
+            preview_file_name("goblin.png", &order),
+            preview_file_name("my.photo.jpeg", &order),
+        ];
+
+        assert_eq!(
+            names,
+            ["goblin-48-2-a4.preview.png", "my.photo-48-2-a4.preview.png"]
+        );
     }
 
     #[test]
