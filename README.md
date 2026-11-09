@@ -12,7 +12,7 @@ trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, find
 
 - **Made for children**: big square cells outlined in light grey, numbers in dark grey rather than black, and a legend whose numbers stay readable on dark and light bubbles.
 - **A model to copy from**: every sheet shows the picture in miniature in the page's top left corner, in its colours and without numbers, for the youngest to see what they are making, and is titled with its file name. Its preview shows the whole sheet coloured in, before a single crayon is out.
-- **Ready to print**: A3, A4 or A5 at 300 dots per inch, or A2, A1 and A0 posters at 150, portrait or landscape, the resolution written in the PNG so the printer keeps the paper's size.
+- **Ready to print**: A3, A4 or A5 at 300 dots per inch, or A2, A1 and A0 posters at 150 with bubbles twice as wide, portrait or landscape, the resolution written in the PNG so the printer keeps the paper's size.
 - **Safe by default**: a sheet that would not fit, cells too small for their numbers or a margin outside 5 to 20 mm is refused with what to try instead; an existing sheet is never overwritten without `--force`.
 - **Small**: the library needs only `png` and `zune-jpeg`, the command line adds `clap`, the page adds Leptos; the digits and letters are drawn from a five-by-seven pixel font, with no font file.
 

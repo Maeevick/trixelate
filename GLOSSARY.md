@@ -19,4 +19,4 @@ The words trixelate's code and docs use, read before naming anything.
 | **Legend** | The row of bubbles of a sheet: upright, right of the model and centred on its middle; on its side, centred at the bottom. |
 | **Credit** | The small line at the bottom right of every sheet, in its margin: trixelate and its licence. |
 | **Title** | The sheet's file name, centred in the top margin of every sheet, as big as the bubbles' numbers. |
-| **Bubble** | A disc filled with one palette colour, its colour number written inside. |
+| **Bubble** | A disc filled with one palette colour, its colour number written inside, up to 8 mm wide on a sheet and 16 mm on a poster. |
