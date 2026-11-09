@@ -24,7 +24,30 @@ pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
 
 /// Draws a colouring's sheet as it looks once coloured in: every cell filled with its colour inside its outline.
 pub fn draw_coloured_in(colouring: &Colouring, layout: &Layout) -> Picture {
-    draw(colouring, layout)
+    let mut paper = Paper::blank(layout.page_width(), layout.page_height());
+    outline_the_cells(&mut paper, colouring, layout);
+    colour_the_cells(&mut paper, colouring, layout);
+    draw_the_miniature(&mut paper, colouring, layout);
+    draw_the_legend(&mut paper, colouring, layout);
+    write_the_credit(&mut paper, layout);
+    write_the_title(&mut paper, layout);
+    paper.into_picture()
+}
+
+/// Fills each cell with its colour inside its outline, as a child who coloured it in would.
+fn colour_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+    let place = layout.grid();
+    for (column, row, number) in colouring.numbered_cells() {
+        let cell = place.cell(column, row);
+        let inside = cell.side - layout.line();
+        paper.fill(
+            cell.left + layout.line(),
+            cell.top + layout.line(),
+            inside,
+            inside,
+            colouring.palette().colour_of(number),
+        );
+    }
 }
 
 /// Paints the model's miniature, a block of colour per cell, framed like the grid's lines.
@@ -324,12 +347,14 @@ mod tests {
         let (colouring, layout) = red_red_yellow();
         let line = layout.line();
         let colour_inside = |x: u32, y: u32| {
-            colouring.numbered_cells().find_map(|(column, row, number)| {
-                let cell = layout.grid().cell(column, row);
-                let inside = |from: u32, at: u32| (from + line..from + cell.side).contains(&at);
-                (inside(cell.left, x) && inside(cell.top, y))
-                    .then(|| colouring.palette().colour_of(number))
-            })
+            colouring
+                .numbered_cells()
+                .find_map(|(column, row, number)| {
+                    let cell = layout.grid().cell(column, row);
+                    let inside = |from: u32, at: u32| (from + line..from + cell.side).contains(&at);
+                    (inside(cell.left, x) && inside(cell.top, y))
+                        .then(|| colouring.palette().colour_of(number))
+                })
         };
         let sheet = draw(&colouring, &layout);
 
