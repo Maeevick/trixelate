@@ -22,6 +22,11 @@ pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
     paper.into_picture()
 }
 
+/// Draws a colouring's sheet as it looks once coloured in: every cell filled with its colour inside its outline.
+pub fn draw_coloured_in(colouring: &Colouring, layout: &Layout) -> Picture {
+    draw(colouring, layout)
+}
+
 /// Paints the model's miniature, a block of colour per cell, framed like the grid's lines.
 fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
     let miniature = layout.miniature();
@@ -312,6 +317,34 @@ mod tests {
 
             assert_eq!(inked, expected, "the number in cell {column}");
         }
+    }
+
+    #[test]
+    fn a_coloured_in_sheet_is_its_sheet_with_every_cell_filled_with_its_colour_over_its_number() {
+        let (colouring, layout) = red_red_yellow();
+        let line = layout.line();
+        let colour_inside = |x: u32, y: u32| {
+            colouring.numbered_cells().find_map(|(column, row, number)| {
+                let cell = layout.grid().cell(column, row);
+                let inside = |from: u32, at: u32| (from + line..from + cell.side).contains(&at);
+                (inside(cell.left, x) && inside(cell.top, y))
+                    .then(|| colouring.palette().colour_of(number))
+            })
+        };
+        let sheet = draw(&colouring, &layout);
+
+        let coloured_in = draw_coloured_in(&colouring, &layout);
+
+        let (width, height) = (layout.page_width(), layout.page_height());
+        assert_eq!((coloured_in.width(), coloured_in.height()), (width, height));
+        let unlike_the_sheet_coloured_in = (0..height)
+            .flat_map(|y| (0..width).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                let expected = colour_inside(x, y).unwrap_or_else(|| sheet.pixel(x, y));
+                coloured_in.pixel(x, y) != expected
+            })
+            .count();
+        assert_eq!(unlike_the_sheet_coloured_in, 0);
     }
 
     #[test]
