@@ -38,7 +38,11 @@ pub fn make_sheet(picture: &Picture, order: Order, file_name: &str) -> Result<Pi
 /// Turns a picture into the preview of the sheet ordered: the sheet as it looks once coloured in, titled with its file
 /// name, or says what lacks room on the page, as making the sheet would.
 pub fn make_preview(picture: &Picture, order: Order, file_name: &str) -> Result<Picture, NoRoom> {
-    make_sheet(picture, order, file_name)
+    let (colouring, layout) = lay_out(picture, order)?;
+    Ok(sheet::draw_coloured_in(
+        &colouring,
+        &layout.titled(file_name),
+    ))
 }
 
 /// Whether the sheet ordered would fit its page, told without drawing it, so a page can say so before it is asked.
