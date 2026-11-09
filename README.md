@@ -12,7 +12,7 @@ trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, find
 
 - **Made for children**: big square cells outlined in light grey, numbers in dark grey rather than black, and a legend whose numbers stay readable on dark and light bubbles.
 - **A model to copy from**: every sheet shows the picture in miniature in the page's top left corner, in its colours and without numbers, for the youngest to see what they are making, and is titled with its file name. Its preview shows the whole sheet coloured in, before a single crayon is out.
-- **Ready to print**: A3, A4 or A5, portrait or landscape, at 300 dots per inch, the resolution written in the PNG so the printer keeps the paper's size.
+- **Ready to print**: A3, A4 or A5 at 300 dots per inch, or A2, A1 and A0 posters at 150, portrait or landscape, the resolution written in the PNG so the printer keeps the paper's size.
 - **Safe by default**: a sheet that would not fit, cells too small for their numbers or a margin outside 5 to 20 mm is refused with what to try instead; an existing sheet is never overwritten without `--force`.
 - **Small**: the library needs only `png` and `zune-jpeg`, the command line adds `clap`, the page adds Leptos; the digits and letters are drawn from a five-by-seven pixel font, with no font file.
 
@@ -37,9 +37,9 @@ trixelate [OPTIONS] <PICTURE>
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `<PICTURE>` | The PNG or JPEG picture to turn into a sheet, of any colour type and depth; the sheet is always a PNG | |
-| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched. At most 64 on A3, 48 on A4 and 32 on A5 | the most the paper holds |
+| `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched. At most 128 on A0, 96 on A1, 80 on A2, 64 on A3, 48 on A4 and 32 on A5 | the most the paper holds |
 | `-c`, `--colours` | Colours in the palette, from 2 to 24 (`--colors` works too) | 8 |
-| `-f`, `--format` | The paper: `a3`, `a4` or `a5` | `a4` |
+| `-f`, `--format` | The paper: `a3`, `a4` or `a5` at 300 dots per inch, or the posters `a2`, `a1` and `a0` at 150, light enough for any computer and sharp from where a poster is seen | `a4` |
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres, from 5 for the title and the credit to 20, leaving the room to the cells | 10 |
 | `-o`, `--output` | Where to write the sheet | beside the picture, named after it and its settings, so variants never overwrite each other: `goblin-48-8-a4.sheet.png`, `goblin-32-24-a5-landscape.sheet.png` |
@@ -57,7 +57,7 @@ A goblin turned into a sheet to colour with `trixelate sample/goblin.png`: 48 ce
 
 ## In the browser
 
-The same sheets without a command line or a server: drop a picture in, set the sheet up, look at it beside your picture, then download it. The picture never leaves the browser.
+The same sheets without a command line or a server: drop a picture in, set the sheet up, look at it beside your picture, slide the line across it to see it coloured in, then download it. The picture never leaves the browser.
 
 ```sh
 rustup target add wasm32-unknown-unknown
@@ -66,7 +66,7 @@ make web        # served at http://127.0.0.1:8080, rebuilt on every change
 make web-build  # a static site in crates/trixelate-web/dist, for any host
 ```
 
-![The page: the goblin dropped in on the left, its sheet with its model in the corner on the right, the settings and the download button above](docs/web.png)
+![The page: the goblin dropped in on the left, its sheet with its model in the corner on the right, coloured in left of a line slid halfway across, the settings and the download button above](docs/web.png)
 
 ## How a sheet is made
 

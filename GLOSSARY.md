@@ -13,7 +13,7 @@ The words trixelate's code and docs use, read before naming anything.
 | **Sheet** | The page printed for the child: the grid of numbered cells and its legend. |
 | **Model** | The picture in miniature in the page's top left corner of every sheet, a block of colour per cell with no number and no line, for the child to see what they are making. It is seven thirty-seconds of the grid wide, over the grid where they meet. |
 | **Preview** | A sheet as it looks once coloured in: every cell filled with its colour inside its outline, over its number, the rest of the sheet unchanged. |
-| **Page format** | The paper the sheet is drawn for, A3, A4 or A5, at 300 dots per inch. |
+| **Page format** | The paper the sheet is drawn for: A3, A4 or A5 at 300 dots per inch, or A2, A1 and A0 posters at 150. |
 | **Orientation** | Which way up the paper lies: portrait, upright, or landscape, on its side. |
 | **Margin** | The blank paper around the sheet's content, 10 mm unless asked otherwise, from 5 mm, the room the title and the credit need, to 20 mm, leaving the room to the cells. |
 | **Legend** | The row of bubbles of a sheet: upright, right of the model and centred on its middle; on its side, centred at the bottom. |
