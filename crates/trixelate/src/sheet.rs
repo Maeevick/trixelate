@@ -12,21 +12,23 @@ const OUTLINES_PER_BUBBLE_DIAMETER: u32 = 24;
 
 /// Draws a colouring's sheet on white paper, as laid out.
 pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
-    let mut paper = Paper::blank(layout.page_width(), layout.page_height());
-    outline_the_cells(&mut paper, colouring, layout);
-    number_the_cells(&mut paper, colouring, layout);
-    draw_the_miniature(&mut paper, colouring, layout);
-    draw_the_legend(&mut paper, colouring, layout);
-    write_the_credit(&mut paper, layout);
-    write_the_title(&mut paper, layout);
-    paper.into_picture()
+    drawn_with(number_the_cells, colouring, layout)
 }
 
 /// Draws a colouring's sheet as it looks once coloured in: every cell filled with its colour inside its outline.
 pub fn draw_coloured_in(colouring: &Colouring, layout: &Layout) -> Picture {
+    drawn_with(colour_the_cells, colouring, layout)
+}
+
+/// A sheet on white paper, its cells outlined then filled as asked, its model, legend, credit and title drawn over.
+fn drawn_with(
+    fill_the_cells: fn(&mut Paper, &Colouring, &Layout),
+    colouring: &Colouring,
+    layout: &Layout,
+) -> Picture {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
     outline_the_cells(&mut paper, colouring, layout);
-    colour_the_cells(&mut paper, colouring, layout);
+    fill_the_cells(&mut paper, colouring, layout);
     draw_the_miniature(&mut paper, colouring, layout);
     draw_the_legend(&mut paper, colouring, layout);
     write_the_credit(&mut paper, layout);
