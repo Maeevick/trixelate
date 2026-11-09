@@ -92,11 +92,7 @@ fn paint(picture: &Picture, name: &str, order: Order, make: Making) -> Result<Ve
 }
 
 fn beyond(format: PageFormat, most: u32) -> String {
-    let paper = match format {
-        PageFormat::A3 => "A3",
-        PageFormat::A4 => "A4",
-        PageFormat::A5 => "A5",
-    };
+    let paper = format.name();
     format!(
         "An {paper} sheet holds at most {most} cells across, or little fingers give up. Fewer cells, or bigger paper?"
     )

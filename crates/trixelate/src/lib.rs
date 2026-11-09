@@ -73,11 +73,7 @@ fn named_after(picture_file_name: &str, order: &Order, what: &str) -> String {
     let stem = std::path::Path::new(picture_file_name)
         .file_stem()
         .map_or(picture_file_name.into(), |stem| stem.to_string_lossy());
-    let paper = match order.format {
-        PageFormat::A3 => "a3",
-        PageFormat::A4 => "a4",
-        PageFormat::A5 => "a5",
-    };
+    let paper = order.format.name().to_lowercase();
     let landscape = match order.orientation {
         Orientation::Portrait => "",
         Orientation::Landscape => "-landscape",

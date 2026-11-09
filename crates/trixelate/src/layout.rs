@@ -13,6 +13,15 @@ pub enum PageFormat {
 }
 
 impl PageFormat {
+    /// The paper's name, as printers and shops call it.
+    pub fn name(self) -> &'static str {
+        match self {
+            PageFormat::A3 => "A3",
+            PageFormat::A4 => "A4",
+            PageFormat::A5 => "A5",
+        }
+    }
+
     fn millimetres(self) -> (u32, u32) {
         match self {
             PageFormat::A3 => (297, 420),

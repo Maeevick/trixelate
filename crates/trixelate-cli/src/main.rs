@@ -93,15 +93,12 @@ fn cells_across(cli: &Cli) -> u32 {
 
 /// Refuses more cells across than the paper holds for a child.
 fn within_the_limits(cli: &Cli) -> Result<(), String> {
-    let most = layout::most_cells_across(cli.format.into());
+    let paper = PageFormat::from(cli.format);
+    let most = layout::most_cells_across(paper);
     if cells_across(cli) <= most {
         return Ok(());
     }
-    let paper = match cli.format {
-        Format::A3 => "A3",
-        Format::A4 => "A4",
-        Format::A5 => "A5",
-    };
+    let paper = paper.name();
     Err(format!(
         "an {paper} sheet holds at most {most} cells across: try a smaller --width or a bigger --format"
     ))
