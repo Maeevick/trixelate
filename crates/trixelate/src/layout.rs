@@ -708,6 +708,32 @@ mod tests {
     }
 
     #[test]
+    fn the_credit_is_printed_between_one_and_two_millimetres_tall_on_every_paper()
+    -> Result<(), NoRoom> {
+        let small = colouring(4, 4, 2);
+        let papers = [
+            PageFormat::A0,
+            PageFormat::A1,
+            PageFormat::A2,
+            PageFormat::A3,
+            PageFormat::A4,
+            PageFormat::A5,
+        ];
+
+        let tenths_of_millimetre_tall = papers.map(|format| {
+            upright(&small, format, Margin(5)).map(|layout| {
+                let (_, height) = lettering::size(CREDIT, layout.credit().scale);
+                height * TENTHS_OF_MILLIMETRE_PER_INCH / format.dots_per_inch()
+            })
+        });
+
+        for tall in tenths_of_millimetre_tall {
+            assert!((10..20).contains(&tall?), "{tall:?} tenths of a millimetre");
+        }
+        Ok(())
+    }
+
+    #[test]
     fn the_credit_sits_small_in_the_bottom_margin_flush_right_even_inside_the_widest_margin_of_the_smallest_page()
     -> Result<(), NoRoom> {
         let small = colouring(4, 4, 2);
