@@ -28,7 +28,7 @@ fn a_picture_in(folder: &Path) -> PathBuf {
     ];
     let picture = Picture::from_rgba(4, 3, pixels.as_flattened()).expect("a picture");
     let path = folder.join("sunset.png");
-    fs::write(&path, png_file::write(&picture).expect("a PNG")).expect("the picture on disk");
+    fs::write(&path, png_file::write(&picture, 300).expect("a PNG")).expect("the picture on disk");
     path
 }
 
@@ -176,7 +176,7 @@ fn a_twelve_colour_picture_in(folder: &Path) -> PathBuf {
         .collect();
     let picture = Picture::from_rgba(4, 3, &pixels).expect("a picture");
     let path = folder.join("twelve.png");
-    fs::write(&path, png_file::write(&picture).expect("a PNG")).expect("the picture on disk");
+    fs::write(&path, png_file::write(&picture, 300).expect("a PNG")).expect("the picture on disk");
     path
 }
 
@@ -275,7 +275,8 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
     fs::write(&not_a_png, "a drawing described in words").expect("a text file");
     let a_ribbon = folder.join("ribbon.png");
     let ribbon = Picture::from_rgba(1, 100, &RED.repeat(100)).expect("a picture");
-    fs::write(&a_ribbon, png_file::write(&ribbon).expect("a PNG")).expect("the picture on disk");
+    fs::write(&a_ribbon, png_file::write(&ribbon, 300).expect("a PNG"))
+        .expect("the picture on disk");
     let cases: [(&[&str], &str); 3] = [
         (&["missing.png", "--width", "4"], "cannot read missing.png"),
         (

@@ -87,7 +87,7 @@ type Making = fn(&Picture, Order, &str) -> Result<Picture, NoRoom>;
 /// their cells differ, or why it cannot be made.
 fn paint(picture: &Picture, name: &str, order: Order, make: Making) -> Result<Vec<u8>, String> {
     let sheet = make(picture, order, &sheet_file_name(name, &order)).map_err(explain)?;
-    png_file::write(&sheet)
+    png_file::write(&sheet, order.format.dots_per_inch())
         .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
 }
 

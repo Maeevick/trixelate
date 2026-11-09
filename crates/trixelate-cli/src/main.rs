@@ -206,7 +206,7 @@ fn run(cli: Cli) -> Result<String, String> {
         .unwrap_or_else(|| beside(&cli.picture, &order, named));
     let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();
     let sheet = make(&picture, order, &file_name).map_err(explain)?;
-    let bytes = png_file::write(&sheet)
+    let bytes = png_file::write(&sheet, order.format.dots_per_inch())
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
     Ok(report::written(

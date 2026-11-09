@@ -44,8 +44,8 @@ pub fn read(bytes: &[u8]) -> Result<Picture, NotAPng> {
     Picture::from_rgba(frame.width, frame.height, &rgba).map_err(|_| NotAPng)
 }
 
-/// Writes a sheet as an RGB PNG that tells printers its 300 dots per inch.
-pub fn write(sheet: &Picture) -> Result<Vec<u8>, CannotWritePng> {
+/// Writes a sheet as an RGB PNG that tells printers how many dots per inch it is printed at.
+pub fn write(sheet: &Picture, _dots_per_inch: u32) -> Result<Vec<u8>, CannotWritePng> {
     let rgb: Vec<u8> = sheet
         .pixels()
         .iter()
@@ -77,7 +77,7 @@ mod tests {
         ];
         let sheet = Picture::from_rgba(2, 2, &rgba).expect("a picture");
 
-        let bytes = write(&sheet).unwrap_or_default();
+        let bytes = write(&sheet, 300).unwrap_or_default();
 
         let decoder = png::Decoder::new(std::io::Cursor::new(&bytes));
         let dots_per_metre = decoder
@@ -88,6 +88,23 @@ mod tests {
         assert_eq!(
             dots_per_metre.map(|dims| (dims.xppu, dims.yppu, dims.unit)),
             Some((11811, 11811, png::Unit::Meter))
+        );
+    }
+
+    #[test]
+    fn a_poster_written_as_png_tells_printers_its_150_dots_per_inch() {
+        let sheet = Picture::from_rgba(1, 1, &[220, 30, 40, 255]).expect("a picture");
+
+        let bytes = write(&sheet, 150).unwrap_or_default();
+
+        let decoder = png::Decoder::new(std::io::Cursor::new(&bytes));
+        let dots_per_metre = decoder
+            .read_info()
+            .ok()
+            .and_then(|reader| reader.info().pixel_dims);
+        assert_eq!(
+            dots_per_metre.map(|dims| (dims.xppu, dims.yppu, dims.unit)),
+            Some((5906, 5906, png::Unit::Meter))
         );
     }
 
