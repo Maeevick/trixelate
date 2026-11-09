@@ -6,7 +6,8 @@ use png::{BitDepth, ColorType, Decoder, Encoder, PixelDimensions, Transformation
 
 use crate::picture::{Picture, Rgb};
 
-const DOTS_PER_METRE_AT_300_DOTS_PER_INCH: u32 = 11_811;
+const TENTHS_OF_MILLIMETRE_PER_INCH: u32 = 254;
+const TENTHS_OF_MILLIMETRE_PER_METRE: u32 = 10_000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NotAPng;
@@ -45,7 +46,10 @@ pub fn read(bytes: &[u8]) -> Result<Picture, NotAPng> {
 }
 
 /// Writes a sheet as an RGB PNG that tells printers how many dots per inch it is printed at.
-pub fn write(sheet: &Picture, _dots_per_inch: u32) -> Result<Vec<u8>, CannotWritePng> {
+pub fn write(sheet: &Picture, dots_per_inch: u32) -> Result<Vec<u8>, CannotWritePng> {
+    let dots_per_metre = (dots_per_inch * TENTHS_OF_MILLIMETRE_PER_METRE
+        + TENTHS_OF_MILLIMETRE_PER_INCH / 2)
+        / TENTHS_OF_MILLIMETRE_PER_INCH;
     let rgb: Vec<u8> = sheet
         .pixels()
         .iter()
@@ -56,8 +60,8 @@ pub fn write(sheet: &Picture, _dots_per_inch: u32) -> Result<Vec<u8>, CannotWrit
     encoder.set_color(ColorType::Rgb);
     encoder.set_depth(BitDepth::Eight);
     encoder.set_pixel_dims(Some(PixelDimensions {
-        xppu: DOTS_PER_METRE_AT_300_DOTS_PER_INCH,
-        yppu: DOTS_PER_METRE_AT_300_DOTS_PER_INCH,
+        xppu: dots_per_metre,
+        yppu: dots_per_metre,
         unit: Unit::Meter,
     }));
     let mut writer = encoder.write_header().map_err(|_| CannotWritePng)?;
