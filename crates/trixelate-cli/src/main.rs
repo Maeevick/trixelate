@@ -31,7 +31,7 @@ struct Cli {
     /// The PNG or JPEG picture to turn into a sheet
     picture: PathBuf,
 
-    /// Cells across the grid, the rows following from the picture's proportions [default: the most a sheet on the paper holds: 64 on A3, 48 on A4, 32 on A5]
+    /// Cells across the grid, the rows following from the picture's proportions [default: the most a sheet on the paper holds: 128 on A0, 96 on A1, 80 on A2, 64 on A3, 48 on A4, 32 on A5]
     #[arg(long, value_parser = clap::value_parser!(u32).range(1..))]
     width: Option<u32>,
 
@@ -39,7 +39,7 @@ struct Cli {
     #[arg(short, long, visible_alias = "colors", default_value = "8", value_parser = colour_count)]
     colours: ColourCount,
 
-    /// The paper the sheet is drawn for, at 300 dots per inch
+    /// The paper the sheet is drawn for: A3 to A5 at 300 dots per inch, A0 to A2 posters at 150
     #[arg(short, long, value_enum, default_value_t = Format::A4)]
     format: Format,
 
@@ -70,6 +70,9 @@ struct Cli {
 
 #[derive(Clone, Copy, ValueEnum)]
 enum Format {
+    A0,
+    A1,
+    A2,
     A3,
     A4,
     A5,
@@ -78,6 +81,9 @@ enum Format {
 impl From<Format> for PageFormat {
     fn from(format: Format) -> PageFormat {
         match format {
+            Format::A0 => PageFormat::A0,
+            Format::A1 => PageFormat::A1,
+            Format::A2 => PageFormat::A2,
             Format::A3 => PageFormat::A3,
             Format::A4 => PageFormat::A4,
             Format::A5 => PageFormat::A5,
