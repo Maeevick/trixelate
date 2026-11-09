@@ -185,7 +185,7 @@ pub struct Layout {
 
 /// The credit stays small, under two millimetres tall, which half the thinnest margin holds, and narrower than the
 /// room inside the widest margin on the smallest page.
-const CREDIT_SCALE: u32 = 3;
+const CREDIT_UNDER_TENTHS_OF_MM: u32 = 20;
 
 const GAP_ABOVE_THE_LEGEND_MM: u32 = 10;
 /// A bubble is at most eight millimetres wide, big enough for its number, leaving the room to the cells.
@@ -256,11 +256,14 @@ impl Layout {
             lettering::largest_scale_fitting(&widest_number, bubble * 11 / 20, bubble * 9 / 20)
                 .expect("a bubble holds its number whenever a cell does");
 
-        let (credit_width, credit_height) = lettering::size(CREDIT, CREDIT_SCALE);
+        let (_, credit_height_at_one) = lettering::size(CREDIT, 1);
+        let credit_scale =
+            dots_of_tenths(CREDIT_UNDER_TENTHS_OF_MM, dots_per_inch) / credit_height_at_one;
+        let (credit_width, credit_height) = lettering::size(CREDIT, credit_scale);
         let credit = Credit {
             left: margin + room.width - credit_width,
             top: page_height - margin + (margin - credit_height) / 2,
-            scale: CREDIT_SCALE,
+            scale: credit_scale,
         };
 
         Ok(Layout {
