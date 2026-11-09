@@ -7,6 +7,9 @@ use crate::lettering;
 /// The paper a sheet is drawn for, its sides given upright.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PageFormat {
+    A0,
+    A1,
+    A2,
     A3,
     A4,
     A5,
@@ -16,6 +19,9 @@ impl PageFormat {
     /// The paper's name, as printers and shops call it.
     pub fn name(self) -> &'static str {
         match self {
+            PageFormat::A0 => "A0",
+            PageFormat::A1 => "A1",
+            PageFormat::A2 => "A2",
             PageFormat::A3 => "A3",
             PageFormat::A4 => "A4",
             PageFormat::A5 => "A5",
@@ -24,6 +30,9 @@ impl PageFormat {
 
     fn millimetres(self) -> (u32, u32) {
         match self {
+            PageFormat::A0 => (841, 1189),
+            PageFormat::A1 => (594, 841),
+            PageFormat::A2 => (420, 594),
             PageFormat::A3 => (297, 420),
             PageFormat::A4 => (210, 297),
             PageFormat::A5 => (148, 210),
@@ -34,6 +43,9 @@ impl PageFormat {
 /// The most cells across a grid may have on a paper, for a child to colour them.
 pub fn most_cells_across(format: PageFormat) -> u32 {
     match format {
+        PageFormat::A0 => 128,
+        PageFormat::A1 => 96,
+        PageFormat::A2 => 80,
         PageFormat::A3 => 64,
         PageFormat::A4 => 48,
         PageFormat::A5 => 32,
@@ -621,6 +633,27 @@ mod tests {
         assert_eq!(
             pages,
             [Ok((3508, 4961)), Ok((2480, 3508)), Ok((1748, 2480))]
+        );
+    }
+
+    #[test]
+    fn posters_on_a2_a1_and_a0_hold_80_96_and_128_cells_across_on_pages_counted_at_150_dots_per_inch()
+     {
+        let small = colouring(4, 4, 2);
+
+        let posters = [PageFormat::A2, PageFormat::A1, PageFormat::A0].map(|format| {
+            let page = upright(&small, format, Margin(20))
+                .map(|layout| (layout.page_width(), layout.page_height()));
+            (format.name(), most_cells_across(format), page)
+        });
+
+        assert_eq!(
+            posters,
+            [
+                ("A2", 80, Ok((2480, 3508))),
+                ("A1", 96, Ok((3508, 4967))),
+                ("A0", 128, Ok((4967, 7022)))
+            ]
         );
     }
 
