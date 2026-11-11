@@ -39,7 +39,7 @@ impl Sheet {
     /// The sheet as PNG bytes encoded five times faster and four times bigger, for a screen to show rather than a
     /// printer to keep.
     pub fn png_to_show(&self) -> Result<Vec<u8>, CannotWritePng> {
-        Ok(Vec::new())
+        png_file::write_to_show(&self.page, self.dots_per_inch)
     }
 }
 
