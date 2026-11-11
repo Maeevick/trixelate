@@ -31,7 +31,31 @@ pub struct Order {
     pub margin: Margin,
 }
 
+/// Why an order is refused before any picture is read.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Refusal {
+    NoCellAcross,
+    MoreCellsAcrossThanThePaperHolds { most: u32 },
+}
+
 impl Order {
+    /// An order for a sheet, refused when it has no cell across or more than its paper holds for a child to colour.
+    pub fn new(
+        cells_across: u32,
+        colours: ColourCount,
+        format: PageFormat,
+        orientation: Orientation,
+        margin: Margin,
+    ) -> Result<Order, Refusal> {
+        Ok(Order {
+            cells_across: NonZeroU32::new(cells_across.max(1)).unwrap_or(NonZeroU32::MIN),
+            colours,
+            format,
+            orientation,
+            margin,
+        })
+    }
+
     /// The grid a picture is simplified into for this order: the cells across asked, and the rows that keep the
     /// picture's proportions.
     pub fn grid_for(&self, picture: &Picture) -> GridSize {
@@ -108,6 +132,42 @@ mod tests {
             orientation: Orientation::Portrait,
             margin: Margin::new(20).expect("a margin"),
         }
+    }
+
+    #[test]
+    fn an_order_of_no_cell_across_or_more_than_its_paper_holds_is_refused_saying_the_most_it_holds()
+    {
+        let ordered = |cells_across, format| {
+            Order::new(
+                cells_across,
+                ColourCount::new(8).expect("a count"),
+                format,
+                Orientation::Portrait,
+                Margin::new(10).expect("a margin"),
+            )
+            .map(|order| order.cells_across.get())
+        };
+
+        let orders = [
+            ordered(48, PageFormat::A4),
+            ordered(49, PageFormat::A4),
+            ordered(32, PageFormat::A5),
+            ordered(33, PageFormat::A5),
+            ordered(128, PageFormat::A0),
+            ordered(0, PageFormat::A4),
+        ];
+
+        assert_eq!(
+            orders,
+            [
+                Ok(48),
+                Err(Refusal::MoreCellsAcrossThanThePaperHolds { most: 48 }),
+                Ok(32),
+                Err(Refusal::MoreCellsAcrossThanThePaperHolds { most: 32 }),
+                Ok(128),
+                Err(Refusal::NoCellAcross)
+            ]
+        );
     }
 
     #[test]
