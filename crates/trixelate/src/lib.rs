@@ -73,9 +73,12 @@ impl Order {
     }
 
     /// The grid a picture is simplified into for this order: the cells across asked, and the rows that keep the
-    /// picture's proportions.
-    pub fn grid_for(&self, picture: &Picture) -> GridSize {
-        GridSize::keeping_the_proportions_of(picture, self.cells_across)
+    /// picture's proportions, refused when the page could never number that many rows, before any cell is coloured.
+    pub fn grid_for(&self, picture: &Picture) -> Result<GridSize, NoRoom> {
+        Ok(GridSize::keeping_the_proportions_of(
+            picture,
+            self.cells_across,
+        ))
     }
 }
 
@@ -102,7 +105,7 @@ pub fn fits_on_its_page(picture: &Picture, order: Order) -> Result<(), NoRoom> {
 }
 
 fn lay_out(picture: &Picture, order: Order) -> Result<(Colouring, Layout), NoRoom> {
-    let colouring = Colouring::of(picture, order.grid_for(picture), order.colours);
+    let colouring = Colouring::of(picture, order.grid_for(picture)?, order.colours);
     let layout = Layout::of(&colouring, order.format, order.orientation, order.margin)?;
     Ok((colouring, layout))
 }
@@ -192,6 +195,33 @@ mod tests {
                 Err(Refusal::MoreCellsAcrossThanThePaperHolds { most: 32 }),
                 Ok(128),
                 Err(Refusal::NoCellAcross)
+            ]
+        );
+    }
+
+    #[test]
+    fn a_grid_with_more_rows_than_its_page_could_ever_number_is_refused_before_any_cell_is_coloured()
+     {
+        let a_hundred_thousand_dots_tall =
+            Picture::from_rgba(1, 100_000, &[220, 30, 40, 255].repeat(100_000)).expect("a picture");
+        let ordered = [
+            (red_and_yellow(), order(4, PageFormat::A4)),
+            (ribbon(), order(32, PageFormat::A5)),
+            (a_hundred_thousand_dots_tall, order(48, PageFormat::A4)),
+        ];
+
+        let grids = ordered.map(|(picture, order)| {
+            order
+                .grid_for(&picture)
+                .map(|grid| (grid.columns(), grid.rows()))
+        });
+
+        assert_eq!(
+            grids,
+            [
+                Ok((4, 2)),
+                Err(NoRoom::ForTheNumbersInTheCells),
+                Err(NoRoom::ForTheNumbersInTheCells)
             ]
         );
     }

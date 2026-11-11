@@ -192,6 +192,7 @@ type Naming = fn(&str, &Order) -> String;
 fn run(cli: Cli, order: Order) -> Result<String, String> {
     let started = Instant::now();
     let picture = read_picture(&cli.picture)?;
+    let grid = order.grid_for(&picture).map_err(explain)?;
     let what = if cli.preview {
         Written::Preview
     } else {
@@ -209,7 +210,6 @@ fn run(cli: Cli, order: Order) -> Result<String, String> {
     let bytes = png_file::write(&sheet, order.format().dots_per_inch())
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
-    let grid = order.grid_for(&picture);
     Ok(report::written(
         what,
         &sheet_path,
