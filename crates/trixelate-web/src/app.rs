@@ -13,7 +13,10 @@ use trixelate::picture_file::{self, Unreadable};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
-use crate::form::{Painted, Settings, coloured, light_enough, not_a_picture, paint, ready, warned};
+use crate::form::{
+    Painted, Settings, coloured, light_enough, not_a_picture, paint_preview, paint_sheet, ready,
+    warned,
+};
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
 /// The id of the line saying why the download is disabled, for its button to point to.
@@ -113,6 +116,7 @@ pub fn App() -> impl IntoView {
     let unreadable = RwSignal::new(None::<String>);
     let hovering = RwSignal::new(false);
     let settings = RwSignal::new(Settings::default());
+    let colours_dragged = RwSignal::new(None::<usize>);
     let sheet_shown = RwSignal::new(None::<Arc<ObjectUrl>>);
     let coloured_in_shown = RwSignal::new(None::<Arc<ObjectUrl>>);
     let coloured_in = RwSignal::new(0.0_f64);
@@ -197,33 +201,45 @@ pub fn App() -> impl IntoView {
         let this = latest.get_value() + 1;
         latest.set_value(this);
         busy.set(true);
+        let still_latest = move || latest.get_value() == this;
         after_the_next_paint(move || {
-            if latest.get_value() != this {
+            if !still_latest() {
                 return;
             }
             let made = ready(settings).and_then(|order| {
                 let colouring = colouring_for(&picture, order)?;
-                paint(&colouring, &name, order)
+                Ok((paint_sheet(&colouring, &name, order)?, colouring, order))
             });
-            match made {
-                Ok(made) => {
-                    sheet_shown.set(ObjectUrl::of_png(&made.sheet).map(Arc::new));
-                    coloured_in_shown.set(ObjectUrl::of_png(&made.preview).map(Arc::new));
-                    painted.set_value(Some(Arc::new(made)));
-                    refusal.set(None);
-                }
+            let (sheet, colouring, order) = match made {
+                Ok(made) => made,
                 Err(why) => {
                     painted.set_value(None);
                     refusal.set(Some(why));
+                    busy.set(false);
+                    return;
                 }
-            }
-            busy.set(false);
+            };
+            let title = sheet.name.clone();
+            coloured_in_shown.set(None);
+            sheet_shown.set(ObjectUrl::of_png(&sheet.png).map(Arc::new));
+            painted.set_value(Some(Arc::new(sheet)));
+            refusal.set(None);
+            after_the_next_paint(move || {
+                if !still_latest() {
+                    return;
+                }
+                match paint_preview(&colouring, &title, order) {
+                    Ok(preview) => coloured_in_shown.set(ObjectUrl::of_png(&preview).map(Arc::new)),
+                    Err(why) => refusal.set(Some(why)),
+                }
+                busy.set(false);
+            });
         });
     });
 
     let download = move || {
         if let Some(made) = painted.get_value() {
-            save(&made.sheet, &made.name);
+            save(&made.png, &made.name);
         }
     };
 
@@ -344,7 +360,7 @@ pub fn App() -> impl IntoView {
                         <span>
                             "Colours "
                             <span class="font-mono text-lime-700">
-                                {move || settings.get().colours}
+                                {move || colours_dragged.get().unwrap_or(settings.get().colours)}
                             </span>
                         </span>
                         <input
@@ -354,9 +370,13 @@ pub fn App() -> impl IntoView {
                             class="mt-2 accent-lime-600"
                             prop:value=move || settings.get().colours.to_string()
                             on:input=move |event| {
+                                colours_dragged.set(event_target_value(&event).parse::<usize>().ok());
+                            }
+                            on:change=move |event| {
                                 if let Ok(colours) = event_target_value(&event).parse::<usize>() {
                                     settings.update(|settings| settings.colours = colours);
                                 }
+                                colours_dragged.set(None);
                             }
                         />
                     </label>

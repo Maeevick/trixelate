@@ -6,7 +6,6 @@ use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_acro
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
-use trixelate::sheet::Sheet;
 use trixelate::warning::warnings_for;
 use trixelate::{Order, Refusal, colour, preview_of, sheet_file_name, sheet_of};
 
@@ -81,27 +80,36 @@ pub fn coloured(picture: &Picture, order: Order) -> Result<Colouring, String> {
     colour(picture, order).map_err(explain)
 }
 
-/// A sheet and its preview as PNG bytes, both titled with the name the sheet is saved under so that only their cells
-/// differ.
+/// A sheet as PNG bytes ready to save, and the name it is saved under, which its preview is titled with too, so that
+/// only their cells differ.
 pub struct Painted {
-    pub sheet: Vec<u8>,
-    pub preview: Vec<u8>,
+    pub png: Vec<u8>,
     pub name: String,
 }
 
-/// A colouring's sheet and preview painted on the order's page, named after the picture, or why they cannot be.
-pub fn paint(colouring: &Colouring, picture_name: &str, order: Order) -> Result<Painted, String> {
+const NOT_A_PNG: &str = "The sheet could not be turned into a PNG. That one is on us.";
+
+/// A colouring's sheet painted on the order's page, named after the picture, encoded small to be saved, or why it
+/// cannot be.
+pub fn paint_sheet(
+    colouring: &Colouring,
+    picture_name: &str,
+    order: Order,
+) -> Result<Painted, String> {
     let name = sheet_file_name(picture_name, &order);
-    let png = |sheet: Sheet| {
-        sheet
-            .png()
-            .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
-    };
+    let sheet = sheet_of(colouring, order, &name).map_err(explain)?;
     Ok(Painted {
-        sheet: png(sheet_of(colouring, order, &name).map_err(explain)?)?,
-        preview: png(preview_of(colouring, order, &name).map_err(explain)?)?,
+        png: sheet.png().map_err(|_| NOT_A_PNG.to_string())?,
         name,
     })
+}
+
+/// A colouring's preview painted on the order's page, titled as its sheet, encoded fast to be shown only.
+pub fn paint_preview(colouring: &Colouring, title: &str, order: Order) -> Result<Vec<u8>, String> {
+    preview_of(colouring, order, title)
+        .map_err(explain)?
+        .png_to_show()
+        .map_err(|_| NOT_A_PNG.to_string())
 }
 
 fn refused(format: PageFormat, refusal: Refusal) -> String {
@@ -233,9 +241,12 @@ mod tests {
         };
 
         let painted = [Settings::default(), on_its_side].map(|settings| {
-            ready(settings)
-                .and_then(|order| paint(&coloured(&picture, order)?, "red-yellow.png", order))
-                .map(|painted| (page(&painted.sheet), page(&painted.preview), painted.name))
+            ready(settings).and_then(|order| {
+                let colouring = coloured(&picture, order)?;
+                let sheet = paint_sheet(&colouring, "red-yellow.png", order)?;
+                let preview = paint_preview(&colouring, &sheet.name, order)?;
+                Ok((page(&sheet.png), page(&preview), sheet.name))
+            })
         });
 
         assert_eq!(
