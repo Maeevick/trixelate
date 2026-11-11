@@ -19,31 +19,44 @@ const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
 /// The id of the line saying why the download is disabled, for its button to point to.
 const DOWNLOAD_REFUSED: &str = "download-refused";
 
+/// A link to bytes the browser holds, which it forgets once the last holder of the link lets go of it.
+struct ObjectUrl(String);
+
+impl ObjectUrl {
+    fn of_file(file: &File) -> Option<ObjectUrl> {
+        Url::create_object_url_with_blob(file).ok().map(ObjectUrl)
+    }
+
+    fn of_png(bytes: &[u8]) -> Option<ObjectUrl> {
+        let parts = js_sys::Array::of1(&js_sys::Uint8Array::from(bytes));
+        let options = BlobPropertyBag::new();
+        options.set_type("image/png");
+        let blob = Blob::new_with_u8_array_sequence_and_options(&parts, &options).ok()?;
+        Url::create_object_url_with_blob(&blob).ok().map(ObjectUrl)
+    }
+
+    fn link(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl Drop for ObjectUrl {
+    fn drop(&mut self) {
+        let _ = Url::revoke_object_url(&self.0);
+    }
+}
+
 /// A picture dropped in: its file's name, its pixels, and the link the page shows it from.
 #[derive(Clone)]
 struct Dropped {
     name: String,
     picture: Arc<Picture>,
-    shown_from: String,
+    shown_from: Arc<ObjectUrl>,
 }
 
-/// A link to PNG bytes held by the browser, for an image to show or a file to save.
-fn png_link(bytes: &[u8]) -> Option<String> {
-    let parts = js_sys::Array::of1(&js_sys::Uint8Array::from(bytes));
-    let options = BlobPropertyBag::new();
-    options.set_type("image/png");
-    let blob = Blob::new_with_u8_array_sequence_and_options(&parts, &options).ok()?;
-    Url::create_object_url_with_blob(&blob).ok()
-}
-
-/// Lets the browser forget a link once nothing shows or saves from it any more.
-fn forget(link: &str) {
-    let _ = Url::revoke_object_url(link);
-}
-
-/// Hands PNG bytes to the browser as a file to save under a name.
+/// Hands PNG bytes to the browser as a file to save under a name, forgetting the link once the browser has it.
 fn save(bytes: &[u8], name: &str) {
-    let Some(link) = png_link(bytes) else {
+    let Some(link) = ObjectUrl::of_png(bytes) else {
         return;
     };
     let anchor = document()
@@ -51,11 +64,11 @@ fn save(bytes: &[u8], name: &str) {
         .ok()
         .and_then(|element| element.dyn_into::<HtmlAnchorElement>().ok());
     if let Some(anchor) = anchor {
-        anchor.set_href(&link);
+        anchor.set_href(&link.0);
         anchor.set_download(name);
         anchor.click();
     }
-    set_timeout(move || forget(&link), Duration::from_secs(10));
+    set_timeout(move || drop(link), Duration::from_secs(10));
 }
 
 async fn bytes_of(file: &File) -> Option<Vec<u8>> {
@@ -63,15 +76,6 @@ async fn bytes_of(file: &File) -> Option<Vec<u8>> {
         .await
         .ok()?;
     Some(js_sys::Uint8Array::new(&buffer).to_vec())
-}
-
-/// Shows PNG bytes from a new link, letting the browser forget the link shown before.
-fn show(shown: RwSignal<Option<String>>, png: &[u8]) {
-    let previous = shown.get_untracked();
-    shown.set(png_link(png));
-    if let Some(previous) = previous {
-        forget(&previous);
-    }
 }
 
 /// How far across an element a pointer is, from 0 at its left edge to 100 at its right edge.
@@ -94,8 +98,8 @@ pub fn App() -> impl IntoView {
     let unreadable = RwSignal::new(None::<String>);
     let hovering = RwSignal::new(false);
     let settings = RwSignal::new(Settings::default());
-    let sheet_shown = RwSignal::new(None::<String>);
-    let coloured_in_shown = RwSignal::new(None::<String>);
+    let sheet_shown = RwSignal::new(None::<Arc<ObjectUrl>>);
+    let coloured_in_shown = RwSignal::new(None::<Arc<ObjectUrl>>);
     let coloured_in = RwSignal::new(0.0_f64);
     let sliding = RwSignal::new(false);
     let painting = RwSignal::new(false);
@@ -114,23 +118,21 @@ pub fn App() -> impl IntoView {
                 Some(bytes) => picture_file::read(&bytes).map_err(Some),
                 None => Err(Some(Unreadable::NeitherPngNorJpeg)),
             };
-            let shown_from = Url::create_object_url_with_blob(&file).ok();
-            match (picture, shown_from) {
-                (Ok(picture), Some(shown_from)) => {
-                    if let Some(previous) = dropped.get_untracked() {
-                        forget(&previous.shown_from);
-                    }
+            let read = picture.and_then(|picture| {
+                let shown_from =
+                    ObjectUrl::of_file(&file).ok_or(Some(Unreadable::NeitherPngNorJpeg))?;
+                Ok((picture, shown_from))
+            });
+            match read {
+                Ok((picture, shown_from)) => {
                     unreadable.set(None);
                     dropped.set(Some(Dropped {
                         name,
                         picture: Arc::new(picture),
-                        shown_from,
+                        shown_from: Arc::new(shown_from),
                     }));
                 }
-                (Err(why), _) => unreadable.set(Some(not_a_picture(why))),
-                (Ok(_), None) => {
-                    unreadable.set(Some(not_a_picture(Some(Unreadable::NeitherPngNorJpeg))))
-                }
+                Err(why) => unreadable.set(Some(not_a_picture(why))),
             }
         });
     };
@@ -160,8 +162,8 @@ pub fn App() -> impl IntoView {
             });
             match painted {
                 Ok((sheet, preview)) => {
-                    show(sheet_shown, &sheet);
-                    show(coloured_in_shown, &preview);
+                    sheet_shown.set(ObjectUrl::of_png(&sheet).map(Arc::new));
+                    coloured_in_shown.set(ObjectUrl::of_png(&preview).map(Arc::new));
                     refusal.set(None);
                 }
                 Err(why) => refusal.set(Some(why)),
@@ -441,7 +443,7 @@ pub fn App() -> impl IntoView {
                         Some(dropped) => {
                             view! {
                                 <img
-                                    src=dropped.shown_from
+                                    src=dropped.shown_from.link()
                                     alt="The picture you dropped in"
                                     class="max-h-[70vh] w-full object-contain"
                                 />
@@ -471,7 +473,7 @@ pub fn App() -> impl IntoView {
                 </figcaption>
                 <div class="relative flex min-h-80 flex-1 items-center justify-center rounded-2xl bg-stone-100 p-3">
                     {move || match (sheet_shown.get(), no_picture()) {
-                        (Some(link), false) => {
+                        (Some(sheet), false) => {
                             view! {
                                 <div
                                     class=move || {
@@ -499,7 +501,7 @@ pub fn App() -> impl IntoView {
                                     on:pointercancel=move |_| sliding.set(false)
                                 >
                                     <img
-                                        src=link
+                                        src=sheet.link()
                                         alt="The sheet: a grid of numbered cells to colour in, its model in miniature in the top left corner"
                                         draggable="false"
                                         class="block max-h-[70vh] w-auto max-w-full drop-shadow-md"
@@ -507,10 +509,10 @@ pub fn App() -> impl IntoView {
                                     {move || {
                                         coloured_in_shown
                                             .get()
-                                            .map(|link| {
+                                            .map(|preview| {
                                                 view! {
                                                     <img
-                                                        src=link
+                                                        src=preview.link()
                                                         alt=""
                                                         draggable="false"
                                                         class="pointer-events-none absolute inset-0 size-full"
