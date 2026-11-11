@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/trixelate", "crates/trixelate-cli", "crates/trixelate-web"]
+members = ["crates/trixelate", "crates/trixelate-cli", "crates/trixelate-web", "crates/trixelate-csp"]
 resolver = "3"
 
 [workspace.package]

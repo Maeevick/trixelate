@@ -1710,6 +1710,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "trixelate-csp"
+version = "0.4.0"
+dependencies = [
+ "base64",
+ "sha2",
+]
+
+[[package]]
 name = "trixelate-web"
 version = "0.4.0"
 dependencies = [

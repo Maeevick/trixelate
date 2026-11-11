@@ -1,0 +1,13 @@
+[package]
+name = "trixelate-csp"
+description = "Writes the page's Content-Security-Policy into its built index.html, after Trunk"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+base64 = "0.22"
+sha2 = "0.10"
