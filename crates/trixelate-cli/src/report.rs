@@ -95,6 +95,19 @@ mod tests {
     }
 
     #[test]
+    fn a_path_is_printed_with_its_control_characters_escaped_so_a_file_name_cannot_drive_the_terminal()
+     {
+        let report = written(
+            Written::Sheet,
+            Path::new("\u{1b}[2Jgoblin\n.png"),
+            Duration::ZERO,
+            12,
+        );
+
+        assert!(report.starts_with("Sheet written to \\u{1b}[2Jgoblin\\n.png in "));
+    }
+
+    #[test]
     fn a_small_grid_is_coloured_before_the_juice_gets_warm_and_a_middling_one_in_a_rainy_afternoon()
     {
         let [small, middling] = [60, 150].map(|cells| {
