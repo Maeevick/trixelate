@@ -18,13 +18,80 @@ pub(crate) fn size(bytes: &[u8]) -> Option<(u32, u32)> {
     Some((u32::from(info.width), u32::from(info.height)))
 }
 
-/// The picture a JPEG holds, whatever its colour space, in red, green and blue.
+/// The picture a JPEG holds, whatever its colour space, in red, green and blue, turned upright as its camera says.
 pub fn read(bytes: &[u8]) -> Result<Picture, NotAJpeg> {
     let options = DecoderOptions::default().jpeg_set_out_colorspace(ColorSpace::RGBA);
     let mut decoder = JpegDecoder::new_with_options(ZCursor::new(bytes), options);
     let rgba = decoder.decode().map_err(|_| NotAJpeg)?;
     let size = decoder.info().ok_or(NotAJpeg)?;
-    Picture::from_rgba(u32::from(size.width), u32::from(size.height), &rgba).map_err(|_| NotAJpeg)
+    let stored = Picture::from_rgba(u32::from(size.width), u32::from(size.height), &rgba)
+        .map_err(|_| NotAJpeg)?;
+    let orientation = decoder.exif().and_then(|exif| orientation(exif));
+    Ok(turned(stored, orientation.unwrap_or(AS_STORED)))
+}
+
+/// The EXIF orientation of a photo stored the way it is shown.
+const AS_STORED: u16 = 1;
+/// The EXIF tag saying how a camera turned the photo it stored.
+const ORIENTATION_TAG: u16 = 0x0112;
+
+/// The orientation an EXIF block's first directory gives, from 1 to 8, in its own byte order.
+fn orientation(exif: &[u8]) -> Option<u16> {
+    let big_endian = [b"MM", b"II"]
+        .iter()
+        .position(|order| exif.starts_with(*order))?
+        == 0;
+    let at = |offset: usize, length: usize| exif.get(offset..offset.checked_add(length)?);
+    let number = |offset: usize| -> Option<u16> {
+        let bytes = at(offset, 2)?.try_into().ok()?;
+        Some(if big_endian {
+            u16::from_be_bytes(bytes)
+        } else {
+            u16::from_le_bytes(bytes)
+        })
+    };
+    let first_directory = {
+        let bytes = at(4, 4)?.try_into().ok()?;
+        (if big_endian {
+            u32::from_be_bytes(bytes)
+        } else {
+            u32::from_le_bytes(bytes)
+        }) as usize
+    };
+    (0..usize::from(number(first_directory)?))
+        .filter_map(|entry| first_directory.checked_add(2 + entry * 12))
+        .find(|&entry| number(entry) == Some(ORIENTATION_TAG))
+        .and_then(|entry| number(entry.checked_add(8)?))
+        .filter(|orientation| (1..=8).contains(orientation))
+}
+
+/// A stored picture turned and flipped as an EXIF orientation says, so it shows upright: 2 to 4 mirror or turn it half
+/// way, 5 to 8 lay it on its side.
+fn turned(stored: Picture, orientation: u16) -> Picture {
+    let (width, height) = (stored.width(), stored.height());
+    let (shown_width, shown_height) = if orientation >= 5 {
+        (height, width)
+    } else {
+        (width, height)
+    };
+    let stored_at = |x: u32, y: u32| match orientation {
+        2 => (width - 1 - x, y),
+        3 => (width - 1 - x, height - 1 - y),
+        4 => (x, height - 1 - y),
+        5 => (y, x),
+        6 => (y, height - 1 - x),
+        7 => (width - 1 - y, height - 1 - x),
+        8 => (width - 1 - y, x),
+        _ => (x, y),
+    };
+    let pixels = (0..shown_height)
+        .flat_map(|y| (0..shown_width).map(move |x| (x, y)))
+        .map(|(x, y)| {
+            let (x, y) = stored_at(x, y);
+            stored.pixel(x, y)
+        })
+        .collect();
+    Picture::painted(shown_width, shown_height, pixels)
 }
 
 #[cfg(test)]
@@ -45,7 +112,8 @@ mod tests {
     /// The red-cornered JPEG, sixteen by eight, red in its top left quarter and blue elsewhere, told by its EXIF to be
     /// shown turned as a camera says, the tag written big-endian as most cameras do, or little-endian.
     fn told_to_turn(orientation: u16, big_endian: bool) -> Vec<u8> {
-        let (order, number): (&[u8], fn(u16) -> [u8; 2]) = if big_endian {
+        type Number = fn(u16) -> [u8; 2];
+        let (order, number): (&[u8], Number) = if big_endian {
             (b"MM\x00\x2a\x00\x00\x00\x08", u16::to_be_bytes)
         } else {
             (b"II\x2a\x00\x08\x00\x00\x00", u16::to_le_bytes)
@@ -77,8 +145,8 @@ mod tests {
         .concat()
     }
 
-    /// Where the red quarter shows: which corner of the picture as read, with its width and height.
-    fn red_corner_of(picture: &Picture) -> (u32, u32, &'static str) {
+    /// Where the red quarter shows: the corners of the picture as read that are red, with its width and height.
+    fn red_corner_of(picture: &Picture) -> (u32, u32, String) {
         let (width, height) = (picture.width(), picture.height());
         let corners = [
             ((1, 1), "top left"),
@@ -86,20 +154,12 @@ mod tests {
             ((1, height - 2), "bottom left"),
             ((width - 2, height - 2), "bottom right"),
         ];
-        let red = corners
+        let red: Vec<&str> = corners
             .iter()
             .filter(|&&((x, y), _)| about(picture.pixel(x, y), Rgb(220, 30, 40)))
             .map(|&(_, corner)| corner)
-            .collect::<Vec<_>>();
-        (
-            width,
-            height,
-            if red.len() == 1 {
-                red[0]
-            } else {
-                "nowhere or everywhere"
-            },
-        )
+            .collect();
+        (width, height, red.join(" and "))
     }
 
     #[test]
@@ -113,19 +173,19 @@ mod tests {
 
         assert_eq!(
             read(RED_CORNER).map(|picture| red_corner_of(&picture)),
-            Ok((16, 8, "top left"))
+            Ok((16, 8, "top left".to_string()))
         );
         assert_eq!(
             turned,
             [
-                Ok((16, 8, "top left")),
-                Ok((16, 8, "top right")),
-                Ok((16, 8, "bottom right")),
-                Ok((16, 8, "bottom left")),
-                Ok((8, 16, "top left")),
-                Ok((8, 16, "top right")),
-                Ok((8, 16, "bottom right")),
-                Ok((8, 16, "bottom left")),
+                Ok((16, 8, "top left".to_string())),
+                Ok((16, 8, "top right".to_string())),
+                Ok((16, 8, "bottom right".to_string())),
+                Ok((16, 8, "bottom left".to_string())),
+                Ok((8, 16, "top left".to_string())),
+                Ok((8, 16, "top right".to_string())),
+                Ok((8, 16, "bottom right".to_string())),
+                Ok((8, 16, "bottom left".to_string())),
             ]
         );
     }
