@@ -138,11 +138,50 @@ pub fn preview_file_name(picture_file_name: &str, order: &Order) -> String {
     named_after(picture_file_name, order, "preview")
 }
 
-/// A sheet's or a preview's file name stamped with the moment it was made, in UTC to the second, before what it is, so
-/// that a sheet made again never takes an older one's name: `goblin-48-8-a4-20261111T142915Z.sheet.png`.
+/// A sheet's or a preview's file name stamped with the moment it was made, in UTC to the second, before what it is and
+/// its extension, so that a sheet made again never takes an older one's name: `goblin-48-8-a4-20261111T142915Z.sheet.png`.
+/// A name with neither gets its stamp at the end.
 pub fn stamped(file_name: &str, seconds_since_1970: u64) -> String {
-    let _ = seconds_since_1970;
-    file_name.to_string()
+    let stamp = utc(seconds_since_1970);
+    match file_name.rsplitn(3, '.').collect::<Vec<_>>()[..] {
+        [extension, what, name] => format!("{name}-{stamp}.{what}.{extension}"),
+        _ => format!("{file_name}-{stamp}"),
+    }
+}
+
+const SECONDS_A_DAY: u64 = 86_400;
+
+/// A moment as its UTC date and time to the second, in ISO 8601's basic form: `20261111T142915Z`.
+fn utc(seconds_since_1970: u64) -> String {
+    let (days, second_of_day) = (
+        seconds_since_1970 / SECONDS_A_DAY,
+        seconds_since_1970 % SECONDS_A_DAY,
+    );
+    let (year, month, day) = calendar_date(days);
+    format!(
+        "{year:04}{month:02}{day:02}T{:02}{:02}{:02}Z",
+        second_of_day / 3600,
+        second_of_day % 3600 / 60,
+        second_of_day % 60
+    )
+}
+
+/// The Gregorian year, month and day so many days after 1 January 1970, after Howard Hinnant's `civil_from_days`.
+fn calendar_date(days_since_1970: u64) -> (u64, u64, u64) {
+    let days = days_since_1970 + 719_468;
+    let (era, day_of_era) = (days / 146_097, days % 146_097);
+    let year_of_era =
+        (day_of_era - day_of_era / 1_460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
+    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let month_from_march = (5 * day_of_year + 2) / 153;
+    let day = day_of_year - (153 * month_from_march + 2) / 5 + 1;
+    let month = if month_from_march < 10 {
+        month_from_march + 3
+    } else {
+        month_from_march - 9
+    };
+    let year = era * 400 + year_of_era + u64::from(month <= 2);
+    (year, month, day)
 }
 
 fn named_after(picture_file_name: &str, order: &Order, what: &str) -> String {
@@ -348,6 +387,9 @@ mod tests {
             stamped("my.photo-64-12-a3-landscape.preview.png", 1_794_407_355),
             stamped("goblin-32-8-a5.sheet.png", 1_835_397_296),
             stamped("goblin-32-8-a5.sheet.png", 1_835_481_599),
+            stamped("goblin", 0),
+            stamped("dragon.sheet.png", 951_782_400),
+            stamped("dragon.sheet.png", 4_102_444_800),
         ];
 
         assert_eq!(
@@ -357,6 +399,9 @@ mod tests {
                 "my.photo-64-12-a3-landscape-20261111T142915Z.preview.png",
                 "goblin-32-8-a5-20280229T003456Z.sheet.png",
                 "goblin-32-8-a5-20280229T235959Z.sheet.png",
+                "goblin-19700101T000000Z",
+                "dragon-20000229T000000Z.sheet.png",
+                "dragon-21000101T000000Z.sheet.png",
             ]
         );
     }
