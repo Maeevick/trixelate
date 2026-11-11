@@ -308,6 +308,26 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
     }
 }
 
+#[test]
+fn a_folder_or_a_file_over_a_hundred_megabytes_is_refused_before_it_is_read() {
+    let folder = folder("not-read");
+    let heavy = folder.join("heavy.png");
+    fs::File::create(&heavy)
+        .and_then(|file| file.set_len(100_000_001))
+        .expect("a sparse file just over 100 MB");
+    let cases = [
+        (folder.to_str().unwrap_or_default(), "is not a file"),
+        (heavy.to_str().unwrap_or_default(), "is over 100 MB"),
+    ];
+
+    for (picture, hint) in cases {
+        let run = trixelate(&[picture, "--width", "4"]);
+
+        assert_eq!(run.status.code(), Some(1), "{picture}");
+        assert!(text(&run.stderr).contains(hint), "{}", text(&run.stderr));
+    }
+}
+
 /// The dots per metre a PNG tells printers, read from its pHYs chunk.
 fn dots_per_metre(png: &[u8]) -> Option<u32> {
     let chunk = png.windows(4).position(|name| name == b"pHYs")?;
