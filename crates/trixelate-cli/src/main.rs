@@ -60,8 +60,8 @@ struct Cli {
     #[arg(long)]
     preview: bool,
 
-    /// Overwrite the sheet if it already exists
-    #[arg(long)]
+    /// Overwrite the sheet beside the picture if it already exists; never with --output, so a typo cannot replace the picture
+    #[arg(long, conflicts_with = "output")]
     force: bool,
 
     /// Go ahead without asking when the sheet is warned of: under 16 cells across or 4 colours
