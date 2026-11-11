@@ -35,8 +35,10 @@ install: ## the command line, on this machine
 web: ## the page, served at http://127.0.0.1:8080 and rebuilt on every change
 	cd crates/trixelate-web && trunk serve --cargo-profile web
 
-web-build: ## the page, built for any static host in crates/trixelate-web/dist
+web-build: ## the page, built for any static host in crates/trixelate-web/dist, failing without its Content-Security-Policy
 	cd crates/trixelate-web && trunk build --release --cargo-profile web-release
+	@grep -q '<meta http-equiv="Content-Security-Policy"' crates/trixelate-web/dist/index.html \
+		|| { echo "the built page carries no Content-Security-Policy: see crates/trixelate-web/csp.py"; exit 1; }
 
 LIGHTHOUSE_PORT := 8090
 LIGHTHOUSE_PAGE := http://127.0.0.1:$(LIGHTHOUSE_PORT)/
