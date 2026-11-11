@@ -242,6 +242,27 @@ mod tests {
     }
 
     #[test]
+    fn a_grid_is_refused_before_colouring_only_once_its_rows_need_cells_under_fifteen_dots_the_smallest_holding_a_digit()
+     {
+        let one_across = Order::new(
+            1,
+            ColourCount::new(2).expect("a count"),
+            PageFormat::A4,
+            Orientation::Portrait,
+            Margin::new(10).expect("a margin"),
+        )
+        .expect("an order");
+        let tall = |rows: u32| {
+            Picture::from_rgba(1, rows, &[220, 30, 40, 255].repeat(rows as usize))
+                .expect("a picture")
+        };
+
+        let grids = [218, 219].map(|rows| one_across.grid_for(&tall(rows)).map(|grid| grid.rows()));
+
+        assert_eq!(grids, [Ok(218), Err(NoRoom::ForTheNumbersInTheCells)]);
+    }
+
+    #[test]
     fn a_picture_becomes_the_sheet_ordered_or_is_refused_when_the_page_lacks_room() {
         let ordered = [
             (red_and_yellow(), order(4, PageFormat::A4)),
