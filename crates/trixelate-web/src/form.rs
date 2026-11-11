@@ -34,7 +34,20 @@ impl Settings {
     /// The settings on another paper, the cells across following it when they were the most the old paper holds or
     /// are more than the new one holds, as the command line takes the most a paper holds unless told otherwise.
     pub fn on_paper(self, format: PageFormat) -> Settings {
-        Settings { format, ..self }
+        let (was_the_most, most) = (
+            self.width == most_cells_across(self.format),
+            most_cells_across(format),
+        );
+        let width = if was_the_most || self.width > most {
+            most
+        } else {
+            self.width
+        };
+        Settings {
+            width,
+            format,
+            ..self
+        }
     }
 }
 
