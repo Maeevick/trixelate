@@ -242,14 +242,32 @@ struct Placed {
     miniature: Miniature,
 }
 
-impl Layout {
-    /// Lays out a colouring's grid, its legend and its model on the page, inside its margin.
-    pub fn of(
-        colouring: &Colouring,
-        format: PageFormat,
-        orientation: Orientation,
-        margin: Margin,
-    ) -> Result<Layout, NoRoom> {
+/// Whether a grid's cells could ever be numbered on a page, told from its size alone, before any cell is coloured: no
+/// cell smaller than the smallest that holds a digit can be, whatever the legend leaves.
+pub(crate) fn could_number(
+    size: GridSize,
+    format: PageFormat,
+    orientation: Orientation,
+    margin: Margin,
+) -> Result<(), NoRoom> {
+    let (_, room) = Room::inside(format, orientation, margin);
+    let smallest = smallest_numbered_cell();
+    let fits = |cells: u32, room: u32| u64::from(cells) * u64::from(smallest) <= u64::from(room);
+    (fits(size.columns(), room.width) && fits(size.rows(), room.height))
+        .then_some(())
+        .ok_or(NoRoom::ForTheNumbersInTheCells)
+}
+
+/// The smallest cell that holds a one-digit number at the smallest scale, its outline included.
+fn smallest_numbered_cell() -> u32 {
+    let (width, height) = lettering::size("8", 1);
+    let inside = (2 * height).max((3 * width).div_ceil(2));
+    inside + 1
+}
+
+impl Room {
+    /// The page's width and height, and the room inside its margin, in dots at the paper's dots per inch.
+    fn inside(format: PageFormat, orientation: Orientation, margin: Margin) -> ((u32, u32), Room) {
         let (width, height) = match (orientation, format.millimetres()) {
             (Orientation::Portrait, (short, long)) => (short, long),
             (Orientation::Landscape, (short, long)) => (long, short),
@@ -264,6 +282,20 @@ impl Layout {
             dots_per_inch,
             widest_bubble: dots_of_tenths(format.widest_bubble_tenths_of_mm(), dots_per_inch),
         };
+        ((page_width, page_height), room)
+    }
+}
+
+impl Layout {
+    /// Lays out a colouring's grid, its legend and its model on the page, inside its margin.
+    pub fn of(
+        colouring: &Colouring,
+        format: PageFormat,
+        orientation: Orientation,
+        margin: Margin,
+    ) -> Result<Layout, NoRoom> {
+        let ((page_width, page_height), room) = Room::inside(format, orientation, margin);
+        let (dots_per_inch, margin) = (room.dots_per_inch, room.margin);
         let size = colouring.size();
         let colours = colouring.palette().colours().len() as u32;
         let (placed, bubble) = match orientation {

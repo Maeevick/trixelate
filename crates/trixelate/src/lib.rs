@@ -75,10 +75,9 @@ impl Order {
     /// The grid a picture is simplified into for this order: the cells across asked, and the rows that keep the
     /// picture's proportions, refused when the page could never number that many rows, before any cell is coloured.
     pub fn grid_for(&self, picture: &Picture) -> Result<GridSize, NoRoom> {
-        Ok(GridSize::keeping_the_proportions_of(
-            picture,
-            self.cells_across,
-        ))
+        let grid = GridSize::keeping_the_proportions_of(picture, self.cells_across);
+        layout::could_number(grid, self.format, self.orientation, self.margin)?;
+        Ok(grid)
     }
 }
 
