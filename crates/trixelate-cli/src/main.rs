@@ -10,7 +10,7 @@ use std::time::Instant;
 
 use clap::error::ErrorKind as ArgumentError;
 use clap::{CommandFactory, Parser, ValueEnum};
-use report::Written;
+use report::{Written, shown};
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
@@ -230,21 +230,21 @@ fn write_sheet(path: &Path, bytes: &[u8], force: bool) -> Result<(), String> {
         .map_err(|error| match error.kind() {
             ErrorKind::AlreadyExists => format!(
                 "{} already exists: pass --force to overwrite it",
-                path.display()
+                shown(path)
             ),
-            _ => format!("cannot write the sheet to {}: {error}", path.display()),
+            _ => format!("cannot write the sheet to {}: {error}", shown(path)),
         })?;
     file.write_all(bytes)
-        .map_err(|error| format!("cannot write the sheet to {}: {error}", path.display()))
+        .map_err(|error| format!("cannot write the sheet to {}: {error}", shown(path)))
 }
 
 /// Reads a picture from a file, refusing anything but a file, and a file too heavy for any picture, before reading it.
 fn read_picture(path: &Path) -> Result<Picture, String> {
-    let cannot_read = |error: std::io::Error| format!("cannot read {}: {error}", path.display());
+    let cannot_read = |error: std::io::Error| format!("cannot read {}: {error}", shown(path));
     let too_heavy = || {
         format!(
             "{} is over {MOST_MEGABYTES} MB, more than any picture a sheet needs: shrink it first",
-            path.display()
+            shown(path)
         )
     };
     let most_bytes = MOST_MEGABYTES * 1_000_000;
@@ -253,7 +253,7 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
     if !metadata.is_file() {
         return Err(format!(
             "{} is not a file: give it a PNG or JPEG picture",
-            path.display()
+            shown(path)
         ));
     }
     if metadata.len() > most_bytes {
@@ -267,10 +267,10 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
         return Err(too_heavy());
     }
     picture_file::read(&bytes).map_err(|unreadable| match unreadable {
-        Unreadable::NeitherPngNorJpeg => format!("{} is not a PNG or JPEG picture", path.display()),
+        Unreadable::NeitherPngNorJpeg => format!("{} is not a PNG or JPEG picture", shown(path)),
         Unreadable::TooBig { megapixels } => format!(
             "{} is {megapixels} megapixels, and the goblins counting its dots gave up at {MOST_MEGAPIXELS}: shrink it under {MOST_MEGAPIXELS} megapixels first",
-            path.display()
+            shown(path)
         ),
     })
 }
