@@ -15,6 +15,13 @@ pub struct NotAPng;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CannotWritePng;
 
+/// A PNG's width and height, read from its header alone.
+pub(crate) fn size(bytes: &[u8]) -> Option<(u32, u32)> {
+    let mut decoder = Decoder::new(Cursor::new(bytes));
+    let info = decoder.read_header_info().ok()?;
+    Some((info.width, info.height))
+}
+
 /// Reads a picture from a PNG of any colour type and depth.
 pub fn read(bytes: &[u8]) -> Result<Picture, NotAPng> {
     let mut decoder = Decoder::new(Cursor::new(bytes));

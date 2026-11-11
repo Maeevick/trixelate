@@ -10,6 +10,14 @@ use crate::picture::Picture;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NotAJpeg;
 
+/// A JPEG's width and height, read from its headers alone.
+pub(crate) fn size(bytes: &[u8]) -> Option<(u32, u32)> {
+    let mut decoder = JpegDecoder::new(ZCursor::new(bytes));
+    decoder.decode_headers().ok()?;
+    let info = decoder.info()?;
+    Some((u32::from(info.width), u32::from(info.height)))
+}
+
 /// The picture a JPEG holds, whatever its colour space, in red, green and blue.
 pub fn read(bytes: &[u8]) -> Result<Picture, NotAJpeg> {
     let options = DecoderOptions::default().jpeg_set_out_colorspace(ColorSpace::RGBA);

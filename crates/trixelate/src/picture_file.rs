@@ -19,6 +19,13 @@ pub enum Unreadable {
 
 /// The picture a PNG or a JPEG holds.
 pub fn read(bytes: &[u8]) -> Result<Picture, Unreadable> {
+    let (width, height) = png_file::size(bytes)
+        .or_else(|| jpeg_file::size(bytes))
+        .ok_or(Unreadable::NeitherPngNorJpeg)?;
+    let megapixels = (u64::from(width) * u64::from(height)).div_ceil(1_000_000);
+    if megapixels > MOST_MEGAPIXELS {
+        return Err(Unreadable::TooBig { megapixels });
+    }
     png_file::read(bytes)
         .ok()
         .or_else(|| jpeg_file::read(bytes).ok())
