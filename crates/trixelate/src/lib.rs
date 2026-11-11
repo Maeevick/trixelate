@@ -94,11 +94,6 @@ pub fn make_preview(picture: &Picture, order: Order, file_name: &str) -> Result<
     preview_of(&colour(picture, order)?, order, file_name)
 }
 
-/// Whether the sheet ordered would fit its page, told without drawing it, so a page can say so before it is asked.
-pub fn fits_on_its_page(picture: &Picture, order: Order) -> Result<(), NoRoom> {
-    lay_out(&colour(picture, order)?, order).map(|_| ())
-}
-
 /// A picture simplified into the order's grid and numbered from its dominant colours, the slow part of making a sheet,
 /// kept to lay out again on any page of the same cells across and colours.
 pub fn colour(picture: &Picture, order: Order) -> Result<Colouring, NoRoom> {
@@ -316,18 +311,6 @@ mod tests {
             .map(|name| make_sheet(&picture, order(4, PageFormat::A4), name));
 
         assert!(red.is_ok() && red != yellow);
-    }
-
-    #[test]
-    fn whether_a_sheet_fits_its_page_is_told_without_drawing_it_as_making_it_would_tell() {
-        let ordered = [
-            (red_and_yellow(), order(4, PageFormat::A4)),
-            (ribbon(), order(32, PageFormat::A5)),
-        ];
-
-        let fits = ordered.map(|(picture, order)| fits_on_its_page(&picture, order));
-
-        assert_eq!(fits, [Ok(()), Err(NoRoom::ForTheNumbersInTheCells)]);
     }
 
     #[test]
