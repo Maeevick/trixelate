@@ -836,12 +836,13 @@ mod tests {
     }
 
     #[test]
-    fn the_credit_says_where_trixelate_lives_and_that_trixelate_is_mit_licensed_not_the_sheet() {
+    fn the_credit_says_the_sheet_was_made_with_trixelate_and_where_it_lives_and_nothing_of_licences()
+     {
         let credit = CREDIT;
 
         assert_eq!(
             credit,
-            "Made with github.com/Maeevick/trixelate - trixelate is MIT-licensed"
+            "Made with trixelate (github.com/Maeevick/trixelate)"
         );
     }
 
@@ -864,8 +865,8 @@ mod tests {
                 credit.top + height,
             )
         };
-        assert_eq!(edges(&a4), (3, 2480 - 236 - 1203, 2480 - 236, 3379, 3400));
-        assert_eq!(edges(&a5), (3, 1748 - 236 - 1203, 1748 - 236, 2351, 2372));
+        assert_eq!(edges(&a4), (3, 2480 - 236 - 933, 2480 - 236, 3379, 3400));
+        assert_eq!(edges(&a5), (3, 1748 - 236 - 933, 1748 - 236, 2351, 2372));
         Ok(())
     }
 
