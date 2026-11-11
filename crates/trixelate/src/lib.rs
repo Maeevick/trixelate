@@ -85,29 +85,49 @@ impl Order {
 /// Turns a picture into the colour-by-number sheet ordered, titled with its file name, or says what lacks room on the
 /// page.
 pub fn make_sheet(picture: &Picture, order: Order, file_name: &str) -> Result<Sheet, NoRoom> {
-    let (colouring, layout) = lay_out(picture, order)?;
-    Ok(sheet::draw(&colouring, &layout.titled(file_name)))
+    sheet_of(&colour(picture, order)?, order, file_name)
 }
 
 /// Turns a picture into the preview of the sheet ordered: the sheet as it looks once coloured in, titled with its file
 /// name, or says what lacks room on the page, as making the sheet would.
 pub fn make_preview(picture: &Picture, order: Order, file_name: &str) -> Result<Sheet, NoRoom> {
-    let (colouring, layout) = lay_out(picture, order)?;
-    Ok(sheet::draw_coloured_in(
-        &colouring,
-        &layout.titled(file_name),
-    ))
+    preview_of(&colour(picture, order)?, order, file_name)
 }
 
 /// Whether the sheet ordered would fit its page, told without drawing it, so a page can say so before it is asked.
 pub fn fits_on_its_page(picture: &Picture, order: Order) -> Result<(), NoRoom> {
-    lay_out(picture, order).map(|_| ())
+    lay_out(&colour(picture, order)?, order).map(|_| ())
 }
 
-fn lay_out(picture: &Picture, order: Order) -> Result<(Colouring, Layout), NoRoom> {
-    let colouring = Colouring::of(picture, order.grid_for(picture)?, order.colours);
-    let layout = Layout::of(&colouring, order.format, order.orientation, order.margin)?;
-    Ok((colouring, layout))
+/// A picture simplified into the order's grid and numbered from its dominant colours, the slow part of making a sheet,
+/// kept to lay out again on any page of the same cells across and colours.
+pub fn colour(picture: &Picture, order: Order) -> Result<Colouring, NoRoom> {
+    Ok(Colouring::of(
+        picture,
+        order.grid_for(picture)?,
+        order.colours,
+    ))
+}
+
+/// The sheet of a colouring, laid out on the order's paper, which way up and inside the margin it asks, titled with its
+/// file name.
+pub fn sheet_of(colouring: &Colouring, order: Order, file_name: &str) -> Result<Sheet, NoRoom> {
+    Ok(sheet::draw(
+        colouring,
+        &lay_out(colouring, order)?.titled(file_name),
+    ))
+}
+
+/// The preview of a colouring's sheet: the sheet as it looks once coloured in, laid out and titled as the sheet is.
+pub fn preview_of(colouring: &Colouring, order: Order, file_name: &str) -> Result<Sheet, NoRoom> {
+    Ok(sheet::draw_coloured_in(
+        colouring,
+        &lay_out(colouring, order)?.titled(file_name),
+    ))
+}
+
+fn lay_out(colouring: &Colouring, order: Order) -> Result<Layout, NoRoom> {
+    Layout::of(colouring, order.format, order.orientation, order.margin)
 }
 
 /// What a sheet made from a picture file is called: the picture's name, without its extension, then the cells across,
@@ -264,6 +284,28 @@ mod tests {
         );
         assert!(preview != sheet, "a preview coloured in, unlike its sheet");
         assert_eq!(refused, Err(NoRoom::ForTheNumbersInTheCells));
+    }
+
+    #[test]
+    fn a_colouring_laid_on_another_page_gives_the_sheet_and_preview_its_picture_would_on_that_page()
+    {
+        let picture = red_and_yellow();
+        let colouring = colour(&picture, order(4, PageFormat::A4)).expect("a colouring");
+        let on_a5 = order(4, PageFormat::A5);
+
+        let laid = [
+            sheet_of(&colouring, on_a5, "red-yellow.png"),
+            preview_of(&colouring, on_a5, "red-yellow.png"),
+        ];
+
+        assert_eq!(
+            laid,
+            [
+                make_sheet(&picture, on_a5, "red-yellow.png"),
+                make_preview(&picture, on_a5, "red-yellow.png")
+            ]
+        );
+        assert!(laid[0].as_ref().is_ok_and(|sheet| sheet.width() == 1748));
     }
 
     #[test]
