@@ -354,13 +354,19 @@ fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
 #[test]
 fn a_folder_or_a_file_over_a_hundred_megabytes_is_refused_before_it_is_read() {
     let folder = folder("not-read");
-    let heavy = folder.join("heavy.png");
-    fs::File::create(&heavy)
-        .and_then(|file| file.set_len(100_000_001))
-        .expect("a sparse file just over 100 MB");
+    let (heavy, just_light_enough) = (folder.join("heavy.png"), folder.join("light.png"));
+    for (path, bytes) in [(&heavy, 100_000_001), (&just_light_enough, 100_000_000)] {
+        fs::File::create(path)
+            .and_then(|file| file.set_len(bytes))
+            .expect("a sparse file around 100 MB");
+    }
     let cases = [
         (folder.to_str().unwrap_or_default(), "is not a file"),
         (heavy.to_str().unwrap_or_default(), "is over 100 MB"),
+        (
+            just_light_enough.to_str().unwrap_or_default(),
+            "is not a PNG or JPEG picture",
+        ),
     ];
 
     for (picture, hint) in cases {
