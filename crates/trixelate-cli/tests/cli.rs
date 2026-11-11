@@ -306,6 +306,44 @@ fn asked_for_a_preview_the_command_writes_the_sheet_coloured_in_beside_its_pictu
 }
 
 #[test]
+fn an_output_naming_a_folder_or_no_file_at_all_gets_the_sheet_under_its_stamped_name_inside() {
+    let folder = folder("output-folder");
+    let picture = a_picture_in(&folder);
+    let picture = picture.to_str().unwrap_or_default();
+    let inside = folder.join("sheets");
+    fs::create_dir_all(&inside).expect("a folder for sheets");
+    let up_from_inside = inside.join("..");
+
+    let into_a_folder = trixelate(&[
+        picture,
+        "--width",
+        "4",
+        "-o",
+        inside.to_str().unwrap_or_default(),
+    ]);
+    let into_no_file = trixelate(&[
+        picture,
+        "--width",
+        "5",
+        "-o",
+        up_from_inside.to_str().unwrap_or_default(),
+    ]);
+
+    assert!(
+        into_a_folder.status.success(),
+        "{}",
+        text(&into_a_folder.stderr)
+    );
+    assert!(
+        into_no_file.status.success(),
+        "{}",
+        text(&into_no_file.stderr)
+    );
+    assert!(written_beside(&inside, "sunset-4-8-a4", "sheet").is_some());
+    assert!(written_beside(&folder, "sunset-5-8-a4", "sheet").is_some());
+}
+
+#[test]
 fn an_existing_file_is_never_overwritten_not_even_the_picture_and_there_is_no_force_to_ask_for() {
     let folder = folder("never-overwritten");
     let picture = a_picture_in(&folder);
