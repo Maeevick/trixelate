@@ -1,4 +1,4 @@
-# The page is wiring around the library, checked in a browser rather than by mutants.
-exclude_globs = ["crates/trixelate-web/**"]
+# The page's wiring is checked in a browser rather than by mutants; its form is tested like the library.
+exclude_globs = ["crates/trixelate-web/src/app.rs", "crates/trixelate-web/src/main.rs"]
 # A library mutant is caught by any test in the workspace, the command line's golden masters included.
 test_workspace = true

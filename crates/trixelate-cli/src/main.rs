@@ -4,7 +4,6 @@ mod report;
 
 use std::fs;
 use std::io::{BufRead, ErrorKind, IsTerminal, Write};
-use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Instant;
@@ -17,7 +16,8 @@ use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::warning::warnings_for;
 use trixelate::{
-    Order, make_preview, make_sheet, picture_file, png_file, preview_file_name, sheet_file_name,
+    Order, Refusal, make_preview, make_sheet, picture_file, png_file, preview_file_name,
+    sheet_file_name,
 };
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -36,7 +36,7 @@ struct Cli {
     width: Option<u32>,
 
     /// Colours in the palette, from 2 to 24
-    #[arg(short, long, visible_alias = "colors", default_value = "8", value_parser = colour_count)]
+    #[arg(short, long, visible_alias = "colors", default_value_t = ColourCount::IN_A_SMALL_BOX, value_parser = colour_count)]
     colours: ColourCount,
 
     /// The paper the sheet is drawn for: A3 to A5 at 300 dots per inch, A0 to A2 posters at 150
@@ -48,7 +48,7 @@ struct Cli {
     landscape: bool,
 
     /// The blank paper around the sheet, in millimetres, from 5 for the title and the credit to 20, leaving the room to the cells
-    #[arg(short, long, default_value = "10", value_parser = margin)]
+    #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET, value_parser = margin)]
     margin: Margin,
 
     /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape before .sheet.png when asked, and .preview.png for a preview]
@@ -97,17 +97,23 @@ fn cells_across(cli: &Cli) -> u32 {
         .unwrap_or_else(|| layout::most_cells_across(cli.format.into()))
 }
 
-/// Refuses more cells across than the paper holds for a child.
-fn within_the_limits(cli: &Cli) -> Result<(), String> {
-    let paper = PageFormat::from(cli.format);
-    let most = layout::most_cells_across(paper);
-    if cells_across(cli) <= most {
-        return Ok(());
-    }
-    let paper = paper.name();
-    Err(format!(
-        "an {paper} sheet holds at most {most} cells across: try a smaller --width or a bigger --format"
-    ))
+/// The order the arguments make, or why the library refuses it, worded for the command line.
+fn ordered(cli: &Cli) -> Result<Order, String> {
+    let format = PageFormat::from(cli.format);
+    let orientation = if cli.landscape {
+        layout::Orientation::Landscape
+    } else {
+        layout::Orientation::Portrait
+    };
+    Order::new(cells_across(cli), cli.colours, format, orientation, cli.margin).map_err(|refusal| {
+        match refusal {
+            Refusal::NoCellAcross => "a grid needs at least one cell across".to_string(),
+            Refusal::MoreCellsAcrossThanThePaperHolds { most } => format!(
+                "an {} sheet holds at most {most} cells across: try a smaller --width or a bigger --format",
+                format.name()
+            ),
+        }
+    })
 }
 
 fn colour_count(raw: &str) -> Result<ColourCount, String> {
@@ -134,12 +140,13 @@ fn margin(raw: &str) -> Result<Margin, String> {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    if let Err(beyond) = within_the_limits(&cli) {
-        Cli::command()
-            .error(ArgumentError::ValueValidation, beyond)
-            .exit();
-    }
-    let warnings = warnings_for(cells_across(&cli), cli.colours);
+    let order = match ordered(&cli) {
+        Ok(order) => order,
+        Err(refused) => Cli::command()
+            .error(ArgumentError::ValueValidation, refused)
+            .exit(),
+    };
+    let warnings = warnings_for(order.cells_across(), order.colours());
     for warning in &warnings {
         eprintln!("warning: {}", warning.says());
     }
@@ -157,7 +164,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     }
-    match run(cli) {
+    match run(cli, order) {
         Ok(written) => {
             println!("{written}");
             ExitCode::SUCCESS
@@ -182,21 +189,9 @@ type Making = fn(&Picture, Order, &str) -> Result<Picture, NoRoom>;
 /// How the command names what it writes, from its picture's file name and its order.
 type Naming = fn(&str, &Order) -> String;
 
-fn run(cli: Cli) -> Result<String, String> {
+fn run(cli: Cli, order: Order) -> Result<String, String> {
     let started = Instant::now();
     let picture = read_picture(&cli.picture)?;
-    let order = Order {
-        cells_across: NonZeroU32::new(cells_across(&cli))
-            .ok_or_else(|| "a grid needs at least one cell".to_string())?,
-        colours: cli.colours,
-        format: cli.format.into(),
-        orientation: if cli.landscape {
-            layout::Orientation::Landscape
-        } else {
-            layout::Orientation::Portrait
-        },
-        margin: cli.margin,
-    };
     let what = if cli.preview {
         Written::Preview
     } else {
@@ -211,7 +206,7 @@ fn run(cli: Cli) -> Result<String, String> {
         .unwrap_or_else(|| beside(&cli.picture, &order, named));
     let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();
     let sheet = make(&picture, order, &file_name).map_err(explain)?;
-    let bytes = png_file::write(&sheet, order.format.dots_per_inch())
+    let bytes = png_file::write(&sheet, order.format().dots_per_inch())
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
     let grid = order.grid_for(&picture);

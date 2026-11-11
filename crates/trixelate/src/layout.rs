@@ -1,5 +1,7 @@
 //! Where everything lies on the sheet's paper, in dots at its paper's dots per inch.
 
+use std::fmt;
+
 use crate::colouring::Colouring;
 use crate::grid::GridSize;
 use crate::lettering;
@@ -16,6 +18,16 @@ pub enum PageFormat {
 }
 
 impl PageFormat {
+    /// Every paper, the posters first, the biggest first.
+    pub const ALL: [PageFormat; 6] = [
+        PageFormat::A0,
+        PageFormat::A1,
+        PageFormat::A2,
+        PageFormat::A3,
+        PageFormat::A4,
+        PageFormat::A5,
+    ];
+
     /// The paper's name, as printers and shops call it.
     pub fn name(self) -> &'static str {
         match self {
@@ -97,7 +109,8 @@ pub struct Margin(u32);
 pub struct MarginOutOfRange;
 
 impl Margin {
-    pub const AROUND_A_SHEET: u32 = 10;
+    /// Ten millimetres, unless asked otherwise.
+    pub const AROUND_A_SHEET: Margin = Margin(10);
     pub const THINNEST: u32 = 5;
     pub const WIDEST: u32 = 20;
 
@@ -106,6 +119,16 @@ impl Margin {
             .contains(&millimetres)
             .then_some(Margin(millimetres))
             .ok_or(MarginOutOfRange)
+    }
+
+    pub fn millimetres(self) -> u32 {
+        self.0
+    }
+}
+
+impl fmt::Display for Margin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

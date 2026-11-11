@@ -21,14 +21,14 @@ use palette::ColourCount;
 use picture::Picture;
 
 /// What a sheet is asked to be: its cells across, its number of colours, its paper, which way up it lies and its
-/// margin.
+/// margin, only ever made by [`Order::new`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Order {
-    pub cells_across: NonZeroU32,
-    pub colours: ColourCount,
-    pub format: PageFormat,
-    pub orientation: Orientation,
-    pub margin: Margin,
+    cells_across: NonZeroU32,
+    colours: ColourCount,
+    format: PageFormat,
+    orientation: Orientation,
+    margin: Margin,
 }
 
 /// Why an order is refused before any picture is read.
@@ -58,6 +58,18 @@ impl Order {
             orientation,
             margin,
         })
+    }
+
+    pub fn cells_across(&self) -> u32 {
+        self.cells_across.get()
+    }
+
+    pub fn colours(&self) -> ColourCount {
+        self.colours
+    }
+
+    pub fn format(&self) -> PageFormat {
+        self.format
     }
 
     /// The grid a picture is simplified into for this order: the cells across asked, and the rows that keep the
@@ -129,13 +141,23 @@ mod tests {
     use super::*;
 
     fn order(columns: u32, format: PageFormat) -> Order {
-        Order {
-            cells_across: NonZeroU32::new(columns).expect("some cells across"),
-            colours: ColourCount::new(2).expect("a count"),
+        Order::new(
+            columns,
+            ColourCount::new(2).expect("a count"),
             format,
-            orientation: Orientation::Portrait,
-            margin: Margin::new(20).expect("a margin"),
-        }
+            Orientation::Portrait,
+            Margin::new(20).expect("a margin"),
+        )
+        .expect("an order")
+    }
+
+    fn red_and_yellow() -> Picture {
+        Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture")
+    }
+
+    /// A picture forty times taller than wide, whose rows no A5 page has room to number at 32 cells across.
+    fn ribbon() -> Picture {
+        Picture::from_rgba(1, 40, &[220, 30, 40, 255].repeat(40)).expect("a picture")
     }
 
     #[test]
@@ -149,7 +171,7 @@ mod tests {
                 Orientation::Portrait,
                 Margin::new(10).expect("a margin"),
             )
-            .map(|order| order.cells_across.get())
+            .map(|order| order.cells_across())
         };
 
         let orders = [
@@ -176,10 +198,12 @@ mod tests {
 
     #[test]
     fn a_picture_becomes_the_sheet_ordered_or_is_refused_when_the_page_lacks_room() {
-        let picture =
-            Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
+        let ordered = [
+            (red_and_yellow(), order(4, PageFormat::A4)),
+            (ribbon(), order(32, PageFormat::A5)),
+        ];
 
-        let sheets = [order(4, PageFormat::A4), order(400, PageFormat::A5)].map(|order| {
+        let sheets = ordered.map(|(picture, order)| {
             make_sheet(&picture, order, "red-yellow.png")
                 .map(|sheet| (sheet.width(), sheet.height()))
         });
@@ -192,13 +216,15 @@ mod tests {
 
     #[test]
     fn a_preview_is_its_sheet_coloured_in_on_the_same_page_and_refused_when_its_sheet_is() {
-        let picture =
-            Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
         let fits = order(4, PageFormat::A4);
-        let sheet = make_sheet(&picture, fits, "red-yellow.png").expect("a sheet");
+        let sheet = make_sheet(&red_and_yellow(), fits, "red-yellow.png").expect("a sheet");
+        let ordered = [
+            (red_and_yellow(), fits),
+            (ribbon(), order(32, PageFormat::A5)),
+        ];
 
-        let previews = [fits, order(400, PageFormat::A5)]
-            .map(|order| make_preview(&picture, order, "red-yellow.png"));
+        let previews =
+            ordered.map(|(picture, order)| make_preview(&picture, order, "red-yellow.png"));
 
         let [preview, refused] = previews;
         let preview = preview.expect("a preview");
@@ -212,8 +238,7 @@ mod tests {
 
     #[test]
     fn a_sheet_is_titled_with_the_file_name_it_is_given() {
-        let picture =
-            Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
+        let picture = red_and_yellow();
 
         let [red, yellow] = ["red.png", "yellow.png"]
             .map(|name| make_sheet(&picture, order(4, PageFormat::A4), name));
@@ -223,11 +248,12 @@ mod tests {
 
     #[test]
     fn whether_a_sheet_fits_its_page_is_told_without_drawing_it_as_making_it_would_tell() {
-        let picture =
-            Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture");
+        let ordered = [
+            (red_and_yellow(), order(4, PageFormat::A4)),
+            (ribbon(), order(32, PageFormat::A5)),
+        ];
 
-        let fits = [order(4, PageFormat::A4), order(400, PageFormat::A5)]
-            .map(|order| fits_on_its_page(&picture, order));
+        let fits = ordered.map(|(picture, order)| fits_on_its_page(&picture, order));
 
         assert_eq!(fits, [Ok(()), Err(NoRoom::ForTheNumbersInTheCells)]);
     }
@@ -251,13 +277,14 @@ mod tests {
     fn a_sheet_is_named_after_its_picture_then_its_cells_across_colours_paper_and_any_landscape_then_what_it_is()
      {
         let named = |picture, (columns, colours), format, orientation| {
-            let order = Order {
-                cells_across: NonZeroU32::new(columns).expect("some cells across"),
-                colours: ColourCount::new(colours).expect("a count"),
+            let order = Order::new(
+                columns,
+                ColourCount::new(colours).expect("a count"),
                 format,
                 orientation,
-                margin: Margin::new(20).expect("a margin"),
-            };
+                Margin::new(20).expect("a margin"),
+            )
+            .expect("an order");
             sheet_file_name(picture, &order)
         };
         let (portrait, landscape) = (Orientation::Portrait, Orientation::Landscape);

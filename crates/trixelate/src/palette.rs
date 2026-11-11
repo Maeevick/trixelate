@@ -16,6 +16,8 @@ pub struct ColourCountOutOfRange;
 impl ColourCount {
     pub const FEWEST: usize = 2;
     pub const MOST: usize = 24;
+    /// Eight colours, a small box of crayons, unless asked otherwise.
+    pub const IN_A_SMALL_BOX: ColourCount = ColourCount(8);
 
     pub fn new(count: usize) -> Result<ColourCount, ColourCountOutOfRange> {
         (Self::FEWEST..=Self::MOST)
@@ -35,6 +37,12 @@ pub struct Palette(Vec<Rgb>);
 /// A colour's place in its palette, from 1, as written in the cells to paint with it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ColourNumber(usize);
+
+impl fmt::Display for ColourCount {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl fmt::Display for ColourNumber {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

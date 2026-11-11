@@ -1,6 +1,7 @@
 //! The browser page: a picture dropped in, a sheet out, with nothing sent anywhere.
 
 mod app;
+mod form;
 
 use wasm_bindgen::JsCast;
 

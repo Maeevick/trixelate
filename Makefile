@@ -14,7 +14,7 @@ check: ## formatting, lints, tests and no uncovered line but the command line's 
 	cargo fmt --all --check
 	cargo clippy --workspace --all-targets -- -D warnings
 	cargo clippy -p trixelate-web --target wasm32-unknown-unknown -- -D warnings
-	cargo llvm-cov --workspace --exclude trixelate-web --ignore-filename-regex 'trixelate-cli/src/main\.rs' --fail-uncovered-lines 0 --summary-only
+	cargo llvm-cov --workspace --ignore-filename-regex '(trixelate-cli/src/main|trixelate-web/src/(app|main))\.rs' --fail-uncovered-lines 0 --summary-only
 
 mutants: ## whether the tests bite, at the end of a slice
 	cargo mutants

@@ -1,21 +1,20 @@
 //! The page's parts: the picture dropped in, the settings, the preview and the download.
 //! Everything happens here, in the browser: no picture is ever sent anywhere.
 
-use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_across};
+use trixelate::layout::{PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::warning::warnings_for;
-use trixelate::{
-    Order, fits_on_its_page, make_preview, make_sheet, picture_file, png_file, sheet_file_name,
-};
+use trixelate::{make_preview, make_sheet, picture_file, sheet_file_name};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
+
+use crate::form::{Settings, paint, ready, sentence};
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
 /// The id of the line saying why the download is disabled, for its button to point to.
@@ -27,93 +26,6 @@ struct Dropped {
     name: String,
     picture: Arc<Picture>,
     shown_from: String,
-}
-
-/// What the sheet is asked to be, as the form sets it.
-#[derive(Clone, Copy, PartialEq)]
-struct Settings {
-    width: u32,
-    colours: usize,
-    format: PageFormat,
-    landscape: bool,
-    margin: u32,
-}
-
-impl Default for Settings {
-    fn default() -> Settings {
-        Settings {
-            width: 48,
-            colours: 8,
-            format: PageFormat::A4,
-            landscape: false,
-            margin: Margin::AROUND_A_SHEET,
-        }
-    }
-}
-
-/// The order for the sheet asked for, once sure its page has room for it, or why it would be refused.
-fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
-    let most = most_cells_across(settings.format);
-    if settings.width > most {
-        return Err(beyond(settings.format, most));
-    }
-    let cells_across = NonZeroU32::new(settings.width)
-        .ok_or_else(|| "A grid needs at least one cell across.".to_string())?;
-    let colours = ColourCount::new(settings.colours).map_err(|_| {
-        "A sheet holds from 2 to 24 colours, like a big box of crayons.".to_string()
-    })?;
-    let margin = Margin::new(settings.margin).map_err(|_| {
-        "A margin from 5 mm, or the title and the credit fall off the page, to 20 mm, or the cells shrink.".to_string()
-    })?;
-    let order = Order {
-        cells_across,
-        colours,
-        format: settings.format,
-        orientation: if settings.landscape {
-            Orientation::Landscape
-        } else {
-            Orientation::Portrait
-        },
-        margin,
-    };
-    fits_on_its_page(picture, order).map_err(explain)?;
-    Ok(order)
-}
-
-/// How a sheet or its preview is drawn from a picture, its order and the name it is titled with.
-type Making = fn(&Picture, Order, &str) -> Result<Picture, NoRoom>;
-
-/// The sheet ordered, or its preview, as PNG bytes, both titled with the name the sheet is saved under so that only
-/// their cells differ, or why it cannot be made.
-fn paint(picture: &Picture, name: &str, order: Order, make: Making) -> Result<Vec<u8>, String> {
-    let sheet = make(picture, order, &sheet_file_name(name, &order)).map_err(explain)?;
-    png_file::write(&sheet, order.format.dots_per_inch())
-        .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
-}
-
-fn beyond(format: PageFormat, most: u32) -> String {
-    let paper = format.name();
-    format!(
-        "An {paper} sheet holds at most {most} cells across, or little fingers give up. Fewer cells, or bigger paper?"
-    )
-}
-
-fn explain(no_room: NoRoom) -> String {
-    match no_room {
-        NoRoom::ForTheNumbersInTheCells => {
-            "The cells got too small for their numbers. Fewer cells across, or bigger paper?"
-        }
-    }
-    .to_string()
-}
-
-/// A text started with a capital, as a sentence on the page.
-fn sentence(text: &str) -> String {
-    let mut characters = text.chars();
-    characters
-        .next()
-        .map(|first| first.to_uppercase().chain(characters).collect())
-        .unwrap_or_default()
 }
 
 /// A link to PNG bytes held by the browser, for an image to show or a file to save.
