@@ -222,6 +222,19 @@ mod tests {
     }
 
     #[test]
+    fn a_photo_whose_exif_names_no_orientation_from_one_to_eight_is_read_as_stored() {
+        let photos = [
+            told_to_turn(0, true),
+            told_to_turn(9, false),
+            told_to_turn(u16::MAX, true),
+        ];
+
+        let read = photos.map(|photo| read(&photo).map(|picture| red_corner_of(&picture)));
+
+        assert_eq!(read, [(); 3].map(|_| Ok((16, 8, "top left".to_string()))));
+    }
+
+    #[test]
     fn a_jpeg_red_on_its_left_and_blue_on_its_right_reads_so_within_its_compression() {
         let picture = read(RED_AND_BLUE);
 
