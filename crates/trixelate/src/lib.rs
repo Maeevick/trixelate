@@ -390,6 +390,9 @@ mod tests {
             stamped("goblin", 0),
             stamped("dragon.sheet.png", 951_782_400),
             stamped("dragon.sheet.png", 4_102_444_800),
+            stamped("dragon.sheet.png", 4_107_542_400),
+            stamped("dragon.sheet.png", 13_569_465_599),
+            stamped("dragon.sheet.png", 13_574_606_400),
         ];
 
         assert_eq!(
@@ -402,6 +405,9 @@ mod tests {
                 "goblin-19700101T000000Z",
                 "dragon-20000229T000000Z.sheet.png",
                 "dragon-21000101T000000Z.sheet.png",
+                "dragon-21000301T000000Z.sheet.png",
+                "dragon-23991231T235959Z.sheet.png",
+                "dragon-24000229T120000Z.sheet.png",
             ]
         );
     }
