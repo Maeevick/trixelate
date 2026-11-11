@@ -14,6 +14,7 @@ use report::Written;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
+use trixelate::picture_file::{MOST_MEGAPIXELS, Unreadable};
 use trixelate::warning::warnings_for;
 use trixelate::{
     Order, Refusal, make_preview, make_sheet, picture_file, png_file, preview_file_name,
@@ -240,8 +241,13 @@ fn write_sheet(path: &Path, bytes: &[u8], force: bool) -> Result<(), String> {
 fn read_picture(path: &Path) -> Result<Picture, String> {
     let bytes =
         fs::read(path).map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-    picture_file::read(&bytes)
-        .map_err(|_| format!("{} is not a PNG or JPEG picture", path.display()))
+    picture_file::read(&bytes).map_err(|unreadable| match unreadable {
+        Unreadable::NeitherPngNorJpeg => format!("{} is not a PNG or JPEG picture", path.display()),
+        Unreadable::TooBig { megapixels } => format!(
+            "{} is {megapixels} megapixels, and the goblins counting its dots gave up at {MOST_MEGAPIXELS}: shrink it under {MOST_MEGAPIXELS} megapixels first",
+            path.display()
+        ),
+    })
 }
 
 /// Where a sheet or its preview goes when no output is given: beside its picture, named after it.
