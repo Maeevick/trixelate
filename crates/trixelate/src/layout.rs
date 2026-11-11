@@ -210,7 +210,7 @@ pub struct Layout {
     cell_number_scale: u32,
     bubbles: Vec<Disc>,
     bubble_number_scale: u32,
-    margin: u32,
+    margin_dots: u32,
     credit: Credit,
     title: Option<Title>,
     miniature: Miniature,
@@ -228,7 +228,7 @@ const MINIATURE_THIRTY_SECONDS_OF_A_CELL: u32 = 7;
 /// The room inside the margin, in dots, from the margin's inner edge.
 #[derive(Clone, Copy)]
 struct Room {
-    margin: u32,
+    margin_dots: u32,
     width: u32,
     height: u32,
     dots_per_inch: u32,
@@ -275,11 +275,11 @@ impl Room {
         };
         let dots_per_inch = format.dots_per_inch();
         let (page_width, page_height) = (dots(width, dots_per_inch), dots(height, dots_per_inch));
-        let margin = dots(margin.0, dots_per_inch);
+        let margin_dots = dots(margin.0, dots_per_inch);
         let room = Room {
-            margin,
-            width: page_width - 2 * margin,
-            height: page_height - 2 * margin,
+            margin_dots,
+            width: page_width - 2 * margin_dots,
+            height: page_height - 2 * margin_dots,
             dots_per_inch,
             widest_bubble: dots_of_tenths(format.widest_bubble_tenths_of_mm(), dots_per_inch),
         };
@@ -288,7 +288,7 @@ impl Room {
 }
 
 impl Layout {
-    /// Lays out a colouring's grid, its legend and its model on the page, inside its margin.
+    /// Lays out a colouring's grid, its legend and its model's miniature on the page, inside its margin.
     pub fn of(
         colouring: &Colouring,
         format: PageFormat,
@@ -296,16 +296,17 @@ impl Layout {
         margin: Margin,
     ) -> Result<Layout, NoRoom> {
         let ((page_width, page_height), room) = Room::inside(format, orientation, margin);
-        let (dots_per_inch, margin) = (room.dots_per_inch, room.margin);
+        let (dots_per_inch, margin_dots) = (room.dots_per_inch, room.margin_dots);
         let size = colouring.size();
         let colours = colouring.palette().colours().len() as u32;
         let (placed, bubble) = match orientation {
             Orientation::Landscape => {
                 let bubble = bubble_sharing(room.width, colours, room.widest_bubble);
-                let placed = centred_above_its_legend_under_its_model(size, colours, bubble, room);
+                let placed =
+                    centred_above_its_legend_under_its_miniature(size, colours, bubble, room);
                 (placed, bubble)
             }
-            Orientation::Portrait => beside_its_model_above_its_grid(size, colours, room)
+            Orientation::Portrait => beside_its_miniature_above_its_grid(size, colours, room)
                 .ok_or(NoRoom::ForTheNumbersInTheCells)?,
         };
 
@@ -326,8 +327,8 @@ impl Layout {
             dots_of_tenths(CREDIT_UNDER_TENTHS_OF_MM, dots_per_inch) / credit_height_at_one;
         let (credit_width, credit_height) = lettering::size(CREDIT, credit_scale);
         let credit = Credit {
-            left: margin + room.width - credit_width,
-            top: page_height - margin + (margin - credit_height) / 2,
+            left: margin_dots + room.width - credit_width,
+            top: page_height - margin_dots + (margin_dots - credit_height) / 2,
             scale: credit_scale,
         };
 
@@ -340,7 +341,7 @@ impl Layout {
             line: placed.line,
             cell_number_scale,
             bubble_number_scale,
-            margin,
+            margin_dots,
             credit,
             title: None,
             miniature: placed.miniature,
@@ -388,15 +389,15 @@ impl Layout {
     /// The layout with the sheet's file name as its title, centred in the top margin as big as the bubbles' numbers, if
     /// the margin has room for it.
     pub fn titled(self, file_name: &str) -> Layout {
-        let room_width = self.page_width - 2 * self.margin;
-        let title = lettering::largest_scale_fitting(file_name, room_width, self.margin / 2)
+        let room_width = self.page_width - 2 * self.margin_dots;
+        let title = lettering::largest_scale_fitting(file_name, room_width, self.margin_dots / 2)
             .map(|scale| scale.min(self.bubble_number_scale))
             .map(|scale| {
                 let (width, height) = lettering::size(file_name, scale);
                 Title {
                     text: file_name.to_string(),
-                    left: self.margin + (room_width - width) / 2,
-                    top: (self.margin - height) / 2,
+                    left: self.margin_dots + (room_width - width) / 2,
+                    top: (self.margin_dots - height) / 2,
                     scale,
                 }
             });
@@ -420,9 +421,9 @@ impl Layout {
 }
 
 /// The grid as big as the room allows above a row of bubbles, one per colour, centred on the room's bottom edge, the grid
-/// centred both ways in the room left above them, and its model in the top left corner, seven thirty-seconds of the grid
-/// wide, over the grid where they meet.
-fn centred_above_its_legend_under_its_model(
+/// centred both ways in the room left above them, and its miniature in the top left corner, seven thirty-seconds of the
+/// grid wide, over the grid where they meet.
+fn centred_above_its_legend_under_its_miniature(
     size: GridSize,
     colours: u32,
     bubble: u32,
@@ -437,30 +438,30 @@ fn centred_above_its_legend_under_its_model(
     let grid_height = cell_side * size.rows() + line;
     Placed {
         grid: GridPlace {
-            left: room.margin + (room.width - grid_width) / 2,
-            top: room.margin + (grid_room - grid_height) / 2,
+            left: room.margin_dots + (room.width - grid_width) / 2,
+            top: room.margin_dots + (grid_room - grid_height) / 2,
             cell_side,
         },
         line,
         bubbles: row_of_bubbles(
             colours,
             bubble,
-            (room.margin, room.width),
-            room.margin + room.height - 1 - bubble / 2,
+            (room.margin_dots, room.width),
+            room.margin_dots + room.height - 1 - bubble / 2,
         ),
         miniature: Miniature {
-            left: room.margin + line,
-            top: room.margin + line,
-            cell_side: model_cell(cell_side),
+            left: room.margin_dots + line,
+            top: room.margin_dots + line,
+            cell_side: miniature_cell(cell_side),
         },
     }
 }
 
 /// Upright, the grid as big as the room allows below a row of bubbles, one per colour, laid in the room right of the
-/// model in the top left corner, centred across it and on the model's middle, the grid centred both ways in the room
-/// below the legend and the model seven thirty-seconds of the grid wide, over the grid where they meet. The legend's
+/// miniature in the top left corner, centred across it and on the miniature's middle, the grid centred both ways in the
+/// room below the legend and the miniature seven thirty-seconds of the grid wide, over the grid where they meet. The legend's
 /// bubbles share that room, as big as the legend allows.
-fn beside_its_model_above_its_grid(
+fn beside_its_miniature_above_its_grid(
     size: GridSize,
     colours: u32,
     room: Room,
@@ -470,20 +471,20 @@ fn beside_its_model_above_its_grid(
         .rev()
         .find_map(|cell_side| {
             let line = (cell_side / LINES_PER_CELL_SIDE).max(1);
-            let model_cell = model_cell(cell_side);
-            let model_width = size.columns() * model_cell + 2 * line;
-            let model_height = size.rows() * model_cell + 2 * line;
-            let column = room.width.checked_sub(model_width + gap)?;
+            let miniature_cell = miniature_cell(cell_side);
+            let miniature_width = size.columns() * miniature_cell + 2 * line;
+            let miniature_height = size.rows() * miniature_cell + 2 * line;
+            let column = room.width.checked_sub(miniature_width + gap)?;
             let bubble = bubble_sharing(column, colours, room.widest_bubble);
-            let legend_top = room.margin + model_height.saturating_sub(bubble) / 2;
+            let legend_top = room.margin_dots + miniature_height.saturating_sub(bubble) / 2;
             let below_the_legend = legend_top + bubble + gap;
-            let grid_room = (room.margin + room.height).checked_sub(below_the_legend)?;
+            let grid_room = (room.margin_dots + room.height).checked_sub(below_the_legend)?;
             let grid_width = cell_side * size.columns() + line;
             let grid_height = cell_side * size.rows() + line;
             (grid_width <= room.width && grid_height <= grid_room).then(|| {
                 let placed = Placed {
                     grid: GridPlace {
-                        left: room.margin + (room.width - grid_width) / 2,
+                        left: room.margin_dots + (room.width - grid_width) / 2,
                         top: below_the_legend + (grid_room - grid_height) / 2,
                         cell_side,
                     },
@@ -491,13 +492,13 @@ fn beside_its_model_above_its_grid(
                     bubbles: row_of_bubbles(
                         colours,
                         bubble,
-                        (room.margin + model_width + gap, column),
+                        (room.margin_dots + miniature_width + gap, column),
                         legend_top + bubble / 2,
                     ),
                     miniature: Miniature {
-                        left: room.margin + line,
-                        top: room.margin + line,
-                        cell_side: model_cell,
+                        left: room.margin_dots + line,
+                        top: room.margin_dots + line,
+                        cell_side: miniature_cell,
                     },
                 };
                 (placed, bubble)
@@ -505,8 +506,8 @@ fn beside_its_model_above_its_grid(
         })
 }
 
-/// A model's cell: seven thirty-seconds of the grid's.
-fn model_cell(cell_side: u32) -> u32 {
+/// A miniature's cell: seven thirty-seconds of the grid's.
+fn miniature_cell(cell_side: u32) -> u32 {
     (cell_side * MINIATURE_THIRTY_SECONDS_OF_A_CELL / 32).max(1)
 }
 
@@ -571,7 +572,7 @@ mod tests {
     }
 
     #[test]
-    fn on_its_side_a_sheet_centres_its_grid_above_a_row_of_bubbles_centred_on_the_bottom_its_model_seven_thirty_seconds_of_the_grid_wide_in_the_top_left_corner()
+    fn on_its_side_a_sheet_centres_its_grid_above_a_row_of_bubbles_centred_on_the_bottom_its_miniature_seven_thirty_seconds_of_the_grid_wide_in_the_top_left_corner()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
         let margin = 118;
@@ -615,7 +616,7 @@ mod tests {
     }
 
     #[test]
-    fn upright_a_sheet_lays_its_legend_in_the_room_right_of_its_model_centred_on_its_middle_and_centres_its_grid_in_the_room_below()
+    fn upright_a_sheet_lays_its_legend_in_the_room_right_of_its_miniature_centred_on_its_middle_and_centres_its_grid_in_the_room_below()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
         let (margin, right, bottom, gap) = (118, 2480 - 118, 3508 - 118, dots(10, 300));
@@ -625,16 +626,16 @@ mod tests {
         let (grid, line) = (layout.grid(), layout.line());
         let (top_left, past_the_end) = (grid.cell(0, 0), grid.cell(48, 48));
         let (grid_right, grid_bottom) = (past_the_end.left + line, past_the_end.top + line);
-        let model = layout.miniature();
-        let model_right = model.left + 48 * model.cell_side + line;
-        let model_middle = (margin + model.top + 48 * model.cell_side + line) / 2;
+        let miniature = layout.miniature();
+        let miniature_right = miniature.left + 48 * miniature.cell_side + line;
+        let miniature_middle = (margin + miniature.top + 48 * miniature.cell_side + line) / 2;
         let bubbles = layout.bubbles();
         let radius = bubbles[0].diameter / 2;
         let legend_left = bubbles[0].centre_x - radius;
         let legend_right = bubbles[bubbles.len() - 1].centre_x + radius + 1;
         let below_the_legend = bubbles[0].centre_y + radius + 1 + gap;
         assert_eq!(
-            model,
+            miniature,
             Miniature {
                 left: margin + line,
                 top: margin + line,
@@ -644,9 +645,9 @@ mod tests {
         assert!(
             bubbles
                 .iter()
-                .all(|bubble| bubble.centre_y.abs_diff(model_middle) <= 1)
+                .all(|bubble| bubble.centre_y.abs_diff(miniature_middle) <= 1)
         );
-        assert!((legend_left - model_right - gap).abs_diff(right - legend_right) <= 1);
+        assert!((legend_left - miniature_right - gap).abs_diff(right - legend_right) <= 1);
         assert!((top_left.left - margin).abs_diff(right - grid_right) <= 1);
         assert!((top_left.top - below_the_legend).abs_diff(bottom - grid_bottom) <= 1);
         assert!(

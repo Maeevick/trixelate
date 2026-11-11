@@ -47,7 +47,7 @@ pub fn draw_coloured_in(colouring: &Colouring, layout: &Layout) -> Sheet {
     drawn_with(colour_the_cells, colouring, layout)
 }
 
-/// A sheet on white paper, its cells outlined then filled as asked, its model, legend, credit and title drawn over.
+/// A sheet on white paper, its cells outlined then filled as asked, its miniature, legend, credit and title drawn over.
 fn drawn_with(
     fill_the_cells: fn(&mut Paper, &Colouring, &Layout),
     colouring: &Colouring,

@@ -197,7 +197,7 @@ fn matches_golden(sheet: &Path, golden: &str) -> bool {
 }
 
 #[test]
-fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot_its_model_in_the_corner_and_its_title_on_top()
+fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot_its_miniature_in_the_corner_and_its_title_on_top()
  {
     let folder = folder("golden");
     let picture = a_twelve_colour_picture_in(&folder);
