@@ -346,7 +346,7 @@ pub fn App() -> impl IntoView {
                                 "a5" => PageFormat::A5,
                                 _ => PageFormat::A4,
                             };
-                            settings.update(|settings| settings.format = format);
+                            settings.update(|settings| *settings = settings.on_paper(format));
                         }
                     >
                         <optgroup label="Sheets, 300 dpi">

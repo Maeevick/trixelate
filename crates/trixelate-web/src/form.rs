@@ -30,6 +30,14 @@ impl Default for Settings {
     }
 }
 
+impl Settings {
+    /// The settings on another paper, the cells across following it when they were the most the old paper holds or
+    /// are more than the new one holds, as the command line takes the most a paper holds unless told otherwise.
+    pub fn on_paper(self, format: PageFormat) -> Settings {
+        Settings { format, ..self }
+    }
+}
+
 /// The order for the sheet asked for, once sure its page has room for it, or why it would be refused.
 pub fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
     let colours = ColourCount::new(settings.colours).map_err(|_| {
@@ -207,6 +215,29 @@ mod tests {
                 "That picture is 64 megapixels. The goblins counting its dots gave up at 50: shrink it a little first.",
             ]
         );
+    }
+
+    #[test]
+    fn the_cells_across_follow_the_paper_when_they_were_the_most_it_holds_or_are_more_than_the_new_one_holds()
+     {
+        let across = |width, from, to| {
+            let settings = Settings {
+                width,
+                format: from,
+                ..Settings::default()
+            };
+            settings.on_paper(to).width
+        };
+
+        let widths = [
+            across(48, PageFormat::A4, PageFormat::A5),
+            across(48, PageFormat::A4, PageFormat::A0),
+            across(20, PageFormat::A4, PageFormat::A5),
+            across(40, PageFormat::A4, PageFormat::A5),
+            across(20, PageFormat::A4, PageFormat::A0),
+        ];
+
+        assert_eq!(widths, [32, 128, 20, 32, 20]);
     }
 
     #[test]
