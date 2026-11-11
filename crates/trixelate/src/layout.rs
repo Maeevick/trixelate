@@ -836,6 +836,16 @@ mod tests {
     }
 
     #[test]
+    fn the_credit_says_where_trixelate_lives_and_that_trixelate_is_mit_licensed_not_the_sheet() {
+        let credit = CREDIT;
+
+        assert_eq!(
+            credit,
+            "Made with github.com/Maeevick/trixelate - trixelate is MIT-licensed"
+        );
+    }
+
+    #[test]
     fn the_credit_sits_small_in_the_bottom_margin_flush_right_even_inside_the_widest_margin_of_the_smallest_page()
     -> Result<(), NoRoom> {
         let small = colouring(4, 4, 2);
