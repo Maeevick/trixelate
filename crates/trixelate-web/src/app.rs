@@ -9,12 +9,13 @@ use leptos::task::spawn_local;
 use trixelate::layout::{PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
+use trixelate::picture_file::Unreadable;
 use trixelate::warning::warnings_for;
 use trixelate::{make_preview, make_sheet, picture_file, sheet_file_name};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
-use crate::form::{Settings, paint, ready, sentence};
+use crate::form::{Settings, light_enough, not_a_picture, paint, ready, sentence};
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
 /// The id of the line saying why the download is disabled, for its button to point to.
@@ -92,7 +93,7 @@ fn after_the_next_paint(work: impl FnOnce() + 'static) {
 #[component]
 pub fn App() -> impl IntoView {
     let dropped = RwSignal::new(None::<Dropped>);
-    let unreadable = RwSignal::new(false);
+    let unreadable = RwSignal::new(None::<String>);
     let hovering = RwSignal::new(false);
     let settings = RwSignal::new(Settings::default());
     let sheet_shown = RwSignal::new(None::<String>);
@@ -106,24 +107,32 @@ pub fn App() -> impl IntoView {
 
     let take = move |file: File| {
         let name = file.name();
+        if !light_enough(file.size()) {
+            unreadable.set(Some(not_a_picture(None)));
+            return;
+        }
         spawn_local(async move {
-            let picture = bytes_of(&file)
-                .await
-                .and_then(|bytes| picture_file::read(&bytes).ok());
+            let picture = match bytes_of(&file).await {
+                Some(bytes) => picture_file::read(&bytes).map_err(Some),
+                None => Err(Some(Unreadable::NeitherPngNorJpeg)),
+            };
             let shown_from = Url::create_object_url_with_blob(&file).ok();
             match (picture, shown_from) {
-                (Some(picture), Some(shown_from)) => {
+                (Ok(picture), Some(shown_from)) => {
                     if let Some(previous) = dropped.get_untracked() {
                         forget(&previous.shown_from);
                     }
-                    unreadable.set(false);
+                    unreadable.set(None);
                     dropped.set(Some(Dropped {
                         name,
                         picture: Arc::new(picture),
                         shown_from,
                     }));
                 }
-                _ => unreadable.set(true),
+                (Err(why), _) => unreadable.set(Some(not_a_picture(why))),
+                (Ok(_), None) => {
+                    unreadable.set(Some(not_a_picture(Some(Unreadable::NeitherPngNorJpeg))))
+                }
             }
         });
     };
@@ -266,9 +275,9 @@ pub fn App() -> impl IntoView {
                 <span class="text-sm text-stone-500">
                     "or click to pick one · PNG or JPEG"
                 </span>
-                <Show when=move || unreadable.get()>
+                <Show when=move || unreadable.with(Option::is_some)>
                     <span role="alert" class="text-sm font-medium text-rose-600">
-                        "That does not look like a PNG or a JPEG. Goblins only come in those two flavours."
+                        {move || unreadable.get()}
                     </span>
                 </Show>
             </label>

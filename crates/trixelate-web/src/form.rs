@@ -4,6 +4,7 @@
 use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
+use trixelate::picture_file::Unreadable;
 use trixelate::sheet::Sheet;
 use trixelate::{Order, Refusal, fits_on_its_page, sheet_file_name};
 
@@ -85,6 +86,17 @@ fn explain(no_room: NoRoom) -> String {
     .to_string()
 }
 
+/// Whether a file of this many bytes is light enough to read as a picture.
+pub fn light_enough(bytes: f64) -> bool {
+    bytes >= 0.0
+}
+
+/// Why a dropped file gives no picture, worded for a parent: too heavy to read, or not a picture the goblins can read.
+pub fn not_a_picture(why: Option<Unreadable>) -> String {
+    let _ = why;
+    "That does not look like a PNG or a JPEG. Goblins only come in those two flavours.".to_string()
+}
+
 /// A text started with a capital, as a sentence on the page.
 pub fn sentence(text: &str) -> String {
     let mut characters = text.chars();
@@ -163,6 +175,28 @@ mod tests {
         });
 
         assert_eq!(pages, [Some((2480, 3508)), Some((3508, 2480))]);
+    }
+
+    #[test]
+    fn a_file_over_a_hundred_megabytes_or_a_picture_over_fifty_megapixels_is_refused_worded_for_a_parent()
+     {
+        let weighed = [100_000_000.0, 100_000_001.0].map(light_enough);
+        let said = [
+            None,
+            Some(Unreadable::NeitherPngNorJpeg),
+            Some(Unreadable::TooBig { megapixels: 64 }),
+        ]
+        .map(not_a_picture);
+
+        assert_eq!(weighed, [true, false]);
+        assert_eq!(
+            said,
+            [
+                "That file weighs over 100 MB, more than any picture a sheet needs. Shrink it a little first.",
+                "That does not look like a PNG or a JPEG. Goblins only come in those two flavours.",
+                "That picture is 64 megapixels. The goblins counting its dots gave up at 50: shrink it a little first.",
+            ]
+        );
     }
 
     #[test]
