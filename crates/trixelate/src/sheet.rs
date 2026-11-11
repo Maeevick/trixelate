@@ -536,6 +536,22 @@ mod tests {
     }
 
     #[test]
+    fn a_near_black_bubble_takes_white_ink_however_dark_its_channels_are() {
+        let (colouring, layout) = laid_out(&[[8, 8, 8, 255], [250, 250, 250, 255]]);
+
+        let sheet = draw(&colouring, &layout);
+
+        assert_eq!(
+            colouring.palette().colours(),
+            [Rgb(8, 8, 8), Rgb(250, 250, 250)]
+        );
+        assert_eq!(
+            inks_of_the_numbers_in_the_bubbles(&sheet, &layout),
+            [vec![Rgb::WHITE], vec![BLACK]]
+        );
+    }
+
+    #[test]
     fn light_red_and_light_blue_bubbles_count_every_channel_and_write_their_numbers_in_black() {
         let (colouring, layout) = laid_out(&[
             [220, 30, 40, 255],
