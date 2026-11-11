@@ -6,7 +6,7 @@ use std::fs;
 use std::io::{BufRead, ErrorKind, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 
 use clap::error::ErrorKind as ArgumentError;
 use clap::{CommandFactory, Parser, ValueEnum};
@@ -19,6 +19,7 @@ use trixelate::sheet::Sheet;
 use trixelate::warning::warnings_for;
 use trixelate::{
     Order, Refusal, make_preview, make_sheet, picture_file, preview_file_name, sheet_file_name,
+    stamped,
 };
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -52,17 +53,13 @@ struct Cli {
     #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET, value_parser = margin)]
     margin: Margin,
 
-    /// Where to write the sheet [default: beside the picture, as <picture>-<width>-<colours>-<format>.sheet.png, with -landscape before .sheet.png when asked, and .preview.png for a preview]
+    /// Where to write the sheet, never over an existing file [default: beside the picture, as <picture>-<width>-<colours>-<format>-<UTC second>.sheet.png, with -landscape after the format when asked, and .preview.png for a preview]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
     /// Write the sheet's preview instead: the sheet as it looks once coloured in, every cell filled with its colour
     #[arg(long)]
     preview: bool,
-
-    /// Overwrite the sheet beside the picture if it already exists; never with --output, so a typo cannot replace the picture
-    #[arg(long, conflicts_with = "output")]
-    force: bool,
 
     /// Go ahead without asking when the sheet is warned of: under 16 cells across or 4 colours
     #[arg(short, long)]
@@ -165,7 +162,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     }
-    match run(cli, order) {
+    match run(cli, order, SystemTime::now()) {
         Ok(written) => {
             println!("{written}");
             ExitCode::SUCCESS
@@ -190,7 +187,7 @@ type Making = fn(&Picture, Order, &str) -> Result<Sheet, NoRoom>;
 /// How the command names what it writes, from its picture's file name and its order.
 type Naming = fn(&str, &Order) -> String;
 
-fn run(cli: Cli, order: Order) -> Result<String, String> {
+fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
     let started = Instant::now();
     let picture = read_picture(&cli.picture)?;
     let grid = order.grid_for(&picture).map_err(explain)?;
@@ -205,13 +202,13 @@ fn run(cli: Cli, order: Order) -> Result<String, String> {
     };
     let sheet_path = cli
         .output
-        .unwrap_or_else(|| beside(&cli.picture, &order, named));
+        .unwrap_or_else(|| beside(&cli.picture, &order, named, now));
     let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();
     let sheet = make(&picture, order, &file_name).map_err(explain)?;
     let bytes = sheet
         .png()
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
-    write_sheet(&sheet_path, &bytes, cli.force)?;
+    write_sheet(&sheet_path, &bytes)?;
     Ok(report::written(
         what,
         &sheet_path,
@@ -220,17 +217,15 @@ fn run(cli: Cli, order: Order) -> Result<String, String> {
     ))
 }
 
-/// Writes the sheet, refusing to replace an existing file unless forced, even if one appears meanwhile.
-fn write_sheet(path: &Path, bytes: &[u8], force: bool) -> Result<(), String> {
+/// Writes the sheet to a new file, never replacing one, even one that appears meanwhile or a link to another.
+fn write_sheet(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let mut file = fs::OpenOptions::new()
         .write(true)
-        .create(true)
-        .truncate(true)
-        .create_new(!force)
+        .create_new(true)
         .open(path)
         .map_err(|error| match error.kind() {
             ErrorKind::AlreadyExists => format!(
-                "{} already exists: pass --force to overwrite it",
+                "{} already exists, and trixelate never overwrites a file: choose another --output",
                 shown(path)
             ),
             _ => format!("cannot write the sheet to {}: {error}", shown(path)),
@@ -276,10 +271,14 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
     })
 }
 
-/// Where a sheet or its preview goes when no output is given: beside its picture, named after it.
-fn beside(picture: &Path, order: &Order, named: Naming) -> PathBuf {
+/// Where a sheet or its preview goes when no output is given: beside its picture, named after it and stamped with the
+/// second it was made, so that it never takes an older sheet's name.
+fn beside(picture: &Path, order: &Order, named: Naming, now: SystemTime) -> PathBuf {
     let name = picture.file_name().unwrap_or_default().to_string_lossy();
-    picture.with_file_name(named(&name, order))
+    let seconds = now
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs());
+    picture.with_file_name(stamped(&named(&name, order), seconds))
 }
 
 fn explain(no_room: NoRoom) -> String {

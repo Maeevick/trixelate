@@ -98,20 +98,10 @@ fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_c
 {
     let folder = folder("beside");
     let picture = a_picture_in(&folder);
-    let explicit = folder.join("explicit");
-    let forty_eight_wide = explicit.join("sunset-48-8-a4.sheet.png");
-    fs::create_dir_all(&explicit).unwrap_or_default();
 
     let run = trixelate(&[picture.to_str().unwrap_or_default()]);
-    trixelate(&[
-        picture.to_str().unwrap_or_default(),
-        "--width",
-        "48",
-        "--output",
-        forty_eight_wide.to_str().unwrap_or_default(),
-    ]);
 
-    let sheet_path = folder.join("sunset-48-8-a4.sheet.png");
+    let sheet_path = written_beside(&folder, "sunset-48-8-a4", "sheet").unwrap_or_default();
     let sheet = fs::read(&sheet_path)
         .ok()
         .and_then(|bytes| png_file::read(&bytes).ok());
@@ -121,7 +111,6 @@ fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_c
         Some((2480, 3508))
     );
     assert!(text(&run.stdout).contains(&sheet_path.display().to_string()));
-    assert_eq!(fs::read(&sheet_path).ok(), fs::read(&forty_eight_wide).ok());
 }
 
 #[test]
@@ -137,8 +126,8 @@ fn a_jpeg_photo_becomes_a_sheet_beside_it_as_a_png() {
 
     let run = trixelate(&[photo.to_str().unwrap_or_default(), "--width", "8"]);
 
-    let sheet = fs::read(folder.join("photo-8-8-a4.sheet.png"))
-        .ok()
+    let sheet = written_beside(&folder, "photo-8-8-a4", "sheet")
+        .and_then(|path| fs::read(path).ok())
         .and_then(|bytes| png_file::read(&bytes).ok());
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert_eq!(
@@ -156,10 +145,8 @@ fn the_command_says_what_it_wrote_where_how_fast_and_how_long_a_five_year_old_wi
 
     let sheet = text(&trixelate(&[picture, "--width", "4"]).stdout);
 
-    assert!(sheet.starts_with(&format!(
-        "Sheet written to {} in ",
-        folder.join("sunset-4-8-a4.sheet.png").display()
-    )));
+    let written = written_beside(&folder, "sunset-4-8-a4", "sheet").unwrap_or_default();
+    assert!(sheet.starts_with(&format!("Sheet written to {} in ", written.display())));
     assert!(sheet.contains(" s\n"));
     assert!(sheet.contains("12 cells to colour"));
 }
@@ -169,10 +156,10 @@ fn a_sheet_of_few_cells_or_few_colours_is_warned_of_and_written_only_once_the_us
     let folder = folder("warned");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
-    let sheet = folder.join("sunset-4-2-a4.sheet.png");
+    let written = || written_beside(&folder, "sunset-4-2-a4", "sheet").is_some();
 
     let unanswered = trixelate_asking(&[picture, "--width", "4", "--colours", "2"]);
-    let written_unanswered = sheet.exists();
+    let written_unanswered = written();
     let sure = trixelate_asking(&[picture, "--width", "4", "--colours", "2", "-y"]);
 
     let warned = text(&unanswered.stderr);
@@ -187,7 +174,7 @@ fn a_sheet_of_few_cells_or_few_colours_is_warned_of_and_written_only_once_the_us
     assert!(warned.contains("--yes"));
     assert!(sure.status.success(), "{}", text(&sure.stderr));
     assert!(text(&sure.stderr).contains("warning: with so few cells across"));
-    assert!(sheet.exists());
+    assert!(written());
 }
 
 #[test]
@@ -202,8 +189,8 @@ fn a_landscape_sheet_lies_on_its_side() {
         "--landscape",
     ]);
 
-    let sheet = fs::read(folder.join("sunset-4-8-a4-landscape.sheet.png"))
-        .ok()
+    let sheet = written_beside(&folder, "sunset-4-8-a4-landscape", "sheet")
+        .and_then(|path| fs::read(path).ok())
         .and_then(|bytes| png_file::read(&bytes).ok());
     assert_eq!(
         sheet.map(|sheet| (sheet.width(), sheet.height())),
@@ -292,9 +279,8 @@ fn asked_for_a_preview_the_command_writes_the_sheet_coloured_in_beside_its_pictu
  {
     let folder = folder("preview");
     let picture = a_twelve_colour_picture_in(&folder);
-    let preview = folder.join("twelve-4-12-a5.preview.png");
-
-    let run = trixelate(&[
+    let titled_as_its_master = folder.join("twelve-4-12-a5.preview.png");
+    let arguments = [
         picture.to_str().unwrap_or_default(),
         "--width",
         "4",
@@ -303,56 +289,50 @@ fn asked_for_a_preview_the_command_writes_the_sheet_coloured_in_beside_its_pictu
         "--format",
         "a5",
         "--preview",
-    ]);
+    ];
 
-    assert!(run.status.success(), "{}", text(&run.stderr));
-    assert!(text(&run.stdout).contains(&preview.display().to_string()));
-    assert!(matches_golden(&preview, "twelve-a5.preview.png"));
+    let beside = trixelate(&arguments);
+    let output = titled_as_its_master.to_str().unwrap_or_default();
+    let named = trixelate(&[arguments.as_slice(), &["--output", output]].concat());
+
+    let preview = written_beside(&folder, "twelve-4-12-a5", "preview").unwrap_or_default();
+    assert!(beside.status.success(), "{}", text(&beside.stderr));
+    assert!(text(&beside.stdout).contains(&preview.display().to_string()));
+    assert!(named.status.success(), "{}", text(&named.stderr));
+    assert!(matches_golden(
+        &titled_as_its_master,
+        "twelve-a5.preview.png"
+    ));
 }
 
 #[test]
-fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
-    let folder = folder("overwrite");
-    let picture = a_picture_in(&folder);
-    let sheet = folder.join("sunset-4-8-a4.sheet.png");
-    fs::write(&sheet, "a sheet already coloured in").expect("an existing sheet");
-    let arguments = [picture.to_str().unwrap_or_default(), "--width", "4"];
-
-    let kept = trixelate(&arguments);
-    let kept_sheet = fs::read_to_string(&sheet).ok();
-    let overwritten = trixelate(&[arguments.as_slice(), &["--force"]].concat());
-
-    assert_eq!(
-        (kept.status.code(), kept_sheet.as_deref()),
-        (Some(1), Some("a sheet already coloured in"))
-    );
-    assert!(text(&kept.stderr).contains("--force"));
-    assert!(overwritten.status.success());
-    assert!(
-        fs::read(&sheet)
-            .ok()
-            .and_then(|bytes| png_file::read(&bytes).ok())
-            .is_some()
-    );
-}
-
-#[test]
-fn forcing_an_overwrite_is_refused_with_an_output_so_a_typo_never_replaces_the_picture_with_its_sheet()
- {
-    let folder = folder("force-output");
+fn an_existing_file_is_never_overwritten_not_even_the_picture_and_there_is_no_force_to_ask_for() {
+    let folder = folder("never-overwritten");
     let picture = a_picture_in(&folder);
     let original = fs::read(&picture).expect("the picture");
+    let existing = folder.join("coloured-in.png");
+    fs::write(&existing, "a sheet already coloured in").expect("an existing sheet");
     let picture = picture.to_str().unwrap_or_default();
 
-    let run = trixelate(&[picture, "--width", "4", "-o", picture, "--force"]);
+    let onto_a_sheet = trixelate(&[
+        picture,
+        "--width",
+        "4",
+        "-o",
+        existing.to_str().unwrap_or_default(),
+    ]);
+    let onto_the_picture = trixelate(&[picture, "--width", "4", "-o", picture]);
+    let forced = trixelate(&[picture, "--width", "4", "--force"]);
 
-    assert_eq!(run.status.code(), Some(2));
-    assert!(
-        text(&run.stderr).contains("--force"),
-        "{}",
-        text(&run.stderr)
+    assert_eq!(onto_a_sheet.status.code(), Some(1));
+    assert!(text(&onto_a_sheet.stderr).contains("already exists"));
+    assert_eq!(
+        fs::read_to_string(&existing).ok().as_deref(),
+        Some("a sheet already coloured in")
     );
+    assert_eq!(onto_the_picture.status.code(), Some(1));
     assert_eq!(fs::read(picture).ok(), Some(original));
+    assert_eq!(forced.status.code(), Some(2));
 }
 
 #[test]
@@ -432,12 +412,12 @@ fn dots_per_metre(png: &[u8]) -> Option<u32> {
 fn a_poster_on_a2_takes_80_cells_across_on_a_page_printed_at_150_dots_per_inch() {
     let folder = folder("poster");
     let picture = a_picture_in(&folder);
-    let poster = folder.join("sunset-80-8-a2.sheet.png");
-
     let run = trixelate(&[picture.to_str().unwrap_or_default(), "--format", "a2"]);
 
     assert!(run.status.success(), "{}", text(&run.stderr));
-    let bytes = fs::read(&poster).unwrap_or_default();
+    let bytes = written_beside(&folder, "sunset-80-8-a2", "sheet")
+        .and_then(|poster| fs::read(poster).ok())
+        .unwrap_or_default();
     let page = png_file::read(&bytes).map(|sheet| (sheet.width(), sheet.height()));
     assert_eq!(page.ok(), Some((2480, 3508)));
     assert_eq!(dots_per_metre(&bytes), Some(5906));
@@ -454,8 +434,8 @@ fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds() {
 
     assert!(on_a4.status.success(), "{}", text(&on_a4.stderr));
     assert!(on_a5.status.success(), "{}", text(&on_a5.stderr));
-    assert!(folder.join("sunset-48-8-a4.sheet.png").exists());
-    assert!(folder.join("sunset-32-8-a5.sheet.png").exists());
+    assert!(written_beside(&folder, "sunset-48-8-a4", "sheet").is_some());
+    assert!(written_beside(&folder, "sunset-32-8-a5", "sheet").is_some());
 }
 
 #[test]
