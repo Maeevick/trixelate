@@ -6,14 +6,14 @@ use std::time::Duration;
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use trixelate::colouring::Colouring;
 use trixelate::layout::{PageFormat, most_cells_across};
 use trixelate::picture::Picture;
-use trixelate::picture_file::Unreadable;
-use trixelate::{make_preview, make_sheet, picture_file, sheet_file_name};
+use trixelate::picture_file::{self, Unreadable};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
-use crate::form::{Settings, light_enough, not_a_picture, paint, ready, warned};
+use crate::form::{Painted, Settings, coloured, light_enough, not_a_picture, paint, ready, warned};
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
 /// The id of the line saying why the download is disabled, for its button to point to.
@@ -52,6 +52,15 @@ struct Dropped {
     name: String,
     picture: Arc<Picture>,
     shown_from: Arc<ObjectUrl>,
+}
+
+/// The last colouring made, kept with its picture, cells across and colours, so that a new paper, margin or
+/// orientation lays it out again without colouring the picture anew.
+struct LastColouring {
+    picture: Arc<Picture>,
+    cells_across: u32,
+    colours: usize,
+    colouring: Arc<Colouring>,
 }
 
 /// Hands PNG bytes to the browser as a file to save under a name, forgetting the link once the browser has it.
@@ -102,9 +111,10 @@ pub fn App() -> impl IntoView {
     let coloured_in_shown = RwSignal::new(None::<Arc<ObjectUrl>>);
     let coloured_in = RwSignal::new(0.0_f64);
     let sliding = RwSignal::new(false);
-    let painting = RwSignal::new(false);
+    let busy = RwSignal::new(false);
     let refusal = RwSignal::new(None::<String>);
-    let saving = RwSignal::new(false);
+    let painted = StoredValue::new(None::<Arc<Painted>>);
+    let last_colouring = StoredValue::new(None::<LastColouring>);
     let latest = StoredValue::new(0_u64);
 
     let take = move |file: File| {
@@ -113,28 +123,60 @@ pub fn App() -> impl IntoView {
             unreadable.set(Some(not_a_picture(None)));
             return;
         }
+        busy.set(true);
         spawn_local(async move {
-            let picture = match bytes_of(&file).await {
-                Some(bytes) => picture_file::read(&bytes).map_err(Some),
-                None => Err(Some(Unreadable::NeitherPngNorJpeg)),
+            let Some(bytes) = bytes_of(&file).await else {
+                unreadable.set(Some(not_a_picture(Some(Unreadable::NeitherPngNorJpeg))));
+                busy.set(false);
+                return;
             };
-            let read = picture.and_then(|picture| {
-                let shown_from =
-                    ObjectUrl::of_file(&file).ok_or(Some(Unreadable::NeitherPngNorJpeg))?;
-                Ok((picture, shown_from))
-            });
-            match read {
-                Ok((picture, shown_from)) => {
-                    unreadable.set(None);
-                    dropped.set(Some(Dropped {
-                        name,
-                        picture: Arc::new(picture),
-                        shown_from: Arc::new(shown_from),
-                    }));
+            after_the_next_paint(move || {
+                let read = picture_file::read(&bytes)
+                    .map_err(Some)
+                    .and_then(|picture| {
+                        let shown_from =
+                            ObjectUrl::of_file(&file).ok_or(Some(Unreadable::NeitherPngNorJpeg))?;
+                        Ok((picture, shown_from))
+                    });
+                match read {
+                    Ok((picture, shown_from)) => {
+                        unreadable.set(None);
+                        dropped.set(Some(Dropped {
+                            name,
+                            picture: Arc::new(picture),
+                            shown_from: Arc::new(shown_from),
+                        }));
+                    }
+                    Err(why) => {
+                        unreadable.set(Some(not_a_picture(why)));
+                        busy.set(false);
+                    }
                 }
-                Err(why) => unreadable.set(Some(not_a_picture(why))),
-            }
+            });
         });
+    };
+
+    let colouring_for = move |picture: &Arc<Picture>, order: trixelate::Order| {
+        let kept = last_colouring.with_value(|last| {
+            last.as_ref()
+                .filter(|last| {
+                    Arc::ptr_eq(&last.picture, picture)
+                        && last.cells_across == order.cells_across()
+                        && last.colours == order.colours().get()
+                })
+                .map(|last| last.colouring.clone())
+        });
+        if let Some(colouring) = kept {
+            return Ok(colouring);
+        }
+        let colouring = Arc::new(coloured(picture, order)?);
+        last_colouring.set_value(Some(LastColouring {
+            picture: picture.clone(),
+            cells_across: order.cells_across(),
+            colours: order.colours().get(),
+            colouring: colouring.clone(),
+        }));
+        Ok::<_, String>(colouring)
     };
 
     Effect::new(move |_| {
@@ -148,49 +190,35 @@ pub fn App() -> impl IntoView {
         let settings = settings.get();
         let this = latest.get_value() + 1;
         latest.set_value(this);
-        refusal.set(None);
-        painting.set(true);
+        busy.set(true);
         after_the_next_paint(move || {
             if latest.get_value() != this {
                 return;
             }
-            let painted = ready(&picture, settings).and_then(|order| {
-                Ok((
-                    paint(&picture, &name, order, make_sheet)?,
-                    paint(&picture, &name, order, make_preview)?,
-                ))
+            let made = ready(settings).and_then(|order| {
+                let colouring = colouring_for(&picture, order)?;
+                paint(&colouring, &name, order)
             });
-            match painted {
-                Ok((sheet, preview)) => {
-                    sheet_shown.set(ObjectUrl::of_png(&sheet).map(Arc::new));
-                    coloured_in_shown.set(ObjectUrl::of_png(&preview).map(Arc::new));
+            match made {
+                Ok(made) => {
+                    sheet_shown.set(ObjectUrl::of_png(&made.sheet).map(Arc::new));
+                    coloured_in_shown.set(ObjectUrl::of_png(&made.preview).map(Arc::new));
+                    painted.set_value(Some(Arc::new(made)));
                     refusal.set(None);
                 }
-                Err(why) => refusal.set(Some(why)),
+                Err(why) => {
+                    painted.set_value(None);
+                    refusal.set(Some(why));
+                }
             }
-            painting.set(false);
+            busy.set(false);
         });
     });
 
     let download = move || {
-        let Some(dropped) = dropped.get_untracked() else {
-            return;
-        };
-        let settings = settings.get_untracked();
-        saving.set(true);
-        after_the_next_paint(move || {
-            let painted = ready(&dropped.picture, settings).and_then(|order| {
-                Ok((
-                    paint(&dropped.picture, &dropped.name, order, make_sheet)?,
-                    order,
-                ))
-            });
-            match painted {
-                Ok((png, order)) => save(&png, &sheet_file_name(&dropped.name, &order)),
-                Err(why) => refusal.set(Some(why)),
-            }
-            saving.set(false);
-        });
+        if let Some(made) = painted.get_value() {
+            save(&made.sheet, &made.name);
+        }
     };
 
     let file_picked = move |event: leptos::ev::Event| {
@@ -215,6 +243,7 @@ pub fn App() -> impl IntoView {
 
     let warnings = move || warned(settings.get());
     let no_picture = move || dropped.with(Option::is_none);
+    let refused = move || refusal.get().filter(|_| !no_picture());
     let slide = move |event: &leptos::ev::PointerEvent| {
         if let Some(element) = event
             .current_target()
@@ -223,10 +252,6 @@ pub fn App() -> impl IntoView {
             coloured_in.set(across(&element, event.client_x()));
         }
     };
-    let refused = Memo::new(move |_| {
-        let picture = dropped.with(|dropped| dropped.as_ref().map(|d| d.picture.clone()))?;
-        ready(&picture, settings.get()).err()
-    });
 
     view! {
         <section
@@ -393,26 +418,26 @@ pub fn App() -> impl IntoView {
                 class="grid gap-3 border-t border-stone-100 pt-5 sm:flex sm:flex-wrap sm:items-center sm:justify-center lg:col-span-2"
             >
                 <span class="text-center text-sm text-stone-500">
-                    {move || if saving.get() { "Sharpening the crayons…" } else { "Download the" }}
+                    "Download the"
                 </span>
                 <button
                     type="button"
-                    disabled=move || saving.get() || no_picture() || refused.get().is_some()
-                    title=move || refused.get().unwrap_or_else(|| "to colour in".to_string())
-                    aria-describedby=move || refused.get().map(|_| DOWNLOAD_REFUSED.to_string())
+                    disabled=move || busy.get() || no_picture() || refused().is_some()
+                    title=move || refused().unwrap_or_else(|| "to colour in".to_string())
+                    aria-describedby=move || refused().map(|_| DOWNLOAD_REFUSED.to_string())
                     class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none sm:w-auto"
                     on:click=move |_| download()
                 >
                     "Sheet"
                     <span class="ml-1.5 font-normal text-amber-200/80 group-disabled:text-stone-400">
                         {move || {
-                            if refused.get().is_some() { "doesn't fit" } else { "to colour in" }
+                            if refused().is_some() { "doesn't fit" } else { "to colour in" }
                         }}
                     </span>
                 </button>
-                <Show when=move || refused.get().is_some()>
+                <Show when=move || refused().is_some()>
                     <p id=DOWNLOAD_REFUSED class="basis-full text-center text-sm text-stone-600">
-                        {move || refused.get()}
+                        {move || refused()}
                     </p>
                 </Show>
             </div>
@@ -479,7 +504,7 @@ pub fn App() -> impl IntoView {
                                     class=move || {
                                         format!(
                                             "relative w-fit max-w-full cursor-ew-resize touch-pan-y select-none transition {}",
-                                            if refusal.get().is_some() { "opacity-25" } else { "" },
+                                            if refused().is_some() { "opacity-25" } else { "" },
                                         )
                                     }
                                     on:pointerdown=move |event| {
@@ -568,7 +593,7 @@ pub fn App() -> impl IntoView {
                                 .into_any()
                         }
                     }}
-                    <Show when=move || painting.get()>
+                    <Show when=move || busy.get()>
                         <p
                             role="status"
                             class="absolute top-5 right-5 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-stone-600 shadow-sm"
@@ -576,12 +601,12 @@ pub fn App() -> impl IntoView {
                             "Sharpening the crayons…"
                         </p>
                     </Show>
-                    <Show when=move || refusal.get().is_some()>
+                    <Show when=move || refused().is_some()>
                         <p
                             role="alert"
                             class="absolute inset-x-5 top-5 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 shadow-sm ring-1 ring-rose-200"
                         >
-                            {move || refusal.get().unwrap_or_default()}
+                            {move || refused().unwrap_or_default()}
                         </p>
                     </Show>
                 </div>

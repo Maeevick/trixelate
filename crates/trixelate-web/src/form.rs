@@ -1,13 +1,14 @@
 //! The form's settings turned into an order for a sheet, the sheet painted as PNG bytes, and what the page says when
 //! one is refused, worded for a parent.
 
+use trixelate::colouring::Colouring;
 use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::sheet::Sheet;
 use trixelate::warning::warnings_for;
-use trixelate::{Order, Refusal, fits_on_its_page, sheet_file_name};
+use trixelate::{Order, Refusal, colour, preview_of, sheet_file_name, sheet_of};
 
 /// What the sheet is asked to be, as the form sets it.
 #[derive(Clone, Copy, PartialEq)]
@@ -52,8 +53,8 @@ impl Settings {
     }
 }
 
-/// The order for the sheet asked for, once sure its page has room for it, or why it would be refused.
-pub fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
+/// The order for the sheet asked for, or why it would be refused, before any picture is coloured.
+pub fn ready(settings: Settings) -> Result<Order, String> {
     let colours = ColourCount::new(settings.colours).map_err(|_| {
         "A sheet holds from 2 to 24 colours, like a big box of crayons.".to_string()
     })?;
@@ -65,28 +66,42 @@ pub fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
     } else {
         Orientation::Portrait
     };
-    let order = Order::new(
+    Order::new(
         settings.width,
         colours,
         settings.format,
         orientation,
         margin,
     )
-    .map_err(|refusal| refused(settings.format, refusal))?;
-    fits_on_its_page(picture, order).map_err(explain)?;
-    Ok(order)
+    .map_err(|refusal| refused(settings.format, refusal))
 }
 
-/// How a sheet or its preview is drawn from a picture, its order and the name it is titled with.
-pub type Making = fn(&Picture, Order, &str) -> Result<Sheet, NoRoom>;
+/// A picture coloured for an order, the slow part of a sheet, or why its page could never number its cells.
+pub fn coloured(picture: &Picture, order: Order) -> Result<Colouring, String> {
+    colour(picture, order).map_err(explain)
+}
 
-/// The sheet ordered, or its preview, as PNG bytes, both titled with the name the sheet is saved under so that only
-/// their cells differ, or why it cannot be made.
-pub fn paint(picture: &Picture, name: &str, order: Order, make: Making) -> Result<Vec<u8>, String> {
-    let sheet = make(picture, order, &sheet_file_name(name, &order)).map_err(explain)?;
-    sheet
-        .png()
-        .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
+/// A sheet and its preview as PNG bytes, both titled with the name the sheet is saved under so that only their cells
+/// differ.
+pub struct Painted {
+    pub sheet: Vec<u8>,
+    pub preview: Vec<u8>,
+    pub name: String,
+}
+
+/// A colouring's sheet and preview painted on the order's page, named after the picture, or why they cannot be.
+pub fn paint(colouring: &Colouring, picture_name: &str, order: Order) -> Result<Painted, String> {
+    let name = sheet_file_name(picture_name, &order);
+    let png = |sheet: Sheet| {
+        sheet
+            .png()
+            .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
+    };
+    Ok(Painted {
+        sheet: png(sheet_of(colouring, order, &name).map_err(explain)?)?,
+        preview: png(preview_of(colouring, order, &name).map_err(explain)?)?,
+        name,
+    })
 }
 
 fn refused(format: PageFormat, refusal: Refusal) -> String {
@@ -151,7 +166,7 @@ pub fn sentence(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use trixelate::{make_sheet, png_file};
+    use trixelate::png_file;
 
     fn red_and_yellow() -> Picture {
         Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture")
@@ -160,7 +175,7 @@ mod tests {
     #[test]
     fn the_form_starts_on_an_a4_sheet_as_many_cells_across_as_it_holds_in_eight_colours_with_a_ten_millimetre_margin()
      {
-        let order = ready(&red_and_yellow(), Settings::default());
+        let order = ready(Settings::default());
 
         assert_eq!(
             order.map(|order| (order.cells_across(), order.colours().get(), order.format())),
@@ -179,14 +194,14 @@ mod tests {
             settings
         };
         let refusals = [
-            (red_and_yellow(), asked(|settings| settings.width = 49)),
-            (red_and_yellow(), asked(|settings| settings.width = 0)),
-            (red_and_yellow(), asked(|settings| settings.colours = 25)),
-            (red_and_yellow(), asked(|settings| settings.margin = 4)),
-            (ribbon, asked(|_| ())),
+            asked(|settings| settings.width = 49),
+            asked(|settings| settings.width = 0),
+            asked(|settings| settings.colours = 25),
+            asked(|settings| settings.margin = 4),
         ];
 
-        let said = refusals.map(|(picture, settings)| ready(&picture, settings).err());
+        let said = refusals.map(|settings| ready(settings).err());
+        let too_tall = ready(Settings::default()).and_then(|order| coloured(&ribbon, order));
 
         assert_eq!(
             said.map(Option::unwrap_or_default),
@@ -195,28 +210,49 @@ mod tests {
                 "A grid needs at least one cell across.",
                 "A sheet holds from 2 to 24 colours, like a big box of crayons.",
                 "A margin from 5 mm, or the title and the credit fall off the page, to 20 mm, or the cells shrink.",
-                "The cells got too small for their numbers. Fewer cells across, or bigger paper?",
             ]
+        );
+        assert_eq!(
+            too_tall.err().as_deref(),
+            Some("The cells got too small for their numbers. Fewer cells across, or bigger paper?")
         );
     }
 
     #[test]
-    fn a_sheet_is_painted_as_png_bytes_of_its_whole_page_upright_or_on_its_side() {
+    fn a_sheet_and_its_preview_are_painted_as_png_bytes_of_their_whole_page_upright_or_on_its_side_named_as_the_sheet()
+     {
         let picture = red_and_yellow();
         let on_its_side = Settings {
             landscape: true,
             ..Settings::default()
         };
-
-        let pages = [Settings::default(), on_its_side].map(|settings| {
-            ready(&picture, settings)
-                .and_then(|order| paint(&picture, "red-yellow.png", order, make_sheet))
+        let page = |bytes: &[u8]| {
+            png_file::read(bytes)
                 .ok()
-                .and_then(|bytes| png_file::read(&bytes).ok())
                 .map(|sheet| (sheet.width(), sheet.height()))
+        };
+
+        let painted = [Settings::default(), on_its_side].map(|settings| {
+            ready(settings)
+                .and_then(|order| paint(&coloured(&picture, order)?, "red-yellow.png", order))
+                .map(|painted| (page(&painted.sheet), page(&painted.preview), painted.name))
         });
 
-        assert_eq!(pages, [Some((2480, 3508)), Some((3508, 2480))]);
+        assert_eq!(
+            painted,
+            [
+                Ok((
+                    Some((2480, 3508)),
+                    Some((2480, 3508)),
+                    "red-yellow-48-8-a4.sheet.png".to_string()
+                )),
+                Ok((
+                    Some((3508, 2480)),
+                    Some((3508, 2480)),
+                    "red-yellow-48-8-a4-landscape.sheet.png".to_string()
+                )),
+            ]
+        );
     }
 
     #[test]
