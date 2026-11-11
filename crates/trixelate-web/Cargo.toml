@@ -4,7 +4,8 @@ description = "The browser page that turns a picture into a colour-by-number pix
 publish = false
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
+# Leptos pulls in uuid, which needs 1.89; the library and the command line need only 1.88.
+rust-version = "1.89"
 license.workspace = true
 repository.workspace = true
 

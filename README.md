@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Maeevick/trixelate/actions/workflows/ci.yml/badge.svg)](https://github.com/Maeevick/trixelate/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Rust 1.99+](https://img.shields.io/badge/rust-1.99%2B-orange.svg)
+![Rust 1.88+](https://img.shields.io/badge/rust-1.88%2B-orange.svg)
 
 **Any picture, turned into a colour-by-number pixel sheet ready to print.**
 
