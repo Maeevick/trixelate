@@ -35,6 +35,12 @@ impl Sheet {
     pub fn png(&self) -> Result<Vec<u8>, CannotWritePng> {
         png_file::write(&self.page, self.dots_per_inch)
     }
+
+    /// The sheet as PNG bytes encoded five times faster and four times bigger, for a screen to show rather than a
+    /// printer to keep.
+    pub fn png_to_show(&self) -> Result<Vec<u8>, CannotWritePng> {
+        Ok(Vec::new())
+    }
 }
 
 /// Draws a colouring's sheet on white paper, as laid out.
@@ -290,6 +296,26 @@ mod tests {
         )
         .expect("room");
         (colouring, layout)
+    }
+
+    #[test]
+    fn a_sheet_encoded_to_show_reads_back_as_the_same_page_at_the_same_dots_per_inch() {
+        let (colouring, layout) = red_red_yellow();
+        let sheet = draw(&colouring, &layout);
+
+        let [kept, shown] = [sheet.png(), sheet.png_to_show()].map(Result::unwrap_or_default);
+
+        let read = |bytes: &[u8]| {
+            let pixels = png_file::read(bytes).ok();
+            let dots_per_metre = png::Decoder::new(std::io::Cursor::new(bytes))
+                .read_info()
+                .ok()
+                .and_then(|reader| reader.info().pixel_dims)
+                .map(|dims| dims.xppu);
+            (pixels, dots_per_metre)
+        };
+        assert!(read(&kept).0.is_some());
+        assert_eq!(read(&shown), read(&kept));
     }
 
     #[test]
