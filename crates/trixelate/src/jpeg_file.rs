@@ -109,30 +109,34 @@ mod tests {
 
     const RED_CORNER: &[u8] = include_bytes!("../tests/fixtures/red-corner.jpg");
 
-    /// The red-cornered JPEG, sixteen by eight, red in its top left quarter and blue elsewhere, told by its EXIF to be
-    /// shown turned as a camera says, the tag written big-endian as most cameras do, or little-endian.
-    fn told_to_turn(orientation: u16, big_endian: bool) -> Vec<u8> {
+    /// The red-cornered JPEG, sixteen by eight, red in its top left quarter and blue elsewhere, its EXIF holding these
+    /// tags with their short values, in order, written big-endian as most cameras do, or little-endian.
+    fn with_exif(tags: &[(u16, u16)], big_endian: bool) -> Vec<u8> {
         type Number = fn(u16) -> [u8; 2];
         let (order, number): (&[u8], Number) = if big_endian {
             (b"MM\x00\x2a\x00\x00\x00\x08", u16::to_be_bytes)
         } else {
             (b"II\x2a\x00\x08\x00\x00\x00", u16::to_le_bytes)
         };
-        let entry = [
-            number(1).as_slice(),
-            &number(0x0112),
-            &number(3),
-            &if big_endian {
-                [0, 0, 0, 1]
-            } else {
-                [1, 0, 0, 0]
-            },
-            &number(orientation),
-            &[0, 0],
-            &[0, 0, 0, 0],
-        ]
-        .concat();
-        let tiff = [order, &entry].concat();
+        let one = if big_endian {
+            [0, 0, 0, 1]
+        } else {
+            [1, 0, 0, 0]
+        };
+        let entries: Vec<u8> = tags
+            .iter()
+            .flat_map(|&(tag, value)| {
+                [
+                    number(tag).as_slice(),
+                    &number(3),
+                    &one,
+                    &number(value),
+                    &[0, 0],
+                ]
+                .concat()
+            })
+            .collect();
+        let tiff = [order, &number(tags.len() as u16), &entries, &[0, 0, 0, 0]].concat();
         let length = (2 + 6 + tiff.len()) as u16;
         [
             &RED_CORNER[..2],
@@ -143,6 +147,11 @@ mod tests {
             &RED_CORNER[2..],
         ]
         .concat()
+    }
+
+    /// The red-cornered JPEG told by its EXIF to be shown turned as a camera says, the orientation its only tag.
+    fn told_to_turn(orientation: u16, big_endian: bool) -> Vec<u8> {
+        with_exif(&[(ORIENTATION_TAG, orientation)], big_endian)
     }
 
     /// Where the red quarter shows: the corners of the picture as read that are red, with its width and height.
@@ -186,6 +195,28 @@ mod tests {
                 Ok((8, 16, "top right".to_string())),
                 Ok((8, 16, "bottom right".to_string())),
                 Ok((8, 16, "bottom left".to_string())),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_photo_is_turned_by_the_orientation_its_camera_writes_after_its_make_and_model_and_kept_without_one()
+     {
+        let (make, model) = (0x010F, 0x0110);
+        let photos = [
+            with_exif(&[(make, 0), (model, 0), (ORIENTATION_TAG, 6)], true),
+            with_exif(&[(make, 0), (model, 0), (ORIENTATION_TAG, 8)], false),
+            with_exif(&[(make, 0), (model, 0)], true),
+        ];
+
+        let turned = photos.map(|photo| read(&photo).map(|picture| red_corner_of(&picture)));
+
+        assert_eq!(
+            turned,
+            [
+                Ok((8, 16, "top right".to_string())),
+                Ok((8, 16, "bottom left".to_string())),
+                Ok((16, 8, "top left".to_string())),
             ]
         );
     }
