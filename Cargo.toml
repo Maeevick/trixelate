@@ -3,14 +3,14 @@ members = ["crates/trixelate", "crates/trixelate-cli", "crates/trixelate-web"]
 resolver = "3"
 
 [workspace.package]
-version = "0.3.2"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
 repository = "https://github.com/Maeevick/trixelate"
 
 [workspace.dependencies]
-trixelate = { path = "crates/trixelate", version = "0.3.2" }
+trixelate = { path = "crates/trixelate", version = "0.4.0" }
 
 [profile.dev.package."*"]
 opt-level = 3
