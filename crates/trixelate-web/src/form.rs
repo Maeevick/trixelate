@@ -6,6 +6,7 @@ use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::sheet::Sheet;
+use trixelate::warning::warnings_for;
 use trixelate::{Order, Refusal, fits_on_its_page, sheet_file_name};
 
 /// What the sheet is asked to be, as the form sets it.
@@ -126,6 +127,17 @@ pub fn not_a_picture(why: Option<Unreadable>) -> String {
             "That picture is {megapixels} megapixels. The goblins counting its dots gave up at {MOST_MEGAPIXELS}: shrink it a little first."
         ),
     }
+}
+
+/// What the settings are warned of, each as a sentence on the page, the cells' warning first.
+pub fn warned(settings: Settings) -> Vec<String> {
+    ColourCount::new(settings.colours)
+        .map(|colours| warnings_for(settings.width, colours))
+        .unwrap_or_default()
+        .first()
+        .map(|warning| sentence(warning.says()))
+        .into_iter()
+        .collect()
 }
 
 /// A text started with a capital, as a sentence on the page.
@@ -251,6 +263,22 @@ mod tests {
         ];
 
         assert_eq!(widths, [32, 128, 20, 32, 20]);
+    }
+
+    #[test]
+    fn every_warning_is_said_as_a_sentence_the_cells_first() {
+        let few = Settings {
+            width: 8,
+            colours: 3,
+            ..Settings::default()
+        };
+
+        let said = warned(few);
+
+        assert_eq!(said.len(), 2, "{said:?}");
+        assert!(said[0].starts_with("With so few cells across"));
+        assert!(said[1].starts_with("With so few colours"));
+        assert_eq!(warned(Settings::default()), Vec::<String>::new());
     }
 
     #[test]

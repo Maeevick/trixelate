@@ -7,15 +7,13 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use trixelate::layout::{PageFormat, most_cells_across};
-use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::Unreadable;
-use trixelate::warning::warnings_for;
 use trixelate::{make_preview, make_sheet, picture_file, sheet_file_name};
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
-use crate::form::{Settings, light_enough, not_a_picture, paint, ready, sentence};
+use crate::form::{Settings, light_enough, not_a_picture, paint, ready, warned};
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
 /// The id of the line saying why the download is disabled, for its button to point to.
@@ -213,12 +211,7 @@ pub fn App() -> impl IntoView {
         }
     };
 
-    let warning = move || {
-        let settings = settings.get();
-        ColourCount::new(settings.colours)
-            .ok()
-            .and_then(|colours| warnings_for(settings.width, colours).first().copied())
-    };
+    let warnings = move || warned(settings.get());
     let no_picture = move || dropped.with(Option::is_none);
     let slide = move |event: &leptos::ev::PointerEvent| {
         if let Some(element) = event
@@ -324,13 +317,13 @@ pub fn App() -> impl IntoView {
                         }
                     />
                 </label>
-                <Show when=move || warning().is_some()>
+                <Show when=move || !warnings().is_empty()>
                     <p
                         role="status"
                         class="col-span-full rounded-2xl bg-amber-100 px-4 py-2 text-sm text-amber-900 ring-1 ring-amber-200"
                     >
                         <span aria-hidden="true">"⚠️ "</span>
-                        {move || warning().map(|warning| sentence(warning.says()))}
+                        {move || warnings().join(" ")}
                     </p>
                 </Show>
                 <label class="flex flex-col gap-1 text-sm font-medium">
