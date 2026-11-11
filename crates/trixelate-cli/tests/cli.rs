@@ -220,6 +220,30 @@ fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot_its_miniatu
 }
 
 #[test]
+fn a_twelve_colour_sheet_on_a5_on_its_side_matches_its_golden_master_dot_for_dot_its_legend_along_the_bottom()
+ {
+    let folder = folder("golden-landscape");
+    let picture = a_twelve_colour_picture_in(&folder);
+    let sheet = folder.join("twelve-landscape.sheet.png");
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "--colours",
+        "12",
+        "--format",
+        "a5",
+        "--landscape",
+        "--output",
+        sheet.to_str().unwrap_or_default(),
+    ]);
+
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert!(matches_golden(&sheet, "twelve-a5-landscape.sheet.png"));
+}
+
+#[test]
 fn asked_for_a_preview_the_command_writes_the_sheet_coloured_in_beside_its_picture_named_as_a_preview()
  {
     let folder = folder("preview");
