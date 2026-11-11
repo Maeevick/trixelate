@@ -482,6 +482,50 @@ mod tests {
     }
 
     #[test]
+    fn a_bright_magenta_bubble_takes_the_ink_that_contrasts_with_it_most_black_at_over_seven_to_one()
+     {
+        let magenta_and_navy = [255, 78, 249, 255, 20, 30, 90, 255];
+        let picture = Picture::from_rgba(2, 1, &magenta_and_navy).expect("a picture");
+        let colouring = Colouring::of(
+            &picture,
+            GridSize::new(2, 1).expect("a grid"),
+            ColourCount::new(2).expect("a count"),
+        );
+        let layout = Layout::of(
+            &colouring,
+            PageFormat::A5,
+            Orientation::Portrait,
+            Margin::new(20).expect("a margin"),
+        )
+        .expect("room");
+
+        let sheet = draw(&colouring, &layout);
+
+        let inks: Vec<Vec<Rgb>> = layout
+            .bubbles()
+            .iter()
+            .zip(["1", "2"])
+            .map(|(bubble, number)| {
+                let (width, height) = lettering::size(number, layout.bubble_number_scale());
+                let (left, top) = (bubble.centre_x - width / 2, bubble.centre_y - height / 2);
+                let colours: BTreeSet<Rgb> = lettering::ink(number, layout.bubble_number_scale())
+                    .into_iter()
+                    .map(|(x, y)| sheet.pixel(left + x, top + y))
+                    .collect();
+                colours.into_iter().collect()
+            })
+            .collect();
+        let magenta = colouring
+            .palette()
+            .colours()
+            .iter()
+            .position(|&colour| colour == Rgb(255, 78, 249))
+            .expect("the magenta in the palette");
+        assert_eq!(inks[magenta], [BLACK]);
+        assert_eq!(inks[1 - magenta], [Rgb::WHITE]);
+    }
+
+    #[test]
     fn light_red_and_light_blue_bubbles_count_every_channel_and_write_their_numbers_in_black() {
         let red_pink_light_blue = [220, 30, 40, 255, 255, 110, 110, 255, 100, 140, 255, 255];
         let picture = Picture::from_rgba(3, 1, &red_pink_light_blue).expect("a picture");
