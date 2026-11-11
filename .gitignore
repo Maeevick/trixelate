@@ -3,4 +3,6 @@
 /mutants.out*
 sample/*
 !sample/goblin*.png
+
 lighthouse/
+reports/
