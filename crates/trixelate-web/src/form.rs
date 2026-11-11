@@ -4,7 +4,7 @@
 use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
-use trixelate::picture_file::Unreadable;
+use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::sheet::Sheet;
 use trixelate::{Order, Refusal, fits_on_its_page, sheet_file_name};
 
@@ -88,13 +88,23 @@ fn explain(no_room: NoRoom) -> String {
 
 /// Whether a file of this many bytes is light enough to read as a picture.
 pub fn light_enough(bytes: f64) -> bool {
-    bytes >= 0.0
+    bytes <= (MOST_MEGABYTES * 1_000_000) as f64
 }
 
 /// Why a dropped file gives no picture, worded for a parent: too heavy to read, or not a picture the goblins can read.
 pub fn not_a_picture(why: Option<Unreadable>) -> String {
-    let _ = why;
-    "That does not look like a PNG or a JPEG. Goblins only come in those two flavours.".to_string()
+    match why {
+        None => format!(
+            "That file weighs over {MOST_MEGABYTES} MB, more than any picture a sheet needs. Shrink it a little first."
+        ),
+        Some(Unreadable::NeitherPngNorJpeg) => {
+            "That does not look like a PNG or a JPEG. Goblins only come in those two flavours."
+                .to_string()
+        }
+        Some(Unreadable::TooBig { megapixels }) => format!(
+            "That picture is {megapixels} megapixels. The goblins counting its dots gave up at {MOST_MEGAPIXELS}: shrink it a little first."
+        ),
+    }
 }
 
 /// A text started with a capital, as a sentence on the page.
