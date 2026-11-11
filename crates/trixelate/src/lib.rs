@@ -138,6 +138,13 @@ pub fn preview_file_name(picture_file_name: &str, order: &Order) -> String {
     named_after(picture_file_name, order, "preview")
 }
 
+/// A sheet's or a preview's file name stamped with the moment it was made, in UTC to the second, before what it is, so
+/// that a sheet made again never takes an older one's name: `goblin-48-8-a4-20261111T142915Z.sheet.png`.
+pub fn stamped(file_name: &str, seconds_since_1970: u64) -> String {
+    let _ = seconds_since_1970;
+    file_name.to_string()
+}
+
 fn named_after(picture_file_name: &str, order: &Order, what: &str) -> String {
     let stem = std::path::Path::new(picture_file_name)
         .file_stem()
@@ -332,6 +339,26 @@ mod tests {
             .map(|name| make_sheet(&picture, order(4, PageFormat::A4), name));
 
         assert!(red.is_ok() && red != yellow);
+    }
+
+    #[test]
+    fn a_name_is_stamped_with_the_utc_second_it_was_made_before_what_it_is() {
+        let names = [
+            stamped("goblin-48-8-a4.sheet.png", 0),
+            stamped("my.photo-64-12-a3-landscape.preview.png", 1_794_407_355),
+            stamped("goblin-32-8-a5.sheet.png", 1_835_397_296),
+            stamped("goblin-32-8-a5.sheet.png", 1_835_481_599),
+        ];
+
+        assert_eq!(
+            names,
+            [
+                "goblin-48-8-a4-19700101T000000Z.sheet.png",
+                "my.photo-64-12-a3-landscape-20261111T142915Z.preview.png",
+                "goblin-32-8-a5-20280229T003456Z.sheet.png",
+                "goblin-32-8-a5-20280229T235959Z.sheet.png",
+            ]
+        );
     }
 
     #[test]
