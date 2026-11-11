@@ -26,7 +26,7 @@ web: ## the page, served at http://127.0.0.1:8080 and rebuilt on every change
 	cd crates/trixelate-web && trunk serve --cargo-profile web
 
 web-build: ## the page, built for any static host in crates/trixelate-web/dist
-	cd crates/trixelate-web && trunk build --release
+	cd crates/trixelate-web && trunk build --release --cargo-profile web-release
 
 LIGHTHOUSE_PORT := 8090
 LIGHTHOUSE_PAGE := http://127.0.0.1:$(LIGHTHOUSE_PORT)/
