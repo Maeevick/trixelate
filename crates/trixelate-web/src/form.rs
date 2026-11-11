@@ -4,7 +4,8 @@
 use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
-use trixelate::{Order, Refusal, fits_on_its_page, png_file, sheet_file_name};
+use trixelate::sheet::Sheet;
+use trixelate::{Order, Refusal, fits_on_its_page, sheet_file_name};
 
 /// What the sheet is asked to be, as the form sets it.
 #[derive(Clone, Copy, PartialEq)]
@@ -54,13 +55,14 @@ pub fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
 }
 
 /// How a sheet or its preview is drawn from a picture, its order and the name it is titled with.
-pub type Making = fn(&Picture, Order, &str) -> Result<Picture, NoRoom>;
+pub type Making = fn(&Picture, Order, &str) -> Result<Sheet, NoRoom>;
 
 /// The sheet ordered, or its preview, as PNG bytes, both titled with the name the sheet is saved under so that only
 /// their cells differ, or why it cannot be made.
 pub fn paint(picture: &Picture, name: &str, order: Order, make: Making) -> Result<Vec<u8>, String> {
     let sheet = make(picture, order, &sheet_file_name(name, &order)).map_err(explain)?;
-    png_file::write(&sheet, order.format().dots_per_inch())
+    sheet
+        .png()
         .map_err(|_| "The sheet could not be turned into a PNG. That one is on us.".to_string())
 }
 
@@ -95,7 +97,7 @@ pub fn sentence(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use trixelate::make_sheet;
+    use trixelate::{make_sheet, png_file};
 
     fn red_and_yellow() -> Picture {
         Picture::from_rgba(2, 1, &[220, 30, 40, 255, 250, 220, 60, 255]).expect("a picture")

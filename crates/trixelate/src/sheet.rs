@@ -4,19 +4,46 @@ use crate::colouring::Colouring;
 use crate::layout::{CREDIT, Disc, Layout};
 use crate::lettering;
 use crate::picture::{Picture, Rgb};
+use crate::png_file::{self, CannotWritePng};
 
 const LINE_GREY: Rgb = Rgb(170, 170, 170);
 const NUMBER_GREY: Rgb = Rgb(90, 90, 90);
 const BLACK: Rgb = Rgb(0, 0, 0);
 const OUTLINES_PER_BUBBLE_DIAMETER: u32 = 24;
 
+/// The page printed for the child, or its preview: its dots, and how finely they are printed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Sheet {
+    page: Picture,
+    dots_per_inch: u32,
+}
+
+impl Sheet {
+    pub fn width(&self) -> u32 {
+        self.page.width()
+    }
+
+    pub fn height(&self) -> u32 {
+        self.page.height()
+    }
+
+    pub fn pixel(&self, x: u32, y: u32) -> Rgb {
+        self.page.pixel(x, y)
+    }
+
+    /// The sheet as PNG bytes that tell printers its dots per inch, so it prints at its paper's size.
+    pub fn png(&self) -> Result<Vec<u8>, CannotWritePng> {
+        png_file::write(&self.page, self.dots_per_inch)
+    }
+}
+
 /// Draws a colouring's sheet on white paper, as laid out.
-pub fn draw(colouring: &Colouring, layout: &Layout) -> Picture {
+pub fn draw(colouring: &Colouring, layout: &Layout) -> Sheet {
     drawn_with(number_the_cells, colouring, layout)
 }
 
 /// Draws a colouring's sheet as it looks once coloured in: every cell filled with its colour inside its outline.
-pub fn draw_coloured_in(colouring: &Colouring, layout: &Layout) -> Picture {
+pub fn draw_coloured_in(colouring: &Colouring, layout: &Layout) -> Sheet {
     drawn_with(colour_the_cells, colouring, layout)
 }
 
@@ -25,7 +52,7 @@ fn drawn_with(
     fill_the_cells: fn(&mut Paper, &Colouring, &Layout),
     colouring: &Colouring,
     layout: &Layout,
-) -> Picture {
+) -> Sheet {
     let mut paper = Paper::blank(layout.page_width(), layout.page_height());
     outline_the_cells(&mut paper, colouring, layout);
     fill_the_cells(&mut paper, colouring, layout);
@@ -33,7 +60,10 @@ fn drawn_with(
     draw_the_legend(&mut paper, colouring, layout);
     write_the_credit(&mut paper, layout);
     write_the_title(&mut paper, layout);
-    paper.into_picture()
+    Sheet {
+        page: paper.into_picture(),
+        dots_per_inch: layout.dots_per_inch(),
+    }
 }
 
 /// Fills each cell with its colour inside its outline, as a child who coloured it in would.

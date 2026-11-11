@@ -19,6 +19,7 @@ use grid::GridSize;
 use layout::{Layout, Margin, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
+use sheet::Sheet;
 
 /// What a sheet is asked to be: its cells across, its number of colours, its paper, which way up it lies and its
 /// margin, only ever made by [`Order::new`].
@@ -83,14 +84,14 @@ impl Order {
 
 /// Turns a picture into the colour-by-number sheet ordered, titled with its file name, or says what lacks room on the
 /// page.
-pub fn make_sheet(picture: &Picture, order: Order, file_name: &str) -> Result<Picture, NoRoom> {
+pub fn make_sheet(picture: &Picture, order: Order, file_name: &str) -> Result<Sheet, NoRoom> {
     let (colouring, layout) = lay_out(picture, order)?;
     Ok(sheet::draw(&colouring, &layout.titled(file_name)))
 }
 
 /// Turns a picture into the preview of the sheet ordered: the sheet as it looks once coloured in, titled with its file
 /// name, or says what lacks room on the page, as making the sheet would.
-pub fn make_preview(picture: &Picture, order: Order, file_name: &str) -> Result<Picture, NoRoom> {
+pub fn make_preview(picture: &Picture, order: Order, file_name: &str) -> Result<Sheet, NoRoom> {
     let (colouring, layout) = lay_out(picture, order)?;
     Ok(sheet::draw_coloured_in(
         &colouring,

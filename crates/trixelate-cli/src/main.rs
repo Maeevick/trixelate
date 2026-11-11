@@ -15,10 +15,10 @@ use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
+use trixelate::sheet::Sheet;
 use trixelate::warning::warnings_for;
 use trixelate::{
-    Order, Refusal, make_preview, make_sheet, picture_file, png_file, preview_file_name,
-    sheet_file_name,
+    Order, Refusal, make_preview, make_sheet, picture_file, preview_file_name, sheet_file_name,
 };
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -186,7 +186,7 @@ fn sure() -> bool {
 }
 
 /// How the command draws what it writes, from a picture, its order and its file name.
-type Making = fn(&Picture, Order, &str) -> Result<Picture, NoRoom>;
+type Making = fn(&Picture, Order, &str) -> Result<Sheet, NoRoom>;
 /// How the command names what it writes, from its picture's file name and its order.
 type Naming = fn(&str, &Order) -> String;
 
@@ -208,7 +208,8 @@ fn run(cli: Cli, order: Order) -> Result<String, String> {
         .unwrap_or_else(|| beside(&cli.picture, &order, named));
     let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();
     let sheet = make(&picture, order, &file_name).map_err(explain)?;
-    let bytes = png_file::write(&sheet, order.format().dots_per_inch())
+    let bytes = sheet
+        .png()
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
     Ok(report::written(

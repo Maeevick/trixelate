@@ -1,4 +1,4 @@
-//! Pictures read from PNG bytes and sheets written as PNG bytes, at 300 dots per inch.
+//! Pictures read from PNG bytes, and pages written as PNG bytes that tell printers their dots per inch.
 
 use std::io::Cursor;
 

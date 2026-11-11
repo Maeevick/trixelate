@@ -204,6 +204,7 @@ pub struct Title {
 pub struct Layout {
     page_width: u32,
     page_height: u32,
+    dots_per_inch: u32,
     grid: GridPlace,
     line: u32,
     cell_number_scale: u32,
@@ -333,6 +334,7 @@ impl Layout {
         Ok(Layout {
             page_width,
             page_height,
+            dots_per_inch,
             bubbles: placed.bubbles,
             grid: placed.grid,
             line: placed.line,
@@ -351,6 +353,11 @@ impl Layout {
 
     pub fn page_height(&self) -> u32 {
         self.page_height
+    }
+
+    /// How finely the page is printed, as its paper asks.
+    pub fn dots_per_inch(&self) -> u32 {
+        self.dots_per_inch
     }
 
     /// Where the grid lies.
