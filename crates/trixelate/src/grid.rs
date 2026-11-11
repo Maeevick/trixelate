@@ -1,5 +1,7 @@
 //! The columns and rows of cells a picture is simplified into, each cell the colour of the pixels it covers.
 
+use std::num::NonZeroU32;
+
 use crate::picture::{Picture, Rgb};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -20,10 +22,13 @@ impl GridSize {
 
     /// As many columns as asked, and as many rows as keep the picture's proportions with square cells:
     /// the nearest count, and at least one.
-    pub fn keeping_the_proportions_of(picture: &Picture, columns: u32) -> Result<GridSize, NoCell> {
+    pub fn keeping_the_proportions_of(picture: &Picture, columns: NonZeroU32) -> GridSize {
         let (width, height) = (u64::from(picture.width()), u64::from(picture.height()));
-        let rows = (u64::from(columns) * height + width / 2) / width;
-        GridSize::new(columns, u32::try_from(rows.max(1)).unwrap_or(u32::MAX))
+        let rows = (u64::from(columns.get()) * height + width / 2) / width;
+        GridSize {
+            columns: columns.get(),
+            rows: u32::try_from(rows.max(1)).unwrap_or(u32::MAX),
+        }
     }
 
     pub fn columns(&self) -> u32 {
@@ -152,26 +157,15 @@ mod tests {
             (3, 2, 4),
             (10, 7, 5),
             (1000, 10, 10),
-            (4, 3, 0),
         ];
 
         let sizes = asked.map(|(width, height, columns)| {
-            GridSize::keeping_the_proportions_of(&blank(width, height), columns)
-                .map(|size| (size.columns(), size.rows()))
+            let columns = NonZeroU32::new(columns).expect("some columns");
+            let size = GridSize::keeping_the_proportions_of(&blank(width, height), columns);
+            (size.columns(), size.rows())
         });
 
-        assert_eq!(
-            sizes,
-            [
-                Ok((32, 32)),
-                Ok((8, 6)),
-                Ok((6, 8)),
-                Ok((4, 3)),
-                Ok((5, 4)),
-                Ok((10, 1)),
-                Err(NoCell)
-            ]
-        );
+        assert_eq!(sizes, [(32, 32), (8, 6), (6, 8), (4, 3), (5, 4), (10, 1)]);
     }
 
     #[test]

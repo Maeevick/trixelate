@@ -1,12 +1,12 @@
 //! The page's parts: the picture dropped in, the settings, the preview and the download.
 //! Everything happens here, in the browser: no picture is ever sent anywhere.
 
+use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use trixelate::grid::GridSize;
 use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
@@ -57,8 +57,8 @@ fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
     if settings.width > most {
         return Err(beyond(settings.format, most));
     }
-    let grid = GridSize::keeping_the_proportions_of(picture, settings.width)
-        .map_err(|_| "A grid needs at least one cell across.".to_string())?;
+    let cells_across = NonZeroU32::new(settings.width)
+        .ok_or_else(|| "A grid needs at least one cell across.".to_string())?;
     let colours = ColourCount::new(settings.colours).map_err(|_| {
         "A sheet holds from 2 to 24 colours, like a big box of crayons.".to_string()
     })?;
@@ -66,7 +66,7 @@ fn ready(picture: &Picture, settings: Settings) -> Result<Order, String> {
         "A margin from 5 mm, or the title and the credit fall off the page, to 20 mm, or the cells shrink.".to_string()
     })?;
     let order = Order {
-        grid,
+        cells_across,
         colours,
         format: settings.format,
         orientation: if settings.landscape {

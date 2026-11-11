@@ -4,6 +4,7 @@ mod report;
 
 use std::fs;
 use std::io::{BufRead, ErrorKind, IsTerminal, Write};
+use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Instant;
@@ -11,7 +12,6 @@ use std::time::Instant;
 use clap::error::ErrorKind as ArgumentError;
 use clap::{CommandFactory, Parser, ValueEnum};
 use report::Written;
-use trixelate::grid::GridSize;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
@@ -185,10 +185,9 @@ type Naming = fn(&str, &Order) -> String;
 fn run(cli: Cli) -> Result<String, String> {
     let started = Instant::now();
     let picture = read_picture(&cli.picture)?;
-    let grid = GridSize::keeping_the_proportions_of(&picture, cells_across(&cli))
-        .map_err(|_| "a grid needs at least one cell".to_string())?;
     let order = Order {
-        grid,
+        cells_across: NonZeroU32::new(cells_across(&cli))
+            .ok_or_else(|| "a grid needs at least one cell".to_string())?,
         colours: cli.colours,
         format: cli.format.into(),
         orientation: if cli.landscape {
@@ -215,6 +214,7 @@ fn run(cli: Cli) -> Result<String, String> {
     let bytes = png_file::write(&sheet, order.format.dots_per_inch())
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
     write_sheet(&sheet_path, &bytes, cli.force)?;
+    let grid = order.grid_for(&picture);
     Ok(report::written(
         what,
         &sheet_path,

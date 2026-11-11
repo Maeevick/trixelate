@@ -12,20 +12,31 @@ pub mod png_file;
 pub mod sheet;
 pub mod warning;
 
+use std::num::NonZeroU32;
+
 use colouring::Colouring;
 use grid::GridSize;
 use layout::{Layout, Margin, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
 
-/// What a sheet is asked to be: its grid, its number of colours, its paper, which way up it lies and its margin.
+/// What a sheet is asked to be: its cells across, its number of colours, its paper, which way up it lies and its
+/// margin.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Order {
-    pub grid: GridSize,
+    pub cells_across: NonZeroU32,
     pub colours: ColourCount,
     pub format: PageFormat,
     pub orientation: Orientation,
     pub margin: Margin,
+}
+
+impl Order {
+    /// The grid a picture is simplified into for this order: the cells across asked, and the rows that keep the
+    /// picture's proportions.
+    pub fn grid_for(&self, picture: &Picture) -> GridSize {
+        GridSize::keeping_the_proportions_of(picture, self.cells_across)
+    }
 }
 
 /// Turns a picture into the colour-by-number sheet ordered, titled with its file name, or says what lacks room on the
@@ -51,7 +62,7 @@ pub fn fits_on_its_page(picture: &Picture, order: Order) -> Result<(), NoRoom> {
 }
 
 fn lay_out(picture: &Picture, order: Order) -> Result<(Colouring, Layout), NoRoom> {
-    let colouring = Colouring::of(picture, order.grid, order.colours);
+    let colouring = Colouring::of(picture, order.grid_for(picture), order.colours);
     let layout = Layout::of(&colouring, order.format, order.orientation, order.margin)?;
     Ok((colouring, layout))
 }
@@ -80,7 +91,7 @@ fn named_after(picture_file_name: &str, order: &Order, what: &str) -> String {
     };
     format!(
         "{stem}-{}-{}-{paper}{landscape}.{what}.png",
-        order.grid.columns(),
+        order.cells_across,
         order.colours.get()
     )
 }
@@ -91,7 +102,7 @@ mod tests {
 
     fn order(columns: u32, format: PageFormat) -> Order {
         Order {
-            grid: GridSize::new(columns, 2).expect("a grid"),
+            cells_across: NonZeroU32::new(columns).expect("some cells across"),
             colours: ColourCount::new(2).expect("a count"),
             format,
             orientation: Orientation::Portrait,
@@ -177,7 +188,7 @@ mod tests {
      {
         let named = |picture, (columns, colours), format, orientation| {
             let order = Order {
-                grid: GridSize::new(columns, 2).expect("a grid"),
+                cells_across: NonZeroU32::new(columns).expect("some cells across"),
                 colours: ColourCount::new(colours).expect("a count"),
                 format,
                 orientation,
