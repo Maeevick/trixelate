@@ -1,0 +1,31 @@
+# Who holds each file and under which licence, after the REUSE specification 3.3 (https://reuse.software), checked by
+# `reuse lint`. The goblin pictures are left out on purpose until their origin is known.
+version = 1
+
+[[annotations]]
+path = [
+  ".cargo/**",
+  ".github/**",
+  ".gitignore",
+  "Cargo.lock",
+  "Cargo.toml",
+  "deny.toml",
+  "Makefile",
+  "*.md",
+  "crates/*/Cargo.toml",
+  "crates/**/*.rs",
+  "crates/trixelate-web/index.html",
+  "crates/trixelate-web/style.css",
+  "crates/trixelate-web/Trunk.toml",
+  "crates/trixelate-web/csp.py",
+  "crates/trixelate-cli/tests/golden/**",
+  "crates/trixelate/tests/fixtures/**",
+  "lighthouse/.gitkeep",
+]
+SPDX-FileCopyrightText = "2026 Aurel | Maeevick"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "crates/trixelate-web/fonts/VT323*"
+SPDX-FileCopyrightText = "2011 The VT323 Project Authors (peter.hull@oikoi.com)"
+SPDX-License-Identifier = "OFL-1.1"
