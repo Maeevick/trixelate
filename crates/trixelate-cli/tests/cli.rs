@@ -269,6 +269,25 @@ fn an_existing_sheet_is_kept_unless_the_command_is_told_to_overwrite_it() {
 }
 
 #[test]
+fn forcing_an_overwrite_is_refused_with_an_output_so_a_typo_never_replaces_the_picture_with_its_sheet()
+ {
+    let folder = folder("force-output");
+    let picture = a_picture_in(&folder);
+    let original = fs::read(&picture).expect("the picture");
+    let picture = picture.to_str().unwrap_or_default();
+
+    let run = trixelate(&[picture, "--width", "4", "-o", picture, "--force"]);
+
+    assert_eq!(run.status.code(), Some(2));
+    assert!(
+        text(&run.stderr).contains("--force"),
+        "{}",
+        text(&run.stderr)
+    );
+    assert_eq!(fs::read(picture).ok(), Some(original));
+}
+
+#[test]
 fn a_sheet_that_cannot_be_made_fails_saying_why_and_what_to_try() {
     let folder = folder("failures");
     let not_a_png = folder.join("drawing.txt");
