@@ -6,3 +6,9 @@ public_url = "./"
 
 [tools]
 tailwindcss = "4.3.5"
+
+# The release page's Content-Security-Policy, hashing what Trunk writes inline: see csp.py.
+[[hooks]]
+stage = "post_build"
+command = "python3"
+command_arguments = ["-I", "csp.py"]
