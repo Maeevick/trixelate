@@ -53,7 +53,7 @@ struct Cli {
     #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET, value_parser = margin)]
     margin: Margin,
 
-    /// Where to write the sheet, never over an existing file [default: beside the picture, as <picture>-<width>-<colours>-<format>-<UTC second>.sheet.png, with -landscape after the format when asked, and .preview.png for a preview]
+    /// Where to write the sheet: a new file, or a folder to write it in under its default name [default: beside the picture, as <picture>-<width>-<colours>-<format>-<UTC second>.sheet.png, with -landscape after the format when asked, and .preview.png for a preview]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -200,9 +200,14 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
         Written::Sheet => (make_sheet, sheet_file_name),
         Written::Preview => (make_preview, preview_file_name),
     };
-    let sheet_path = cli
-        .output
-        .unwrap_or_else(|| beside(&cli.picture, &order, named, now));
+    let default_name = named_and_stamped(&cli.picture, &order, named, now);
+    let sheet_path = match cli.output {
+        Some(folder) if folder.is_dir() || folder.file_name().is_none() => {
+            folder.join(default_name)
+        }
+        Some(file) => file,
+        None => cli.picture.with_file_name(default_name),
+    };
     let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();
     let sheet = make(&picture, order, &file_name).map_err(explain)?;
     let bytes = sheet
@@ -271,14 +276,14 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
     })
 }
 
-/// Where a sheet or its preview goes when no output is given: beside its picture, named after it and stamped with the
-/// second it was made, so that it never takes an older sheet's name.
-fn beside(picture: &Path, order: &Order, named: Naming, now: SystemTime) -> PathBuf {
+/// What a sheet or its preview is called beside its picture or in the folder given as its output: named after its
+/// picture and stamped with the second it was made, so that it never takes an older sheet's name.
+fn named_and_stamped(picture: &Path, order: &Order, named: Naming, now: SystemTime) -> String {
     let name = picture.file_name().unwrap_or_default().to_string_lossy();
     let seconds = now
         .duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |since| since.as_secs());
-    picture.with_file_name(stamped(&named(&name, order), seconds))
+    stamped(&named(&name, order), seconds)
 }
 
 fn explain(no_room: NoRoom) -> String {
