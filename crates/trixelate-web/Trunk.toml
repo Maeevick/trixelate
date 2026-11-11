@@ -7,8 +7,8 @@ public_url = "./"
 [tools]
 tailwindcss = "4.3.5"
 
-# The release page's Content-Security-Policy, hashing what Trunk writes inline: see csp.py.
+# The release page's Content-Security-Policy, hashing what Trunk writes inline: see crates/trixelate-csp.
 [[hooks]]
 stage = "post_build"
-command = "python3"
-command_arguments = ["-I", "csp.py"]
+command = "cargo"
+command_arguments = ["run", "--quiet", "--locked", "-p", "trixelate-csp"]

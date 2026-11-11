@@ -14,7 +14,7 @@ check: ## formatting, lints, tests and no uncovered line but the command line's 
 	cargo fmt --all --check
 	cargo clippy --workspace --all-targets -- -D warnings
 	cargo clippy -p trixelate-web --target wasm32-unknown-unknown -- -D warnings
-	cargo llvm-cov --workspace --ignore-filename-regex '(trixelate-cli/src/main|trixelate-web/src/(app|main))\.rs' --fail-uncovered-lines 0 --summary-only
+	cargo llvm-cov --workspace --ignore-filename-regex '(trixelate-cli/src/main|trixelate-csp/src/main|trixelate-web/src/(app|main))\.rs' --fail-uncovered-lines 0 --summary-only
 
 mutants: ## whether the tests bite, at the end of a slice
 	cargo mutants
@@ -38,7 +38,7 @@ web: ## the page, served at http://127.0.0.1:8080 and rebuilt on every change
 web-build: ## the page, built for any static host in crates/trixelate-web/dist, failing without its Content-Security-Policy
 	cd crates/trixelate-web && trunk build --release --cargo-profile web-release
 	@grep -q '<meta http-equiv="Content-Security-Policy"' crates/trixelate-web/dist/index.html \
-		|| { echo "the built page carries no Content-Security-Policy: see crates/trixelate-web/csp.py"; exit 1; }
+		|| { echo "the built page carries no Content-Security-Policy: see crates/trixelate-csp"; exit 1; }
 
 LIGHTHOUSE_PORT := 8090
 LIGHTHOUSE_PAGE := http://127.0.0.1:$(LIGHTHOUSE_PORT)/

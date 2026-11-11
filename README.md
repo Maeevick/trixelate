@@ -62,7 +62,7 @@ The same sheets without a command line or a server, the page needing Rust 1.89 r
 rustup target add wasm32-unknown-unknown
 cargo install trunk
 make web        # served at http://127.0.0.1:8080, rebuilt on every change
-make web-build  # a static site in crates/trixelate-web/dist, for any host; python3 writes its policy, and the build fails without it
+make web-build  # a static site in crates/trixelate-web/dist, for any host; crates/trixelate-csp writes its policy, and the build fails without it
 ```
 
 ![The page: the goblin dropped in on the left, its sheet with its miniature in the corner on the right, coloured in left of a line slid halfway across, the settings and the download button above](docs/web.png)
@@ -79,7 +79,7 @@ make web-build  # a static site in crates/trixelate-web/dist, for any host; pyth
 
 ![A twelve-colour sheet on A5: the twelve colours in miniature in the top left corner, the legend beside them, the grid of numbered cells below, the file name on top](crates/trixelate-cli/tests/golden/twelve-a5.sheet.png)
 
-The workspace holds the library, `crates/trixelate`, the command line, `crates/trixelate-cli`, and the page, `crates/trixelate-web`. The library takes bytes and gives bytes, with no file or terminal in it, so it can also run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
+The workspace holds the library, `crates/trixelate`, the command line, `crates/trixelate-cli`, the page, `crates/trixelate-web`, and the hook that writes the page's Content-Security-Policy, `crates/trixelate-csp`. The library takes bytes and gives bytes, with no file or terminal in it, so it can also run in a browser as WebAssembly. The words it uses are in the [glossary](GLOSSARY.md).
 
 ## Contributing
 

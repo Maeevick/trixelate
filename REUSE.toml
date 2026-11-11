@@ -17,7 +17,6 @@ path = [
   "crates/trixelate-web/index.html",
   "crates/trixelate-web/style.css",
   "crates/trixelate-web/Trunk.toml",
-  "crates/trixelate-web/csp.py",
   "crates/trixelate-cli/tests/golden/**",
   "crates/trixelate/tests/fixtures/**",
   "lighthouse/.gitkeep",

@@ -76,7 +76,7 @@ jobs:
         include:
           - rust: "1.88"
             crates: the library and the command line
-            packages: -p trixelate -p trixelate-cli
+            packages: -p trixelate -p trixelate-cli -p trixelate-csp
           - rust: "1.89"
             crates: the page
             packages: -p trixelate-web
