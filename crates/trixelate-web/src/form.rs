@@ -286,7 +286,8 @@ mod tests {
                 format: from,
                 ..Settings::default()
             };
-            settings.on_paper(to).width
+            let moved = settings.on_paper(to);
+            (moved.format.name(), moved.width)
         };
 
         let widths = [
@@ -297,7 +298,10 @@ mod tests {
             across(20, PageFormat::A4, PageFormat::A0),
         ];
 
-        assert_eq!(widths, [32, 128, 20, 32, 20]);
+        assert_eq!(
+            widths,
+            [("A5", 32), ("A0", 128), ("A5", 20), ("A5", 32), ("A0", 20)]
+        );
     }
 
     #[test]
