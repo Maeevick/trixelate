@@ -49,6 +49,50 @@ fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
+/// The file a run wrote beside its picture under its default name, whatever UTC second it was stamped with.
+fn written_beside(folder: &Path, name: &str, what: &str) -> Option<PathBuf> {
+    let stamped = |file: &str| {
+        file.strip_prefix(&format!("{name}-"))
+            .and_then(|rest| rest.strip_suffix(&format!(".{what}.png")))
+            .is_some_and(|stamp| {
+                stamp.len() == 16
+                    && stamp.ends_with('Z')
+                    && stamp.char_indices().all(|(at, character)| match at {
+                        8 => character == 'T',
+                        15 => true,
+                        _ => character.is_ascii_digit(),
+                    })
+            })
+    };
+    fs::read_dir(folder)
+        .ok()?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .find(|path| {
+            path.file_name()
+                .and_then(|file| file.to_str())
+                .is_some_and(stamped)
+        })
+}
+
+#[test]
+fn a_sheet_written_beside_its_picture_is_stamped_with_the_utc_second_it_was_made() {
+    let folder = folder("stamped");
+    let picture = a_picture_in(&folder);
+
+    let run = trixelate(&[picture.to_str().unwrap_or_default(), "--width", "4"]);
+
+    let sheet = written_beside(&folder, "sunset-4-8-a4", "sheet");
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert!(
+        sheet
+            .as_ref()
+            .is_some_and(|sheet| text(&run.stdout).contains(&sheet.display().to_string())),
+        "{}",
+        text(&run.stdout)
+    );
+}
+
 #[test]
 fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_command_says_where()
 {
