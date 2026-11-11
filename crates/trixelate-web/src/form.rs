@@ -134,9 +134,8 @@ pub fn warned(settings: Settings) -> Vec<String> {
     ColourCount::new(settings.colours)
         .map(|colours| warnings_for(settings.width, colours))
         .unwrap_or_default()
-        .first()
-        .map(|warning| sentence(warning.says()))
         .into_iter()
+        .map(|warning| sentence(warning.says()))
         .collect()
 }
 
