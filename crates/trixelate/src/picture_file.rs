@@ -7,6 +7,9 @@ use crate::{jpeg_file, png_file};
 /// memory of a browser tab.
 pub const MOST_MEGAPIXELS: u64 = 50;
 
+/// The most megabytes a picture file may weigh, checked before it is read: ten times a 48 megapixel phone photo.
+pub const MOST_MEGABYTES: u64 = 100;
+
 /// Why a file's bytes give no picture.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Unreadable {

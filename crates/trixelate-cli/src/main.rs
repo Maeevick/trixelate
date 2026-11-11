@@ -3,7 +3,7 @@
 mod report;
 
 use std::fs;
-use std::io::{BufRead, ErrorKind, IsTerminal, Write};
+use std::io::{BufRead, ErrorKind, IsTerminal, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Instant;
@@ -14,7 +14,7 @@ use report::Written;
 use trixelate::layout::{self, Margin, NoRoom, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
-use trixelate::picture_file::{MOST_MEGAPIXELS, Unreadable};
+use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::warning::warnings_for;
 use trixelate::{
     Order, Refusal, make_preview, make_sheet, picture_file, png_file, preview_file_name,
@@ -238,9 +238,34 @@ fn write_sheet(path: &Path, bytes: &[u8], force: bool) -> Result<(), String> {
         .map_err(|error| format!("cannot write the sheet to {}: {error}", path.display()))
 }
 
+/// Reads a picture from a file, refusing anything but a file, and a file too heavy for any picture, before reading it.
 fn read_picture(path: &Path) -> Result<Picture, String> {
-    let bytes =
-        fs::read(path).map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+    let cannot_read = |error: std::io::Error| format!("cannot read {}: {error}", path.display());
+    let too_heavy = || {
+        format!(
+            "{} is over {MOST_MEGABYTES} MB, more than any picture a sheet needs: shrink it first",
+            path.display()
+        )
+    };
+    let most_bytes = MOST_MEGABYTES * 1_000_000;
+    let file = fs::File::open(path).map_err(cannot_read)?;
+    let metadata = file.metadata().map_err(cannot_read)?;
+    if !metadata.is_file() {
+        return Err(format!(
+            "{} is not a file: give it a PNG or JPEG picture",
+            path.display()
+        ));
+    }
+    if metadata.len() > most_bytes {
+        return Err(too_heavy());
+    }
+    let mut bytes = Vec::new();
+    file.take(most_bytes + 1)
+        .read_to_end(&mut bytes)
+        .map_err(cannot_read)?;
+    if bytes.len() as u64 > most_bytes {
+        return Err(too_heavy());
+    }
     picture_file::read(&bytes).map_err(|unreadable| match unreadable {
         Unreadable::NeitherPngNorJpeg => format!("{} is not a PNG or JPEG picture", path.display()),
         Unreadable::TooBig { megapixels } => format!(
