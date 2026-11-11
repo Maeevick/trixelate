@@ -141,10 +141,20 @@ fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
     }
 }
 
-/// Black on a light colour, white on a dark one, light meaning a luma of half or more, after ITU-R BT.709.
+/// Black or white, whichever contrasts more with a colour, after WCAG 2.2's relative luminance, so a bubble's number
+/// reads at no less than about 4.6 to 1.
 fn readable_on(Rgb(red, green, blue): Rgb) -> Rgb {
-    let luma = 2126 * u32::from(red) + 7152 * u32::from(green) + 722 * u32::from(blue);
-    if luma >= 10_000 * 128 {
+    let linear = |channel: u8| {
+        let share = f64::from(channel) / 255.0;
+        if share <= 0.04045 {
+            share / 12.92
+        } else {
+            ((share + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    let luminance = 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
+    let (with_black, with_white) = ((luminance + 0.05) / 0.05, 1.05 / (luminance + 0.05));
+    if with_black >= with_white {
         BLACK
     } else {
         Rgb::WHITE
