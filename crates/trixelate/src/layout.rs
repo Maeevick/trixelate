@@ -181,7 +181,7 @@ impl GridPlace {
 }
 
 /// The line crediting trixelate and its licence, written small at the bottom right of every sheet.
-pub const CREDIT: &str = "Made with trixelate (github.com/Maeevick/trixelate) - MIT License";
+pub const CREDIT: &str = "Made with github.com/Maeevick/trixelate - trixelate is MIT-licensed";
 
 /// Where the credit is written: the top left corner of its first character, and its scale.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -864,8 +864,8 @@ mod tests {
                 credit.top + height,
             )
         };
-        assert_eq!(edges(&a4), (3, 2480 - 236 - 1167, 2480 - 236, 3379, 3400));
-        assert_eq!(edges(&a5), (3, 1748 - 236 - 1167, 1748 - 236, 2351, 2372));
+        assert_eq!(edges(&a4), (3, 2480 - 236 - 1203, 2480 - 236, 3379, 3400));
+        assert_eq!(edges(&a5), (3, 1748 - 236 - 1203, 1748 - 236, 2351, 2372));
         Ok(())
     }
 
