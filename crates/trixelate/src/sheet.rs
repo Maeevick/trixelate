@@ -467,39 +467,33 @@ mod tests {
         assert!(frame.iter().all(|&(x, y)| sheet.pixel(x, y) == LINE_GREY));
     }
 
-    #[test]
-    fn a_bubbles_number_is_written_in_white_on_a_dark_colour_and_in_black_on_a_light_one() {
-        let (colouring, layout) = red_red_yellow();
-
-        let sheet = draw(&colouring, &layout);
-
-        let inks = layout
-            .bubbles()
-            .iter()
-            .zip(["1", "2"])
-            .map(|(bubble, number)| {
-                let (width, height) = lettering::size(number, layout.bubble_number_scale());
+    /// The inks each bubble's number is written in, bubble by bubble, the numbers counting from 1.
+    fn inks_of_the_numbers_in_the_bubbles(sheet: &Sheet, layout: &Layout) -> Vec<Vec<Rgb>> {
+        let scale = layout.bubble_number_scale();
+        (1..)
+            .zip(layout.bubbles())
+            .map(|(number, bubble): (usize, &Disc)| {
+                let number = number.to_string();
+                let (width, height) = lettering::size(&number, scale);
                 let (left, top) = (bubble.centre_x - width / 2, bubble.centre_y - height / 2);
-                let dots = lettering::ink(number, layout.bubble_number_scale());
-                let colours: std::collections::BTreeSet<Rgb> = dots
+                let colours: BTreeSet<Rgb> = lettering::ink(&number, scale)
                     .into_iter()
                     .map(|(x, y)| sheet.pixel(left + x, top + y))
                     .collect();
-                colours.into_iter().collect::<Vec<_>>()
-            });
-
-        assert_eq!(inks.collect::<Vec<_>>(), [vec![Rgb::WHITE], vec![BLACK]]);
+                colours.into_iter().collect()
+            })
+            .collect()
     }
 
-    #[test]
-    fn a_bright_magenta_bubble_takes_the_ink_that_contrasts_with_it_most_black_at_over_seven_to_one()
-     {
-        let magenta_and_navy = [255, 78, 249, 255, 20, 30, 90, 255];
-        let picture = Picture::from_rgba(2, 1, &magenta_and_navy).expect("a picture");
+    /// A one-row picture of these colours, coloured in as many, laid out upright on A5.
+    fn laid_out(colours: &[[u8; 4]]) -> (Colouring, Layout) {
+        let count = colours.len();
+        let picture =
+            Picture::from_rgba(count as u32, 1, colours.as_flattened()).expect("a picture");
         let colouring = Colouring::of(
             &picture,
-            GridSize::new(2, 1).expect("a grid"),
-            ColourCount::new(2).expect("a count"),
+            GridSize::new(count as u32, 1).expect("a grid"),
+            ColourCount::new(count).expect("a count"),
         );
         let layout = Layout::of(
             &colouring,
@@ -508,23 +502,29 @@ mod tests {
             Margin::new(20).expect("a margin"),
         )
         .expect("room");
+        (colouring, layout)
+    }
+
+    #[test]
+    fn a_bubbles_number_is_written_in_white_on_a_dark_colour_and_in_black_on_a_light_one() {
+        let (colouring, layout) = red_red_yellow();
 
         let sheet = draw(&colouring, &layout);
 
-        let inks: Vec<Vec<Rgb>> = layout
-            .bubbles()
-            .iter()
-            .zip(["1", "2"])
-            .map(|(bubble, number)| {
-                let (width, height) = lettering::size(number, layout.bubble_number_scale());
-                let (left, top) = (bubble.centre_x - width / 2, bubble.centre_y - height / 2);
-                let colours: BTreeSet<Rgb> = lettering::ink(number, layout.bubble_number_scale())
-                    .into_iter()
-                    .map(|(x, y)| sheet.pixel(left + x, top + y))
-                    .collect();
-                colours.into_iter().collect()
-            })
-            .collect();
+        assert_eq!(
+            inks_of_the_numbers_in_the_bubbles(&sheet, &layout),
+            [vec![Rgb::WHITE], vec![BLACK]]
+        );
+    }
+
+    #[test]
+    fn a_bright_magenta_bubble_takes_the_ink_that_contrasts_with_it_most_black_at_over_seven_to_one()
+     {
+        let (colouring, layout) = laid_out(&[[255, 78, 249, 255], [20, 30, 90, 255]]);
+
+        let sheet = draw(&colouring, &layout);
+
+        let inks = inks_of_the_numbers_in_the_bubbles(&sheet, &layout);
         let magenta = colouring
             .palette()
             .colours()
@@ -537,43 +537,20 @@ mod tests {
 
     #[test]
     fn light_red_and_light_blue_bubbles_count_every_channel_and_write_their_numbers_in_black() {
-        let red_pink_light_blue = [220, 30, 40, 255, 255, 110, 110, 255, 100, 140, 255, 255];
-        let picture = Picture::from_rgba(3, 1, &red_pink_light_blue).expect("a picture");
-        let colouring = Colouring::of(
-            &picture,
-            GridSize::new(3, 1).expect("a grid"),
-            ColourCount::new(3).expect("a count"),
-        );
-        let layout = Layout::of(
-            &colouring,
-            PageFormat::A5,
-            Orientation::Portrait,
-            Margin::new(20).expect("a margin"),
-        )
-        .expect("room");
+        let (colouring, layout) = laid_out(&[
+            [220, 30, 40, 255],
+            [255, 110, 110, 255],
+            [100, 140, 255, 255],
+        ]);
 
         let sheet = draw(&colouring, &layout);
 
-        let inks = layout
-            .bubbles()
-            .iter()
-            .zip(["1", "2", "3"])
-            .map(|(bubble, number)| {
-                let (width, height) = lettering::size(number, layout.bubble_number_scale());
-                let (left, top) = (bubble.centre_x - width / 2, bubble.centre_y - height / 2);
-                let colours: std::collections::BTreeSet<Rgb> =
-                    lettering::ink(number, layout.bubble_number_scale())
-                        .into_iter()
-                        .map(|(x, y)| sheet.pixel(left + x, top + y))
-                        .collect();
-                colours.into_iter().collect::<Vec<_>>()
-            });
         assert_eq!(
             colouring.palette().colours(),
             [Rgb(100, 140, 255), Rgb(220, 30, 40), Rgb(255, 110, 110)]
         );
         assert_eq!(
-            inks.collect::<Vec<_>>(),
+            inks_of_the_numbers_in_the_bubbles(&sheet, &layout),
             [vec![BLACK], vec![Rgb::WHITE], vec![BLACK]]
         );
     }

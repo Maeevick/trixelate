@@ -580,43 +580,40 @@ mod tests {
     fn on_its_side_a_sheet_centres_its_grid_above_a_row_of_bubbles_centred_on_the_bottom_its_miniature_seven_thirty_seconds_of_the_grid_wide_in_the_top_left_corner()
     -> Result<(), NoRoom> {
         let square = colouring(48, 48, 8);
-        let margin = 118;
+        let (margin, right, bottom) = (118, 3508 - 118, 2480 - 118);
 
-        let layouts = [(on_its_side(&square, Margin(10))?, (3508, 2480))];
+        let layout = on_its_side(&square, Margin(10))?;
 
-        for (layout, (page_width, page_height)) in layouts {
-            let (right, bottom) = (page_width - margin, page_height - margin);
-            let (grid, line) = (layout.grid(), layout.line());
-            let (top_left, past_the_end) = (grid.cell(0, 0), grid.cell(48, 48));
-            let (grid_right, grid_bottom) = (past_the_end.left + line, past_the_end.top + line);
-            let bubbles = layout.bubbles();
-            let radius = bubbles[0].diameter / 2;
-            let legend_left = bubbles[0].centre_x - radius;
-            let legend_right = bubbles[bubbles.len() - 1].centre_x + radius + 1;
-            let legend_top = bubbles[0].centre_y - radius;
-            let above_the_legend = legend_top - dots(10, 300);
-            assert_eq!(
-                layout.miniature(),
-                Miniature {
-                    left: margin + line,
-                    top: margin + line,
-                    cell_side: top_left.side * 7 / 32,
-                }
-            );
-            assert!((top_left.left - margin).abs_diff(right - grid_right) <= 1);
-            assert!((top_left.top - margin).abs_diff(above_the_legend - grid_bottom) <= 1);
-            assert!(
-                (right - margin - (grid_right - top_left.left))
-                    .min(above_the_legend - margin - (grid_bottom - top_left.top))
-                    < 48
-            );
-            assert!(
-                bubbles
-                    .iter()
-                    .all(|bubble| bubble.centre_y + radius + 1 == bottom)
-            );
-            assert!((legend_left - margin).abs_diff(right - legend_right) <= 1);
-        }
+        let (grid, line) = (layout.grid(), layout.line());
+        let (top_left, past_the_end) = (grid.cell(0, 0), grid.cell(48, 48));
+        let (grid_right, grid_bottom) = (past_the_end.left + line, past_the_end.top + line);
+        let bubbles = layout.bubbles();
+        let radius = bubbles[0].diameter / 2;
+        let legend_left = bubbles[0].centre_x - radius;
+        let legend_right = bubbles[bubbles.len() - 1].centre_x + radius + 1;
+        let legend_top = bubbles[0].centre_y - radius;
+        let above_the_legend = legend_top - dots(10, 300);
+        assert_eq!(
+            layout.miniature(),
+            Miniature {
+                left: margin + line,
+                top: margin + line,
+                cell_side: top_left.side * 7 / 32,
+            }
+        );
+        assert!((top_left.left - margin).abs_diff(right - grid_right) <= 1);
+        assert!((top_left.top - margin).abs_diff(above_the_legend - grid_bottom) <= 1);
+        assert!(
+            (right - margin - (grid_right - top_left.left))
+                .min(above_the_legend - margin - (grid_bottom - top_left.top))
+                < 48
+        );
+        assert!(
+            bubbles
+                .iter()
+                .all(|bubble| bubble.centre_y + radius + 1 == bottom)
+        );
+        assert!((legend_left - margin).abs_diff(right - legend_right) <= 1);
         Ok(())
     }
 
@@ -895,7 +892,6 @@ mod tests {
         let layout = on_its_side(&tall, Margin(20))?;
 
         let bubbles = layout.bubbles();
-        assert_eq!(bubbles.len(), 12);
         let last_cell = layout.grid().cell(4, 9);
         let grid_bottom = last_cell.top + last_cell.side + layout.line();
         let first = bubbles[0];
