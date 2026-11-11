@@ -87,11 +87,11 @@ The workspace holds the library, `crates/trixelate`, the command line, `crates/t
 Issues and pull requests are welcome. Every change comes with its test, and the gate must pass:
 
 ```sh
-make check          # formatting, lints, tests and no uncovered line but the command line's and the page's wiring
-make mutants        # whether the tests bite, at the end of a slice
-make install        # the command line on this machine
-make web            # the page, rebuilt on every change
-make sync-version   # every crate's version set to the most recent git tag's
+make check                # formatting, lints, tests and no uncovered line but the command line's and the page's wiring
+make mutants              # whether the tests bite, at the end of a slice
+make install              # the command line on this machine
+make web                  # the page, rebuilt on every change
+make bump VERSION=0.4.0   # every crate at that version, committed then tagged, never pushed
 ```
 
 `make check` needs `cargo-llvm-cov` and the `wasm32-unknown-unknown` target. Security reports go through the [security policy](SECURITY.md).

@@ -2,10 +2,10 @@ SHELL := bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 
-.PHONY: help test check mutants sync-version install web web-build lighthouse
+.PHONY: help test check mutants bump install web web-build lighthouse
 
 help: ## list the targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-13s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-11s %s\n", $$1, $$2}'
 
 test: ## every test, the command line's included
 	cargo test
@@ -19,11 +19,15 @@ check: ## formatting, lints, tests and no uncovered line but the command line's 
 mutants: ## whether the tests bite, at the end of a slice
 	cargo mutants
 
-sync-version: ## every crate's version set to the most recent git tag's, Cargo.lock included
-	@version=$$(git describe --tags --abbrev=0 | sed 's/^v//'); \
-	VERSION="$$version" perl -0pi -e 's/(\[workspace\.package\]\nversion = )"[^"]*"/$$1"$$ENV{VERSION}"/; s/(trixelate = \{ path = "crates\/trixelate", version = )"[^"]*"/$$1"$$ENV{VERSION}"/' Cargo.toml; \
-	cargo update --workspace --offline --quiet; \
-	echo "every crate at $$version"
+bump: ## every crate at VERSION, committed then tagged vVERSION, never pushed: make bump VERSION=0.4.0
+	@test -n "$(VERSION)" || { echo "which version? make bump VERSION=0.4.0"; exit 2; }
+	@! git rev-parse --quiet --verify "refs/tags/v$(VERSION)" > /dev/null || { echo "v$(VERSION) is already tagged"; exit 2; }
+	@VERSION="$(VERSION)" perl -0pi -e 's/(\[workspace\.package\]\nversion = )"[^"]*"/$$1"$$ENV{VERSION}"/; s/(trixelate = \{ path = "crates\/trixelate", version = )"[^"]*"/$$1"$$ENV{VERSION}"/' Cargo.toml
+	@cargo update --workspace --offline --quiet
+	@git add Cargo.toml Cargo.lock
+	@git commit --quiet -m "chore: every crate at $(VERSION)"
+	@git tag -a "v$(VERSION)" -m "trixelate $(VERSION)"
+	@echo "every crate at $(VERSION), tagged v$(VERSION); push both with: git push --follow-tags"
 
 install: ## the command line, on this machine
 	cargo install --path crates/trixelate-cli
