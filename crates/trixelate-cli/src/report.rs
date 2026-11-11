@@ -24,10 +24,26 @@ pub fn written(what: Written, path: &Path, took: Duration, cells: u32) -> String
     };
     format!(
         "{what} written to {} in {:.2} s\n{}",
-        path.display(),
+        shown(path),
         took.as_secs_f64(),
         how_long_to_colour(cells)
     )
+}
+
+/// A path as the terminal shows it, its control characters escaped, so a file name cannot clear the screen or forge a
+/// line.
+pub fn shown(path: &Path) -> String {
+    path.display()
+        .to_string()
+        .chars()
+        .map(|character| {
+            if character.is_control() {
+                character.escape_default().to_string()
+            } else {
+                character.to_string()
+            }
+        })
+        .collect()
 }
 
 fn how_long_to_colour(cells: u32) -> String {
