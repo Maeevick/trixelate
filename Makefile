@@ -2,10 +2,10 @@ SHELL := bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 
-.PHONY: help test check mutants install web web-build lighthouse
+.PHONY: help test check mutants sync-version install web web-build lighthouse
 
 help: ## list the targets
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-11s %s\n", $$1, $$2}'
+	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-13s %s\n", $$1, $$2}'
 
 test: ## every test, the command line's included
 	cargo test
@@ -18,6 +18,12 @@ check: ## formatting, lints, tests and no uncovered line but the command line's 
 
 mutants: ## whether the tests bite, at the end of a slice
 	cargo mutants
+
+sync-version: ## every crate's version set to the most recent git tag's, Cargo.lock included
+	@version=$$(git describe --tags --abbrev=0 | sed 's/^v//'); \
+	VERSION="$$version" perl -0pi -e 's/(\[workspace\.package\]\nversion = )"[^"]*"/$$1"$$ENV{VERSION}"/; s/(trixelate = \{ path = "crates\/trixelate", version = )"[^"]*"/$$1"$$ENV{VERSION}"/' Cargo.toml; \
+	cargo update --workspace --offline --quiet; \
+	echo "every crate at $$version"
 
 install: ## the command line, on this machine
 	cargo install --path crates/trixelate-cli
