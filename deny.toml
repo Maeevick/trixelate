@@ -1,0 +1,30 @@
+# What every dependency may be, checked by `cargo deny check` in CI: no known vulnerability, a licence that lets
+# trixelate stay MIT, no wildcard version, and nothing from outside crates.io.
+
+[advisories]
+ignore = [
+  { id = "RUSTSEC-2024-0436", reason = "paste is unmaintained, but it only expands macros at compile time, for Leptos and so the page alone, and has no maintained successor Leptos uses yet" },
+]
+
+[licenses]
+allow = [
+  "0BSD",
+  "Apache-2.0",
+  "BSL-1.0",
+  "CC0-1.0",
+  "MIT",
+  "Unicode-3.0",
+  "Unlicense",
+  "Zlib",
+]
+confidence-threshold = 0.93
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
