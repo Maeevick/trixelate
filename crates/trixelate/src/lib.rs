@@ -47,8 +47,12 @@ impl Order {
         orientation: Orientation,
         margin: Margin,
     ) -> Result<Order, Refusal> {
+        let most = layout::most_cells_across(format);
+        if cells_across > most {
+            return Err(Refusal::MoreCellsAcrossThanThePaperHolds { most });
+        }
         Ok(Order {
-            cells_across: NonZeroU32::new(cells_across.max(1)).unwrap_or(NonZeroU32::MIN),
+            cells_across: NonZeroU32::new(cells_across).ok_or(Refusal::NoCellAcross)?,
             colours,
             format,
             orientation,
