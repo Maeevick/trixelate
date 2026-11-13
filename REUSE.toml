@@ -1,5 +1,5 @@
 # Who holds each file and under which licence, after the REUSE specification 3.3 (https://reuse.software), checked by
-# `reuse lint`. The goblin pictures are left out on purpose until their origin is known.
+# `reuse lint`.
 version = 1
 
 [[annotations]]

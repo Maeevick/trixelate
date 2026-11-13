@@ -20,11 +20,11 @@ trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, find
 
 ```sh
 cargo install --path crates/trixelate-cli
-trixelate sample/goblin.png -o goblin.sheet.png
+trixelate picture.png -o picture.sheet.png
 ```
 
 ```
-Sheet written to goblin.sheet.png in 0.05 s
+Sheet written to picture.sheet.png in 0.05 s
 2,304 cells to colour: at 3 a minute, a five-year-old needs about 12 h 48 min, or 26 afternoons of half an hour, snack breaks not included.
 ```
 
@@ -48,12 +48,6 @@ trixelate [OPTIONS] <PICTURE>
 
 Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, or the answer to a warning was no, `2` the arguments are wrong, too many cells across, or a warning with nobody at a terminal to answer it and no `--yes` included. Errors go to stderr and say what to try.
 
-A goblin turned into a sheet to colour with `trixelate sample/goblin.png`: 48 cells wide, 8 colours, on A4.
-
-| Picture | Sheet |
-| --- | --- |
-| ![A cheerful green goblin, arms up, sticking out its red tongue](sample/goblin.png) | ![The goblin as a colour-by-number sheet: the goblin in miniature and in colour in the page's top left corner, a legend of eight coloured bubbles beside it, the grid of numbered cells below, the file name on top](sample/goblin-48-8-a4.sheet.png) |
-
 ## In the browser
 
 The same sheets without a command line or a server, the page needing Rust 1.89 rather than 1.88: drop a picture in, set the sheet up, look at it beside your picture, slide the line across it to see it coloured in, then download it. The picture never leaves the browser, and the browser makes sure of it: the built page's Content-Security-Policy lets it fetch from its own address only, and run only its own script.
@@ -64,8 +58,6 @@ cargo install trunk
 make web        # served at http://127.0.0.1:8080, rebuilt on every change
 make web-build  # a static site in crates/trixelate-web/dist, for any host; crates/trixelate-csp writes its policy, and the build fails without it
 ```
-
-![The page: the goblin dropped in on the left, its sheet with its miniature in the corner on the right, coloured in left of a line slid halfway across, the settings and the download button above](docs/web.png)
 
 ## How a sheet is made
 

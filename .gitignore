@@ -2,7 +2,6 @@
 /crates/trixelate-web/dist
 /mutants.out*
 sample/*
-!sample/goblin*.png
 
 lighthouse/
 reports/
