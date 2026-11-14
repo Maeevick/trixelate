@@ -2,8 +2,7 @@
 
 /// Whether an answer says yes: "y" or "yes", in any case, with any spaces around it; anything else says no.
 pub fn said_yes(answer: &str) -> bool {
-    let _ = answer;
-    false
+    matches!(answer.trim().to_lowercase().as_str(), "y" | "yes")
 }
 
 #[cfg(test)]

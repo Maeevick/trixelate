@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::{Instant, SystemTime};
 
+use answer::said_yes;
 use clap::error::ErrorKind as ArgumentError;
 use clap::{CommandFactory, Parser, ValueEnum};
 use report::{Written, shown};
@@ -179,8 +180,7 @@ fn main() -> ExitCode {
 fn sure() -> bool {
     eprint!("Are you sure? [y/N] ");
     let mut answer = String::new();
-    std::io::stdin().lock().read_line(&mut answer).is_ok()
-        && matches!(answer.trim().to_lowercase().as_str(), "y" | "yes")
+    std::io::stdin().lock().read_line(&mut answer).is_ok() && said_yes(&answer)
 }
 
 /// How the command draws what it writes, from a picture, its order and its file name.
