@@ -21,9 +21,12 @@ mutants: ## whether the tests bite, at the end of a slice
 
 bump: ## every crate at VERSION, committed then tagged vVERSION, never pushed: make bump VERSION=0.4.0
 	@test -n "$(VERSION)" || { echo "which version? make bump VERSION=0.4.0"; exit 2; }
+	@[[ "$(VERSION)" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$$ ]] || { echo "$(VERSION) is no version: three numbers, as in 0.4.0"; exit 2; }
 	@! git rev-parse --quiet --verify "refs/tags/v$(VERSION)" > /dev/null || { echo "v$(VERSION) is already tagged"; exit 2; }
+	@git diff --quiet && git diff --cached --quiet || { echo "commit or stash your changes first: the bump commits the version alone"; exit 2; }
 	@VERSION="$(VERSION)" perl -0pi -e 's/(\[workspace\.package\]\nversion = )"[^"]*"/$$1"$$ENV{VERSION}"/; s/(trixelate = \{ path = "crates\/trixelate", version = )"[^"]*"/$$1"$$ENV{VERSION}"/' Cargo.toml
-	@cargo update --workspace --offline --quiet
+	@[ "$$(grep -c '"$(VERSION)"' Cargo.toml)" -eq 2 ] || { git checkout -- Cargo.toml; echo "Cargo.toml has moved: its workspace version or the library's requirement was not found, nothing changed"; exit 1; }
+	@cargo update --workspace --offline --quiet || { git checkout -- Cargo.toml Cargo.lock; echo "cargo could not update Cargo.lock, nothing changed"; exit 1; }
 	@git add Cargo.toml Cargo.lock
 	@git commit --quiet -m "chore: every crate at $(VERSION)"
 	@git tag -a "v$(VERSION)" -m "trixelate $(VERSION)"
