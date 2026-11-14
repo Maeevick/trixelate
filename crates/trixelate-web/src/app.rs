@@ -13,11 +13,13 @@ use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
 use crate::form::{
-    LastColouring, Latest, Painted, Settings, light_enough, not_a_picture, paint_preview,
-    paint_sheet, ready, warned,
+    LastColouring, Latest, Painted, Settings, light_enough, not_a_picture, offered_in_pieces,
+    paint_pieces, paint_preview, paint_sheet, ready, warned,
 };
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
+const PNG: &str = "image/png";
+const PDF: &str = "application/pdf";
 /// The id of the alert saying why the sheet is refused, for the disabled download button to point to.
 const DOWNLOAD_REFUSED: &str = "download-refused";
 
@@ -30,9 +32,13 @@ impl ObjectUrl {
     }
 
     fn of_png(bytes: &[u8]) -> Option<ObjectUrl> {
+        ObjectUrl::of(bytes, PNG)
+    }
+
+    fn of(bytes: &[u8], media_type: &str) -> Option<ObjectUrl> {
         let parts = js_sys::Array::of1(&js_sys::Uint8Array::from(bytes));
         let options = BlobPropertyBag::new();
-        options.set_type("image/png");
+        options.set_type(media_type);
         let blob = Blob::new_with_u8_array_sequence_and_options(&parts, &options).ok()?;
         Url::create_object_url_with_blob(&blob).ok().map(ObjectUrl)
     }
@@ -56,9 +62,10 @@ struct Dropped {
     shown_from: Arc<ObjectUrl>,
 }
 
-/// Hands PNG bytes to the browser as a file to save under a name, forgetting the link once the browser has it.
-fn save(bytes: &[u8], name: &str) {
-    let Some(link) = ObjectUrl::of_png(bytes) else {
+/// Hands bytes of a media type to the browser as a file to save under a name, forgetting the link once the browser has
+/// it.
+fn save(bytes: &[u8], media_type: &str, name: &str) {
+    let Some(link) = ObjectUrl::of(bytes, media_type) else {
         return;
     };
     let anchor = document()
@@ -215,8 +222,33 @@ pub fn App() -> impl IntoView {
 
     let download = move || {
         if let Some(made) = painted.get_value() {
-            save(&made.bytes, &made.name);
+            save(&made.bytes, PNG, &made.name);
         }
+    };
+
+    let download_pieces = move || {
+        let Some((picture, name)) = dropped.with_untracked(|dropped| {
+            dropped
+                .as_ref()
+                .map(|d| (d.picture.clone(), d.name.clone()))
+        }) else {
+            return;
+        };
+        let Ok(order) = ready(settings.get_untracked()) else {
+            return;
+        };
+        busy.set(true);
+        after_the_next_paint(move || {
+            let pieces = last_colouring
+                .write_value()
+                .for_order(&picture, order)
+                .and_then(|colouring| paint_pieces(&colouring, &name, order));
+            match pieces {
+                Ok(pieces) => save(&pieces.bytes, PDF, &pieces.name),
+                Err(why) => refusal.set(Some(why)),
+            }
+            busy.set(false);
+        });
     };
 
     let file_picked = move |event: leptos::ev::Event| {
@@ -454,6 +486,23 @@ pub fn App() -> impl IntoView {
                             }}
                         </span>
                     </button>
+                    <Show when=move || offered_in_pieces(settings.get().format)>
+                        <button
+                            type="button"
+                            disabled=move || busy.get() || no_picture() || refused().is_some()
+                            aria-describedby=move || refused().map(|_| DOWNLOAD_REFUSED.to_string())
+                            class="group w-full rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-stone-800 shadow-sm ring-1 ring-stone-300 transition hover:-translate-y-0.5 hover:bg-stone-50 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none disabled:ring-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:w-auto"
+                            on:click=move |_| download_pieces()
+                        >
+                            <span class="sr-only">"Download the "</span>
+                            "Pieces "
+                            <span class="font-normal text-stone-500 group-disabled:text-stone-400">
+                                {move || {
+                                    if refused().is_some() { "don't fit" } else { "on A4, as a PDF" }
+                                }}
+                            </span>
+                        </button>
+                    </Show>
                 </div>
             </section>
 

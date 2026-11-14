@@ -1,5 +1,5 @@
-//! The form's settings turned into an order for a sheet, the sheet painted as PNG bytes, and what the page says when
-//! one is refused, worded for a parent.
+//! The form's settings turned into an order for a sheet, the sheet painted as PNG bytes or its pieces as a PDF, and what
+//! the page says when one is refused, worded for a parent.
 
 use std::sync::Arc;
 
@@ -9,7 +9,9 @@ use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::warning::warnings_for;
-use trixelate::{Order, Refusal, colour, preview_of, sheet_file_name, sheet_of};
+use trixelate::{
+    Order, Refusal, colour, pieces, pieces_file_name, preview_of, sheet_file_name, sheet_of,
+};
 
 /// What the sheet is asked to be, as the form sets it.
 #[derive(Clone, Copy, PartialEq)]
@@ -90,6 +92,7 @@ pub struct Painted {
 }
 
 const NOT_A_PNG: &str = "The sheet could not be turned into a PNG. That one is on us.";
+const NOT_A_PDF: &str = "The pieces could not be turned into a PDF. That one is on us.";
 
 /// A colouring's sheet painted on the order's page, named after the picture, encoded small to be saved, or why it
 /// cannot be.
@@ -115,17 +118,24 @@ pub fn paint_preview(colouring: &Colouring, title: &str, order: Order) -> Result
 }
 
 /// Whether a sheet on this paper is offered in A4 pieces: only one bigger than a home printer takes.
-pub fn offered_in_pieces(_format: PageFormat) -> bool {
-    false
+pub fn offered_in_pieces(format: PageFormat) -> bool {
+    !matches!(format, PageFormat::A4 | PageFormat::A5)
 }
 
 /// A colouring's sheet cut into A4 pieces, as a PDF named after the picture, or why it cannot be.
 pub fn paint_pieces(
-    _colouring: &Colouring,
-    _picture_name: &str,
-    _order: Order,
+    colouring: &Colouring,
+    picture_name: &str,
+    order: Order,
 ) -> Result<Painted, String> {
-    Err(String::new())
+    let name = pieces_file_name(picture_name, &order);
+    let sheet = sheet_of(colouring, order, &name).map_err(explain)?;
+    Ok(Painted {
+        bytes: pieces::cut(&sheet)
+            .pdf()
+            .map_err(|_| NOT_A_PDF.to_string())?,
+        name,
+    })
 }
 
 /// The last colouring made, kept with its picture, cells across and colours, so that a new paper, margin or
