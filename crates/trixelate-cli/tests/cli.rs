@@ -348,13 +348,15 @@ fn asked_for_a_preview_the_command_writes_the_sheet_coloured_in_beside_its_pictu
 }
 
 #[test]
-fn an_output_naming_a_folder_or_no_file_at_all_gets_the_sheet_under_its_stamped_name_inside() {
+fn an_output_naming_a_folder_or_no_file_at_all_gets_the_sheet_under_its_stamped_name_inside_even_in_a_missing_folder()
+ {
     let folder = folder("output-folder");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
     let inside = folder.join("sheets");
     fs::create_dir_all(&inside).expect("a folder for sheets");
     let up_from_inside = inside.join("..");
+    let up_from_nowhere = folder.join("nowhere").join("..");
 
     let into_a_folder = trixelate(&[
         picture,
@@ -370,6 +372,13 @@ fn an_output_naming_a_folder_or_no_file_at_all_gets_the_sheet_under_its_stamped_
         "-o",
         up_from_inside.to_str().unwrap_or_default(),
     ]);
+    let into_no_file_nowhere = trixelate(&[
+        picture,
+        "--width",
+        "6",
+        "-o",
+        up_from_nowhere.to_str().unwrap_or_default(),
+    ]);
 
     assert!(
         into_a_folder.status.success(),
@@ -383,6 +392,11 @@ fn an_output_naming_a_folder_or_no_file_at_all_gets_the_sheet_under_its_stamped_
     );
     assert!(written_beside(&inside, "sunset-4-8-a4", "sheet").is_some());
     assert!(written_beside(&folder, "sunset-5-8-a4", "sheet").is_some());
+    assert!(
+        text(&into_no_file_nowhere.stderr).contains("nowhere/../sunset-6-8-a4-"),
+        "{}",
+        text(&into_no_file_nowhere.stderr)
+    );
 }
 
 #[test]
