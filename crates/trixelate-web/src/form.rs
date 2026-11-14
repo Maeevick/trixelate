@@ -1,6 +1,8 @@
 //! The form's settings turned into an order for a sheet, the sheet painted as PNG bytes, and what the page says when
 //! one is refused, worded for a parent.
 
+use std::sync::Arc;
+
 use trixelate::colouring::Colouring;
 use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_across};
 use trixelate::palette::ColourCount;
@@ -110,6 +112,37 @@ pub fn paint_preview(colouring: &Colouring, title: &str, order: Order) -> Result
         .map_err(explain)?
         .png_to_show()
         .map_err(|_| NOT_A_PNG.to_string())
+}
+
+/// The last colouring made, kept with its picture, cells across and colours, so that a new paper, margin or
+/// orientation lays it out again without colouring the picture anew.
+#[derive(Default)]
+pub struct LastColouring(Option<Kept>);
+
+struct Kept {
+    picture: Arc<Picture>,
+    cells_across: u32,
+    colours: usize,
+    colouring: Arc<Colouring>,
+}
+
+impl LastColouring {
+    /// The colouring an order asks of a picture: the one kept when it was made from that very picture with the same
+    /// cells across and colours, or a new one, kept in its place.
+    pub fn for_order(
+        &mut self,
+        picture: &Arc<Picture>,
+        order: Order,
+    ) -> Result<Arc<Colouring>, String> {
+        let colouring = Arc::new(coloured(picture, order)?);
+        self.0 = Some(Kept {
+            picture: picture.clone(),
+            cells_across: order.cells_across(),
+            colours: order.colours().get(),
+            colouring: colouring.clone(),
+        });
+        Ok(colouring)
+    }
 }
 
 fn refused(format: PageFormat, refusal: Refusal) -> String {
@@ -264,6 +297,47 @@ mod tests {
                 )),
             ]
         );
+    }
+
+    #[test]
+    fn a_colouring_is_reused_for_another_paper_margin_or_orientation_of_the_same_picture_and_made_anew_otherwise()
+     {
+        let picture = Arc::new(red_and_yellow());
+        let first = Settings::default();
+        let laid_out_again = [
+            first.on_paper(PageFormat::A0),
+            Settings {
+                margin: 20,
+                ..first
+            },
+            Settings {
+                landscape: true,
+                ..first
+            },
+        ];
+        let coloured_again = [
+            (picture.clone(), Settings { width: 20, ..first }),
+            (
+                picture.clone(),
+                Settings {
+                    colours: 3,
+                    ..first
+                },
+            ),
+            (Arc::new(red_and_yellow()), first),
+        ];
+        let reused = |asked_of: &Arc<Picture>, settings: Settings| {
+            let mut last = LastColouring::default();
+            let made = last.for_order(&picture, ready(first)?)?;
+            let asked = last.for_order(asked_of, ready(settings)?)?;
+            Ok::<_, String>(Arc::ptr_eq(&made, &asked))
+        };
+
+        let laid_out = laid_out_again.map(|settings| reused(&picture, settings));
+        let coloured = coloured_again.map(|(other, settings)| reused(&other, settings));
+
+        assert_eq!(laid_out, [Ok(true), Ok(true), Ok(true)]);
+        assert_eq!(coloured, [Ok(false), Ok(false), Ok(false)]);
     }
 
     #[test]
