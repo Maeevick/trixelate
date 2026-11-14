@@ -3,9 +3,11 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::time::SystemTime;
 
 use trixelate::picture::Picture;
 use trixelate::png_file;
+use trixelate::stamped;
 
 const RED: [u8; 4] = [220, 30, 40, 255];
 const YELLOW: [u8; 4] = [250, 220, 60, 255];
@@ -397,6 +399,35 @@ fn an_output_naming_a_folder_or_no_file_at_all_gets_the_sheet_under_its_stamped_
         "{}",
         text(&into_no_file_nowhere.stderr)
     );
+}
+
+#[test]
+fn a_sheet_made_in_a_second_already_taken_is_written_under_the_next_number_overwriting_nothing() {
+    let folder = folder("second-taken");
+    let picture = a_picture_in(&folder);
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs());
+    let taken: Vec<PathBuf> = (now - 1..now + 30)
+        .map(|second| folder.join(stamped("sunset-4-8-a4.sheet.png", second, 0)))
+        .collect();
+    for path in &taken {
+        fs::write(path, "a sheet made earlier that second").expect("a sheet already there");
+    }
+
+    let run = trixelate(&[picture.to_str().unwrap_or_default(), "--width", "4"]);
+
+    let numbered = fs::read_dir(&folder)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .find(|name| name.ends_with("Z-2.sheet.png"));
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert!(numbered.is_some_and(|name| text(&run.stdout).contains(&name)));
+    assert!(taken.iter().all(|path| {
+        fs::read(path).ok().as_deref() == Some(b"a sheet made earlier that second".as_slice())
+    }));
 }
 
 #[test]
