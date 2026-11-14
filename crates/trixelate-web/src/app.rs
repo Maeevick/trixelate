@@ -6,7 +6,6 @@ use std::time::Duration;
 
 use leptos::prelude::*;
 use leptos::task::spawn_local;
-use trixelate::colouring::Colouring;
 use trixelate::layout::{PageFormat, most_cells_across};
 use trixelate::picture::Picture;
 use trixelate::picture_file::{self, Unreadable};
@@ -14,8 +13,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
 use crate::form::{
-    Painted, Settings, coloured, light_enough, not_a_picture, paint_preview, paint_sheet, ready,
-    warned,
+    LastColouring, Painted, Settings, light_enough, not_a_picture, paint_preview, paint_sheet,
+    ready, warned,
 };
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
@@ -55,15 +54,6 @@ struct Dropped {
     name: String,
     picture: Arc<Picture>,
     shown_from: Arc<ObjectUrl>,
-}
-
-/// The last colouring made, kept with its picture, cells across and colours, so that a new paper, margin or
-/// orientation lays it out again without colouring the picture anew.
-struct LastColouring {
-    picture: Arc<Picture>,
-    cells_across: u32,
-    colours: usize,
-    colouring: Arc<Colouring>,
 }
 
 /// Hands PNG bytes to the browser as a file to save under a name, forgetting the link once the browser has it.
@@ -124,7 +114,7 @@ pub fn App() -> impl IntoView {
     let busy = RwSignal::new(false);
     let refusal = RwSignal::new(None::<String>);
     let painted = StoredValue::new(None::<Arc<Painted>>);
-    let last_colouring = StoredValue::new(None::<LastColouring>);
+    let last_colouring = StoredValue::new(LastColouring::default());
     let latest = StoredValue::new(0_u64);
 
     let take = move |file: File| {
@@ -166,29 +156,6 @@ pub fn App() -> impl IntoView {
         });
     };
 
-    let colouring_for = move |picture: &Arc<Picture>, order: trixelate::Order| {
-        let kept = last_colouring.with_value(|last| {
-            last.as_ref()
-                .filter(|last| {
-                    Arc::ptr_eq(&last.picture, picture)
-                        && last.cells_across == order.cells_across()
-                        && last.colours == order.colours().get()
-                })
-                .map(|last| last.colouring.clone())
-        });
-        if let Some(colouring) = kept {
-            return Ok(colouring);
-        }
-        let colouring = Arc::new(coloured(picture, order)?);
-        last_colouring.set_value(Some(LastColouring {
-            picture: picture.clone(),
-            cells_across: order.cells_across(),
-            colours: order.colours().get(),
-            colouring: colouring.clone(),
-        }));
-        Ok::<_, String>(colouring)
-    };
-
     Effect::new(move |_| {
         let Some((picture, name)) = dropped.with(|dropped| {
             dropped
@@ -207,7 +174,7 @@ pub fn App() -> impl IntoView {
                 return;
             }
             let made = ready(settings).and_then(|order| {
-                let colouring = colouring_for(&picture, order)?;
+                let colouring = last_colouring.write_value().for_order(&picture, order)?;
                 Ok((paint_sheet(&colouring, &name, order)?, colouring, order))
             });
             let (sheet, colouring, order) = match made {

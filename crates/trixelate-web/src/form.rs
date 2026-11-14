@@ -134,6 +134,14 @@ impl LastColouring {
         picture: &Arc<Picture>,
         order: Order,
     ) -> Result<Arc<Colouring>, String> {
+        let kept = self.0.as_ref().filter(|kept| {
+            Arc::ptr_eq(&kept.picture, picture)
+                && kept.cells_across == order.cells_across()
+                && kept.colours == order.colours().get()
+        });
+        if let Some(kept) = kept {
+            return Ok(kept.colouring.clone());
+        }
         let colouring = Arc::new(coloured(picture, order)?);
         self.0 = Some(Kept {
             picture: picture.clone(),
@@ -305,7 +313,10 @@ mod tests {
         let picture = Arc::new(red_and_yellow());
         let first = Settings::default();
         let laid_out_again = [
-            first.on_paper(PageFormat::A0),
+            Settings {
+                format: PageFormat::A3,
+                ..first
+            },
             Settings {
                 margin: 20,
                 ..first
