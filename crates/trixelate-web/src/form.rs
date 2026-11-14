@@ -172,6 +172,28 @@ fn explain(no_room: NoRoom) -> String {
     .to_string()
 }
 
+/// The latest piece of work of a kind the page started, so that one a newer one overtook drops what it made instead of
+/// showing it over the newer one's.
+#[derive(Default)]
+pub struct Latest(u64);
+
+/// A piece of work, told apart from those started before and after it.
+#[derive(Clone, Copy)]
+pub struct Work(u64);
+
+impl Latest {
+    /// A new piece of work, the latest from now on.
+    pub fn start(&mut self) -> Work {
+        self.0 += 1;
+        Work(self.0)
+    }
+
+    /// Whether no newer piece of work was started since this one.
+    pub fn still(&self, _work: Work) -> bool {
+        true
+    }
+}
+
 /// Whether a file of this many bytes is light enough to read as a picture.
 pub fn light_enough(bytes: f64) -> bool {
     bytes <= (MOST_MEGABYTES * 1_000_000) as f64
@@ -349,6 +371,20 @@ mod tests {
 
         assert_eq!(laid_out, [Ok(true), Ok(true), Ok(true)]);
         assert_eq!(coloured, [Ok(false), Ok(false), Ok(false)]);
+    }
+
+    #[test]
+    fn a_piece_of_work_overtaken_by_a_newer_one_is_no_longer_the_latest_and_the_newer_one_is() {
+        let mut latest = Latest::default();
+
+        let first = latest.start();
+        let first_alone = latest.still(first);
+        let second = latest.start();
+
+        assert_eq!(
+            [first_alone, latest.still(first), latest.still(second)],
+            [true, false, true]
+        );
     }
 
     #[test]
