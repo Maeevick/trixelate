@@ -314,8 +314,13 @@ mod tests {
                 .map(|dims| dims.xppu);
             (pixels, dots_per_metre)
         };
-        assert!(read(&kept).0.is_some());
-        assert_eq!(read(&shown), read(&kept));
+        let ((shown_pixels, shown_dots), (kept_pixels, kept_dots)) = (read(&shown), read(&kept));
+        assert!(kept_pixels.is_some());
+        assert_eq!(shown_dots, kept_dots);
+        assert!(
+            shown_pixels == kept_pixels,
+            "the page shown differs from the page kept"
+        );
     }
 
     #[test]
