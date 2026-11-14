@@ -134,6 +134,12 @@ pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
     named_after(picture_file_name, order, "sheet")
 }
 
+/// What a sheet's pieces made from a picture file are called: named like their sheet, as pieces, in the PDF that holds
+/// them.
+pub fn pieces_file_name(_picture_file_name: &str, _order: &Order) -> String {
+    String::new()
+}
+
 /// What a sheet's preview made from a picture file is called: named like its sheet, as a preview, so the two sit side
 /// by side.
 pub fn preview_file_name(picture_file_name: &str, order: &Order) -> String {
@@ -448,6 +454,21 @@ mod tests {
         assert_eq!(
             names,
             ["goblin-48-2-a4.preview.png", "my.photo-48-2-a4.preview.png"]
+        );
+    }
+
+    #[test]
+    fn the_pieces_of_a_sheet_are_named_like_it_as_pieces_in_a_pdf() {
+        let order = order(80, PageFormat::A2);
+
+        let names = [
+            pieces_file_name("goblin.png", &order),
+            pieces_file_name("my.photo.jpeg", &order),
+        ];
+
+        assert_eq!(
+            names,
+            ["goblin-80-2-a2.pieces.pdf", "my.photo-80-2-a2.pieces.pdf"]
         );
     }
 
