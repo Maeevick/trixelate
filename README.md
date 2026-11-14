@@ -42,7 +42,7 @@ trixelate [OPTIONS] <PICTURE>
 | `-f`, `--format` | The paper: `a3`, `a4` or `a5` at 300 dots per inch, or the posters `a2`, `a1` and `a0` at 150, light enough for any computer and sharp from where a poster is seen | `a4` |
 | `--landscape` | Lay the paper on its side, for wide pictures | upright |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres, from 5 for the title and the credit to 20, leaving the room to the cells | 10 |
-| `-o`, `--output` | Where to write the sheet: a new file, or a folder to write it in under its default name | beside the picture, named after it, its settings and the UTC second it was made: `goblin-48-8-a4-20261111T142915Z.sheet.png`, `goblin-32-24-a5-landscape-20261111T142915Z.sheet.png` |
+| `-o`, `--output` | Where to write the sheet: a new file, or a folder to write it in under its default name | beside the picture, named after it, its settings and the UTC second it was made: `goblin-48-8-a4-20261111T142915Z.sheet.png`, `goblin-32-24-a5-landscape-20261111T142915Z.sheet.png`, numbered `-2`, `-3` after the stamp when sheets made that second took the name |
 | `--preview` | Write the sheet's preview instead: the sheet as it looks once coloured in, every cell filled with its colour, named `….preview.png` | the sheet to colour in |
 | `-y`, `--yes` | Go ahead without being asked when warned: under 16 cells across it is big cubes, under 4 colours solid patches, more than pixel art | asks |
 

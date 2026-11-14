@@ -20,5 +20,5 @@ The words trixelate's code and docs use, read before naming anything.
 | **Legend** | The row of bubbles of a sheet: upright, right of the miniature and centred on its middle; on its side, centred at the bottom. |
 | **Credit** | The small line at the bottom right of every sheet, in its margin: made with trixelate, and where it lives. |
 | **Title** | The sheet's file name without its stamp, centred in the top margin of every sheet, as big as the bubbles' numbers. |
-| **Stamp** | The UTC second a sheet was made, written into the name of a file trixelate names itself, before what it is: `goblin-48-8-a4-20261111T142915Z.sheet.png`. It keeps a sheet made again from taking an older one's name, and never shows on the paper. |
+| **Stamp** | The UTC second a sheet was made, written into the name of a file trixelate names itself, before what it is: `goblin-48-8-a4-20261111T142915Z.sheet.png`. It keeps a sheet made again from taking an older one's name, numbered `-2`, `-3` after it when sheets made that second took the name, and never shows on the paper. |
 | **Bubble** | A disc filled with one palette colour, its colour number written inside, up to 8 mm wide on a sheet and 16 mm on a poster. |
