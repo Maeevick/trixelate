@@ -57,6 +57,7 @@ rustup target add wasm32-unknown-unknown
 cargo install trunk
 make web        # served at http://127.0.0.1:8080, rebuilt on every change
 make web-build  # a static site in crates/trixelate-web/dist, for any host; crates/trixelate-csp writes its policy, and the build fails without it
+make web-smoke  # the built page opened in a headless Chrome, failing unless it mounts with its policy blocking nothing
 ```
 
 ## How a sheet is made

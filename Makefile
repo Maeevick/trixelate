@@ -2,7 +2,7 @@ SHELL := bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 
-.PHONY: help test check mutants bump install web web-build lighthouse
+.PHONY: help test check mutants bump install web web-build web-smoke lighthouse
 
 help: ## list the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-11s %s\n", $$1, $$2}'
@@ -46,6 +46,23 @@ web-build: ## the page, built for any static host in crates/trixelate-web/dist, 
 	[ -n "$$policy" ] && [ -n "$$script" ] && [ "$${policy%%:*}" -lt "$$script" ] \
 		&& grep -Eq "script-src [^;]*'sha256-" <<< "$$policy" && grep -Eq "style-src [^;]*'sha256-" <<< "$$policy" \
 		|| { echo "the built page carries no Content-Security-Policy before its first script, hashing its script and style: see crates/trixelate-csp"; exit 1; }
+
+SMOKE_PORT := 8091
+SMOKE_PAGE := http://127.0.0.1:$(SMOKE_PORT)/
+
+web-smoke: ## the built page opened in a headless Chrome, failing unless it mounts with its policy blocking nothing: after make web-build
+	@test -f crates/trixelate-web/dist/index.html || { echo "no page to open: make web-build first"; exit 2; }
+	@chrome="$${CHROME:-$$(command -v google-chrome || command -v chromium || echo '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')}"; \
+	scratch=$$(mktemp -d); \
+	npx -y serve@14.2.8 crates/trixelate-web/dist -l $(SMOKE_PORT) --no-clipboard > /dev/null 2>&1 & server=$$!; \
+	trap 'kill $$server; rm -rf "$$scratch"' EXIT; \
+	for try in $$(seq 30); do curl -s -o /dev/null $(SMOKE_PAGE) && break; sleep 1; done; \
+	"$$chrome" --headless=new --disable-gpu --no-first-run $(CHROME_FLAGS) --user-data-dir="$$scratch/profile" \
+		--enable-logging=stderr --v=0 --virtual-time-budget=10000 --dump-dom $(SMOKE_PAGE) \
+		> "$$scratch/page.html" 2> "$$scratch/console.log" || true; \
+	if grep 'Content Security Policy' "$$scratch/console.log"; then echo "the built page's policy blocks part of it"; exit 1; fi; \
+	grep -q 'type="file"' "$$scratch/page.html" || { cat "$$scratch/console.log"; echo "the built page did not mount"; exit 1; }; \
+	echo "the built page mounts, its policy blocking nothing"
 
 LIGHTHOUSE_PORT := 8090
 LIGHTHOUSE_PAGE := http://127.0.0.1:$(LIGHTHOUSE_PORT)/

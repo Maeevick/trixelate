@@ -113,3 +113,6 @@ jobs:
       - run: cargo fetch --locked
       - name: Build the page, once more if a tool's download drops
         run: make web-build || (sleep 15 && make web-build)
+      - name: Open the built page in Chrome, which must mount it with its policy blocking nothing
+        # The runner is a throwaway machine opening only this page, so Chrome needs no sandbox there.
+        run: make web-smoke CHROME_FLAGS=--no-sandbox
