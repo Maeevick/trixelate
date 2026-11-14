@@ -7,8 +7,8 @@ use crate::picture::{Picture, Rgb};
 use crate::png_file::{self, CannotWritePng};
 
 const LINE_GREY: Rgb = Rgb(170, 170, 170);
-const NUMBER_GREY: Rgb = Rgb(90, 90, 90);
-const BLACK: Rgb = Rgb(0, 0, 0);
+pub(crate) const NUMBER_GREY: Rgb = Rgb(90, 90, 90);
+pub(crate) const BLACK: Rgb = Rgb(0, 0, 0);
 const OUTLINES_PER_BUBBLE_DIAMETER: u32 = 24;
 
 /// The page printed for the child, or its preview: its dots, and how finely they are printed.

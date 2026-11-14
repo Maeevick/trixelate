@@ -1,14 +1,21 @@
 //! A sheet cut into A4 pieces, for a printer that takes nothing bigger: each piece prints its part of the sheet at actual
 //! size, and the pieces glued together make the sheet again.
 
-use crate::layout::dots;
-use crate::sheet::{Paper, Sheet};
+use crate::layout::{dots, dots_of_tenths};
+use crate::lettering;
+use crate::sheet::{BLACK, NUMBER_GREY, Paper, Sheet};
 
 const A4_MILLIMETRES: (u32, u32) = (210, 297);
 /// The blank paper around a piece's part of the sheet, wider than any home printer leaves unprinted.
 const MARGIN_MM: u32 = 10;
 /// The strip of the sheet a piece shares with the next, for the next one to be glued over.
 const OVERLAP_MM: u32 = 10;
+/// A cut mark starts a millimetre from the edge it marks, runs five and is three tenths of a millimetre thick.
+const CUT_MARK_GAP_MM: u32 = 1;
+const CUT_MARK_LENGTH_MM: u32 = 5;
+const CUT_MARK_THICKNESS_TENTHS_OF_MM: u32 = 3;
+/// A piece says where it goes in letters about three millimetres tall.
+const PLACE_TENTHS_OF_MM_TALL: u32 = 30;
 
 /// A sheet cut into A4 pieces, in columns and rows.
 pub struct Pieces<'a> {
@@ -105,10 +112,51 @@ impl Pieces<'_> {
             part.0.min(self.sheet.width() - left),
             part.1.min(self.sheet.height() - top),
         );
+        let dots_per_inch = self.sheet.dots_per_inch();
         let mut paper = Paper::blank(page.0, page.1);
         paper.lay(self.sheet, (left, top), size, (margin, margin));
-        paper.into_sheet(self.sheet.dots_per_inch())
+        mark_the_cuts(&mut paper, margin, size, dots_per_inch);
+        let place = format!(
+            "row {} of {} - column {} of {}",
+            row + 1,
+            self.down(),
+            column + 1,
+            self.across()
+        );
+        write_the_place(&mut paper, &place, page, margin, dots_per_inch);
+        paper.into_sheet(dots_per_inch)
     }
+}
+
+/// Marks the left and top edges of a piece's part, which are cut along before the piece is glued over the pieces to its
+/// left and above: each edge marked at both ends, in the blank paper beyond them.
+fn mark_the_cuts(paper: &mut Paper, margin: u32, (width, height): (u32, u32), dots_per_inch: u32) {
+    let gap = dots(CUT_MARK_GAP_MM, dots_per_inch);
+    let length = dots(CUT_MARK_LENGTH_MM, dots_per_inch);
+    let thickness = dots_of_tenths(CUT_MARK_THICKNESS_TENTHS_OF_MM, dots_per_inch).max(1);
+    let (before, after) = (margin - gap - length, margin + gap);
+    paper.fill(margin, before, thickness, length, BLACK);
+    paper.fill(margin, after + height, thickness, length, BLACK);
+    paper.fill(before, margin, length, thickness, BLACK);
+    paper.fill(after + width, margin, length, thickness, BLACK);
+}
+
+/// Writes where a piece goes in grey, under its part, flush with its right margin.
+fn write_the_place(
+    paper: &mut Paper,
+    place: &str,
+    page: (u32, u32),
+    margin: u32,
+    dots_per_inch: u32,
+) {
+    let (_, height_at_one) = lettering::size(place, 1);
+    let scale = dots_of_tenths(PLACE_TENTHS_OF_MM_TALL, dots_per_inch) / height_at_one;
+    let size = lettering::size(place, scale);
+    let corner = (
+        page.0 - margin - size.0,
+        page.1 - margin + dots(CUT_MARK_GAP_MM, dots_per_inch),
+    );
+    paper.write(place, scale, corner, size, NUMBER_GREY);
 }
 
 #[cfg(test)]
@@ -174,14 +222,9 @@ mod tests {
         let differences = |column: u32, row: u32, (width, height): (u32, u32)| {
             let piece = pieces.piece(column, row).expect("a piece");
             let (left, top) = (column * apart.0, row * apart.1);
-            let part = (0..1122).flat_map(|y| (0..1636).map(move |x| (x, y)));
+            let part = (0..height).flat_map(|y| (0..width).map(move |x| (x, y)));
             part.filter(|&(x, y)| {
-                let expected = if x < width && y < height {
-                    poster.pixel(left + x, top + y)
-                } else {
-                    Rgb::WHITE
-                };
-                piece.pixel(margin.0 + x, margin.1 + y) != expected
+                piece.pixel(margin.0 + x, margin.1 + y) != poster.pixel(left + x, top + y)
             })
             .count()
         };

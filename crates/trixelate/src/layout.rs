@@ -95,7 +95,7 @@ pub(crate) fn dots(millimetres: u32, dots_per_inch: u32) -> u32 {
     dots_of_tenths(millimetres * 10, dots_per_inch)
 }
 
-fn dots_of_tenths(tenths_of_millimetre: u32, dots_per_inch: u32) -> u32 {
+pub(crate) fn dots_of_tenths(tenths_of_millimetre: u32, dots_per_inch: u32) -> u32 {
     (tenths_of_millimetre * dots_per_inch + TENTHS_OF_MILLIMETRE_PER_INCH / 2)
         / TENTHS_OF_MILLIMETRE_PER_INCH
 }
