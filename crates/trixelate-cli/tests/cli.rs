@@ -431,6 +431,30 @@ fn a_sheet_made_in_a_second_already_taken_is_written_under_the_next_number_overw
 }
 
 #[test]
+fn a_folder_the_sheet_cannot_be_written_in_is_said_so_rather_than_taken_for_a_full_second() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("locked");
+    let picture = a_picture_in(&folder);
+    let locked = folder.join("locked");
+    fs::create_dir_all(&locked).expect("a folder to lock");
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o555)).expect("the folder locked");
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--width",
+        "4",
+        "-o",
+        locked.to_str().unwrap_or_default(),
+    ]);
+
+    let said = text(&run.stderr);
+    fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).expect("the folder unlocked");
+    assert!(!run.status.success());
+    assert!(said.contains("cannot write the sheet to"), "{said}");
+    assert!(said.contains("Permission denied"), "{said}");
+}
+
+#[test]
 fn an_existing_file_is_never_overwritten_not_even_the_picture_and_there_is_no_force_to_ask_for() {
     let folder = folder("never-overwritten");
     let picture = a_picture_in(&folder);
