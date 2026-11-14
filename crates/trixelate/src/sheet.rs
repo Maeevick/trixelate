@@ -31,6 +31,11 @@ impl Sheet {
         self.page.pixel(x, y)
     }
 
+    /// How finely the sheet is printed, for it to print at its paper's size.
+    pub fn dots_per_inch(&self) -> u32 {
+        self.dots_per_inch
+    }
+
     /// The sheet as PNG bytes that tell printers its dots per inch, so it prints at its paper's size.
     pub fn png(&self) -> Result<Vec<u8>, CannotWritePng> {
         png_file::write(&self.page, self.dots_per_inch)
