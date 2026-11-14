@@ -3,6 +3,7 @@
 
 use crate::layout::{dots, dots_of_tenths};
 use crate::lettering;
+use crate::pdf_file::CannotWritePdf;
 use crate::sheet::{BLACK, NUMBER_GREY, Paper, Sheet};
 
 const A4_MILLIMETRES: (u32, u32) = (210, 297);
@@ -98,6 +99,11 @@ impl Pieces<'_> {
         (column < self.across() && row < self.down()).then(|| self.drawn(column, row))
     }
 
+    /// Every piece, row after row, as a PDF of a page each that prints at actual size.
+    pub fn pdf(&self) -> Result<Vec<u8>, CannotWritePdf> {
+        Ok(Vec::new())
+    }
+
     /// A piece: its part of the sheet laid inside its margin, on white paper where the sheet ends.
     fn drawn(&self, column: u32, row: u32) -> Sheet {
         let Cutting {
@@ -167,7 +173,7 @@ mod tests {
     use crate::palette::ColourCount;
     use crate::picture::{Picture, Rgb};
     use crate::{Order, make_sheet};
-    use std::collections::BTreeSet;
+    use std::collections::{BTreeMap, BTreeSet};
 
     const RED: [u8; 4] = [220, 30, 40, 255];
     const YELLOW: [u8; 4] = [250, 220, 60, 255];
@@ -280,5 +286,152 @@ mod tests {
             .count();
         assert!(!written.is_empty());
         assert_eq!(misdrawn, 0);
+    }
+
+    #[test]
+    fn the_pieces_are_written_as_a_pdf_of_a_page_each_row_after_row_printing_at_actual_size() {
+        let poster = sheet_on(PageFormat::A2, Orientation::Portrait);
+        let pieces = cut(&poster);
+
+        let pdf = pieces.pdf().unwrap_or_default();
+
+        let objects = objects_of(&pdf);
+        let pages: Vec<_> = numbers_referred_to(
+            &dictionary_of(
+                &objects,
+                number_after(&dictionary_of(&objects, 1), "/Pages "),
+            ),
+            "/Kids [",
+        )
+        .into_iter()
+        .map(|page| {
+            let page = dictionary_of(&objects, page);
+            let image = number_after(&page, "/Piece ");
+            let media_box = page
+                .split_once("/MediaBox [")
+                .and_then(|(_, rest)| rest.split_once(']'))
+                .map(|(media_box, _)| media_box.to_string());
+            (media_box, dots_of(&objects, image))
+        })
+        .collect();
+        let expected: Vec<_> = (0..4)
+            .flat_map(|row| (0..2).map(move |column| (column, row)))
+            .map(|(column, row)| {
+                let piece = pieces.piece(column, row).expect("a piece");
+                (Some("0 0 841.92 595.2".to_string()), dots_in(&piece))
+            })
+            .collect();
+        assert!(pdf.starts_with(b"%PDF-1.4\n") && pdf.ends_with(b"%%EOF\n"));
+        assert_eq!(pages.len(), 8);
+        assert!(
+            pages == expected,
+            "the PDF's pages are not the pieces, row after row"
+        );
+    }
+
+    /// Every object of a PDF by its number, from where its cross-reference table says it starts, which must be there.
+    fn objects_of(pdf: &[u8]) -> BTreeMap<u32, &[u8]> {
+        let text = String::from_utf8_lossy(pdf);
+        let table_at: usize = text
+            .rsplit_once("startxref\n")
+            .and_then(|(_, rest)| rest.lines().next())
+            .and_then(|line| line.parse().ok())
+            .unwrap_or_default();
+        let table = String::from_utf8_lossy(&pdf[table_at..]);
+        let mut lines = table.lines();
+        assert_eq!(lines.next(), Some("xref"));
+        let count: u32 = lines
+            .next()
+            .and_then(|line| line.split(' ').nth(1))
+            .and_then(|count| count.parse().ok())
+            .unwrap_or_default();
+        lines
+            .skip(1)
+            .take(count as usize - 1)
+            .zip(1..)
+            .map(|(entry, number)| {
+                let at: usize = entry[..10].parse().unwrap_or_default();
+                let object = &pdf[at..];
+                assert!(object.starts_with(format!("{number} 0 obj\n").as_bytes()));
+                (number, object)
+            })
+            .collect()
+    }
+
+    fn dictionary_of(objects: &BTreeMap<u32, &[u8]>, number: u32) -> String {
+        let object = String::from_utf8_lossy(objects.get(&number).copied().unwrap_or_default());
+        let end = [object.find("stream\n"), object.find("endobj")]
+            .into_iter()
+            .flatten()
+            .min();
+        object[..end.unwrap_or_default()].to_string()
+    }
+
+    fn number_after(text: &str, key: &str) -> u32 {
+        text.split_once(key)
+            .and_then(|(_, rest)| rest.split(|c: char| !c.is_ascii_digit()).next())
+            .and_then(|number| number.parse().ok())
+            .unwrap_or_default()
+    }
+
+    fn numbers_referred_to(text: &str, key: &str) -> Vec<u32> {
+        text.split_once(key)
+            .and_then(|(_, rest)| rest.split_once(']'))
+            .map(|(references, _)| {
+                references
+                    .split(" 0 R")
+                    .filter_map(|number| number.trim().parse().ok())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// An image object's dots, red, green and blue, row after row, its stream read as a PNG's compressed rows are.
+    fn dots_of(objects: &BTreeMap<u32, &[u8]>, image: u32) -> Vec<u8> {
+        let dictionary = dictionary_of(objects, image);
+        let (width, height, length) = (
+            number_after(&dictionary, "/Width "),
+            number_after(&dictionary, "/Height "),
+            number_after(&dictionary, "/Length ") as usize,
+        );
+        assert!(
+            dictionary.contains("/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode")
+        );
+        assert!(dictionary.contains(&format!(
+            "/DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns {width} >>"
+        )));
+        let object = objects.get(&image).copied().unwrap_or_default();
+        let starts = dictionary.len() + "stream\n".len();
+        let compressed = &object[starts..starts + length];
+        let mut header = width.to_be_bytes().to_vec();
+        header.extend(height.to_be_bytes());
+        header.extend([8, 2, 0, 0, 0]);
+        let mut png = b"\x89PNG\r\n\x1a\n".to_vec();
+        for (kind, data) in [
+            (b"IHDR", &header[..]),
+            (b"IDAT", compressed),
+            (b"IEND", &[]),
+        ] {
+            png.extend((data.len() as u32).to_be_bytes());
+            png.extend(kind);
+            png.extend(data);
+            png.extend([0; 4]);
+        }
+        let mut decoder = png::Decoder::new(std::io::Cursor::new(png));
+        decoder.ignore_checksums(true);
+        let mut reader = decoder.read_info().expect("a PNG's rows");
+        let mut dots = vec![0; reader.output_buffer_size().unwrap_or_default()];
+        reader.next_frame(&mut dots).expect("rows that inflate");
+        dots
+    }
+
+    fn dots_in(piece: &Sheet) -> Vec<u8> {
+        (0..piece.height())
+            .flat_map(|y| (0..piece.width()).map(move |x| (x, y)))
+            .flat_map(|(x, y)| {
+                let Rgb(red, green, blue) = piece.pixel(x, y);
+                [red, green, blue]
+            })
+            .collect()
     }
 }

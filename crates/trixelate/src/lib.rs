@@ -6,6 +6,7 @@ pub mod jpeg_file;
 pub mod layout;
 pub mod lettering;
 pub mod palette;
+pub mod pdf_file;
 pub mod picture;
 pub mod picture_file;
 pub mod pieces;
