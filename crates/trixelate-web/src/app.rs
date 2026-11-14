@@ -197,7 +197,7 @@ pub fn App() -> impl IntoView {
             };
             let title = sheet.name.clone();
             coloured_in_shown.set(None);
-            sheet_shown.set(ObjectUrl::of_png(&sheet.png).map(Arc::new));
+            sheet_shown.set(ObjectUrl::of_png(&sheet.bytes).map(Arc::new));
             painted.set_value(Some(Arc::new(sheet)));
             refusal.set(None);
             after_the_next_paint(move || {
@@ -215,7 +215,7 @@ pub fn App() -> impl IntoView {
 
     let download = move || {
         if let Some(made) = painted.get_value() {
-            save(&made.png, &made.name);
+            save(&made.bytes, &made.name);
         }
     };
 

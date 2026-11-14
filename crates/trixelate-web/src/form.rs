@@ -82,10 +82,10 @@ pub fn coloured(picture: &Picture, order: Order) -> Result<Colouring, String> {
     colour(picture, order).map_err(explain)
 }
 
-/// A sheet as PNG bytes ready to save, and the name it is saved under, which its preview is titled with too, so that
-/// only their cells differ.
+/// A sheet as PNG bytes, or its pieces as a PDF, ready to save, and the name they are saved under, which the sheet's
+/// preview is titled with too, so that only their cells differ.
 pub struct Painted {
-    pub png: Vec<u8>,
+    pub bytes: Vec<u8>,
     pub name: String,
 }
 
@@ -101,7 +101,7 @@ pub fn paint_sheet(
     let name = sheet_file_name(picture_name, &order);
     let sheet = sheet_of(colouring, order, &name).map_err(explain)?;
     Ok(Painted {
-        png: sheet.png().map_err(|_| NOT_A_PNG.to_string())?,
+        bytes: sheet.png().map_err(|_| NOT_A_PNG.to_string())?,
         name,
     })
 }
@@ -117,6 +117,15 @@ pub fn paint_preview(colouring: &Colouring, title: &str, order: Order) -> Result
 /// Whether a sheet on this paper is offered in A4 pieces: only one bigger than a home printer takes.
 pub fn offered_in_pieces(_format: PageFormat) -> bool {
     false
+}
+
+/// A colouring's sheet cut into A4 pieces, as a PDF named after the picture, or why it cannot be.
+pub fn paint_pieces(
+    _colouring: &Colouring,
+    _picture_name: &str,
+    _order: Order,
+) -> Result<Painted, String> {
+    Err(String::new())
 }
 
 /// The last colouring made, kept with its picture, cells across and colours, so that a new paper, margin or
@@ -330,7 +339,7 @@ mod tests {
                 let colouring = coloured(&picture, order)?;
                 let sheet = paint_sheet(&colouring, "red-yellow.png", order)?;
                 let preview = paint_preview(&colouring, &sheet.name, order)?;
-                Ok((page(&sheet.png), page(&preview), sheet.name))
+                Ok((page(&sheet.bytes), page(&preview), sheet.name))
             })
         });
 
@@ -349,6 +358,33 @@ mod tests {
                 )),
             ]
         );
+    }
+
+    #[test]
+    fn the_pieces_of_a_poster_are_painted_as_one_pdf_of_a4_pages_named_as_pieces() {
+        let picture = red_and_yellow();
+        let poster = Settings {
+            format: PageFormat::A2,
+            width: 2,
+            ..Settings::default()
+        };
+
+        let painted = ready(poster).and_then(|order| {
+            let colouring = coloured(&picture, order)?;
+            paint_pieces(&colouring, "red-yellow.png", order)
+        });
+
+        let (name, pages) = painted
+            .map(|pieces| {
+                let pdf = String::from_utf8_lossy(&pieces.bytes).into_owned();
+                let pages = pdf
+                    .starts_with("%PDF-")
+                    .then(|| pdf.matches("/Type /Page ").count());
+                (pieces.name, pages)
+            })
+            .unwrap_or_default();
+        assert_eq!(name, "red-yellow-2-8-a2.pieces.pdf");
+        assert_eq!(pages, Some(8));
     }
 
     #[test]
