@@ -7,16 +7,30 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use sha2::{Digest, Sha256};
 
-/// A built page with no `<meta charset="utf-8" />`, which the policy is written right after.
+/// Why a built page gets no policy: a policy written for it could protect it in name only, or break it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct NoCharset;
+pub enum Refusal {
+    /// No `<meta charset="utf-8" />` to write the policy right after.
+    NoCharset,
+    /// Line ends with carriage returns, which a browser drops before hashing and the hook would not.
+    CarriageReturns,
+    /// A comment, which could hide a charset, a script or a style the hook would read as real.
+    Comments,
+    /// A script or style tag in capitals, which the hook would not hash.
+    TagsInCapitals,
+    /// A script or style tag whose attribute holds a `>`, which the hook would take for the tag's end.
+    AnglesInATag,
+    /// A script or style tag never closed, whose body the hook cannot tell.
+    UnclosedTag,
+}
 
 const CHARSET: &str = r#"<meta charset="utf-8" />"#;
 
-/// The page with its policy right after its charset, hashing every inline script and style it holds.
-pub fn with_policy(page: &str) -> Result<String, NoCharset> {
+/// The page with its policy right after its charset, hashing every inline script and style it holds, or refused when
+/// such a policy could protect it in name only or break it.
+pub fn with_policy(page: &str) -> Result<String, Refusal> {
     if !page.contains(CHARSET) {
-        return Err(NoCharset);
+        return Err(Refusal::NoCharset);
     }
     let meta = format!(
         r#"<meta http-equiv="Content-Security-Policy" content="{}" />"#,
@@ -136,22 +150,40 @@ mod tests {
     }
 
     #[test]
-    fn a_page_without_its_charset_is_refused_and_an_unclosed_tag_hashes_nothing() {
-        let without_charset = BUILT.replace(r#"<meta charset="utf-8" />"#, "");
-        let unclosed = [
-            r#"<meta charset="utf-8" /><style>body{color:red}"#,
-            r#"<meta charset="utf-8" /><script type="module""#,
+    fn a_page_without_its_charset_or_that_a_policy_could_protect_in_name_only_or_break_is_refused()
+    {
+        let pages = [
+            BUILT.replace(r#"<meta charset="utf-8" />"#, ""),
+            BUILT.replace('\n', "\r\n"),
+            BUILT.replace("<head>", r#"<head><!-- <meta charset="utf-8" /> -->"#),
+            BUILT.replace("<body>", "<body><!-- <script>alert(1)</script> -->"),
+            BUILT.replace("<style>p{margin:0}</style>", "<STYLE>p{margin:0}</STYLE>"),
+            BUILT.replace("<style>p{margin:0}</style>", "<style>p{margin:0}</Style>"),
+            BUILT.replace(
+                r#"<script type="module">"#,
+                r#"<script type="module" data-goblin="a>b">"#,
+            ),
+            BUILT.replace(r#"<style >"#, r#"<style data-goblin='a>b'>"#),
+            r#"<meta charset="utf-8" /><style>body{color:red}"#.to_string(),
+            r#"<meta charset="utf-8" /><script type="module""#.to_string(),
         ];
 
-        let refused = with_policy(&without_charset);
-        let policies = unclosed.map(|page| with_policy(page).unwrap_or_default());
+        let refusals = pages.map(|page| with_policy(&page).err());
 
-        assert_eq!(refused, Err(NoCharset));
-        assert!(
-            policies.iter().all(
-                |page| page.contains("script-src 'self' 'wasm-unsafe-eval'; style-src 'none';")
-            ),
-            "{policies:?}"
+        assert_eq!(
+            refusals,
+            [
+                Some(Refusal::NoCharset),
+                Some(Refusal::CarriageReturns),
+                Some(Refusal::Comments),
+                Some(Refusal::Comments),
+                Some(Refusal::TagsInCapitals),
+                Some(Refusal::TagsInCapitals),
+                Some(Refusal::AnglesInATag),
+                Some(Refusal::AnglesInATag),
+                Some(Refusal::UnclosedTag),
+                Some(Refusal::UnclosedTag),
+            ]
         );
     }
 }
