@@ -91,7 +91,7 @@ mod tests {
     use super::*;
     use crate::layout::{Margin, Orientation, PageFormat};
     use crate::palette::ColourCount;
-    use crate::picture::Picture;
+    use crate::picture::{Picture, Rgb};
     use crate::{Order, make_sheet};
 
     const RED: [u8; 4] = [220, 30, 40, 255];
@@ -133,6 +133,37 @@ mod tests {
                 (4, 2, Some((1240, 1754, 150)), false),
                 (1, 1, Some((2480, 3508, 300)), false),
             ]
+        );
+    }
+
+    #[test]
+    fn each_piece_shows_its_part_of_the_sheet_10_mm_in_from_its_edges_sharing_10_mm_with_the_pieces_after_it()
+     {
+        let poster = sheet_on(PageFormat::A2, Orientation::Portrait);
+        let (margin, apart) = ((59, 59), (1636 - 59, 1122 - 59));
+
+        let pieces = cut(&poster);
+
+        let differences = |column: u32, row: u32, (width, height): (u32, u32)| {
+            let piece = pieces.piece(column, row).expect("a piece");
+            let (left, top) = (column * apart.0, row * apart.1);
+            let part = (0..1122).flat_map(|y| (0..1636).map(move |x| (x, y)));
+            part.filter(|&(x, y)| {
+                let expected = if x < width && y < height {
+                    poster.pixel(left + x, top + y)
+                } else {
+                    Rgb::WHITE
+                };
+                piece.pixel(margin.0 + x, margin.1 + y) != expected
+            })
+            .count()
+        };
+        assert_eq!(
+            [
+                differences(0, 1, (1636, 1122)),
+                differences(1, 3, (2480 - 1577, 3508 - 3 * 1063)),
+            ],
+            [0, 0]
         );
     }
 }
