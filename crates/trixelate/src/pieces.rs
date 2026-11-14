@@ -7,7 +7,7 @@ use crate::pdf_file::{self, CannotWritePdf};
 use crate::sheet::{BLACK, NUMBER_GREY, Paper, Sheet};
 
 const A4_MILLIMETRES: (u32, u32) = (210, 297);
-/// The blank paper around a piece's part of the sheet, wider than any home printer leaves unprinted.
+/// The blank paper around a piece's part of the sheet, wider than home printers usually leave unprinted.
 const MARGIN_MM: u32 = 10;
 /// The strip of the sheet a piece shares with the next, for the next one to be glued over.
 const OVERLAP_MM: u32 = 10;
