@@ -18,7 +18,7 @@ use crate::form::{
 };
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
-/// The id of the line saying why the download is disabled, for its button to point to.
+/// The id of the alert saying why the sheet is refused, for the disabled download button to point to.
 const DOWNLOAD_REFUSED: &str = "download-refused";
 
 /// A link to bytes the browser holds, which it forgets once the last holder of the link lets go of it.
@@ -241,7 +241,11 @@ pub fn App() -> impl IntoView {
 
     let warnings = move || warned(settings.get());
     let no_picture = move || dropped.with(Option::is_none);
-    let refused = move || refusal.get().filter(|_| !no_picture());
+    let refused = move || {
+        ready(settings.get())
+            .err()
+            .or_else(|| refusal.get().filter(|_| !no_picture()))
+    };
     let slide = move |event: &leptos::ev::PointerEvent| {
         if let Some(element) = event
             .current_target()
@@ -450,11 +454,6 @@ pub fn App() -> impl IntoView {
                             }}
                         </span>
                     </button>
-                    <Show when=move || refused().is_some()>
-                        <p id=DOWNLOAD_REFUSED class="basis-full text-center text-sm text-stone-600">
-                            {move || refused()}
-                        </p>
-                    </Show>
                 </div>
             </section>
 
@@ -618,6 +617,7 @@ pub fn App() -> impl IntoView {
                             {move || busy.get().then_some("Sharpening the crayons…")}
                         </p>
                         <p
+                            id=DOWNLOAD_REFUSED
                             role="alert"
                             class=move || {
                                 live(
