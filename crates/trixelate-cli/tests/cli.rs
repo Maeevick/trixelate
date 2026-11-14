@@ -51,11 +51,12 @@ fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
-/// The file a run wrote beside its picture under its default name, whatever UTC second it was stamped with.
-fn written_beside(folder: &Path, name: &str, what: &str) -> Option<PathBuf> {
+/// The file a run wrote beside its picture under its default name, whatever UTC second it was stamped with, then what it
+/// is and its extension.
+fn written_beside(folder: &Path, name: &str, what_and_its_extension: &str) -> Option<PathBuf> {
     let stamped = |file: &str| {
         file.strip_prefix(&format!("{name}-"))
-            .and_then(|rest| rest.strip_suffix(&format!(".{what}.png")))
+            .and_then(|rest| rest.strip_suffix(&format!(".{what_and_its_extension}")))
             .is_some_and(|stamp| {
                 stamp.len() == 16
                     && stamp.ends_with('Z')
@@ -84,7 +85,7 @@ fn a_sheet_written_beside_its_picture_is_stamped_with_the_utc_second_it_was_made
 
     let run = trixelate(&[picture.to_str().unwrap_or_default(), "--width", "4"]);
 
-    let sheet = written_beside(&folder, "sunset-4-8-a4", "sheet");
+    let sheet = written_beside(&folder, "sunset-4-8-a4", "sheet.png");
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert!(
         sheet
@@ -123,7 +124,7 @@ fn a_stamped_sheet_beside_its_picture_or_in_a_folder_is_titled_without_its_stamp
     ]);
 
     let sheet_in = |folder: &Path| {
-        written_beside(folder, "sunset-4-8-a4", "sheet").and_then(|path| fs::read(path).ok())
+        written_beside(folder, "sunset-4-8-a4", "sheet.png").and_then(|path| fs::read(path).ok())
     };
     let plainly = fs::read(&named_plainly).ok();
     assert!(plainly.is_some());
@@ -145,7 +146,7 @@ fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_c
 
     let run = trixelate(&[picture.to_str().unwrap_or_default()]);
 
-    let sheet_path = written_beside(&folder, "sunset-48-8-a4", "sheet").unwrap_or_default();
+    let sheet_path = written_beside(&folder, "sunset-48-8-a4", "sheet.png").unwrap_or_default();
     let sheet = fs::read(&sheet_path)
         .ok()
         .and_then(|bytes| png_file::read(&bytes).ok());
@@ -170,7 +171,7 @@ fn a_jpeg_photo_becomes_a_sheet_beside_it_as_a_png() {
 
     let run = trixelate(&[photo.to_str().unwrap_or_default(), "--width", "8"]);
 
-    let sheet = written_beside(&folder, "photo-8-8-a4", "sheet")
+    let sheet = written_beside(&folder, "photo-8-8-a4", "sheet.png")
         .and_then(|path| fs::read(path).ok())
         .and_then(|bytes| png_file::read(&bytes).ok());
     assert!(run.status.success(), "{}", text(&run.stderr));
@@ -189,7 +190,7 @@ fn the_command_says_what_it_wrote_where_how_fast_and_how_long_a_five_year_old_wi
 
     let sheet = text(&trixelate(&[picture, "--width", "4"]).stdout);
 
-    let written = written_beside(&folder, "sunset-4-8-a4", "sheet").unwrap_or_default();
+    let written = written_beside(&folder, "sunset-4-8-a4", "sheet.png").unwrap_or_default();
     assert!(sheet.starts_with(&format!("Sheet written to {} in ", written.display())));
     assert!(sheet.contains(" s\n"));
     assert!(sheet.contains("12 cells to colour"));
@@ -200,7 +201,7 @@ fn a_sheet_of_few_cells_or_few_colours_is_warned_of_and_written_only_once_the_us
     let folder = folder("warned");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
-    let written = || written_beside(&folder, "sunset-4-2-a4", "sheet").is_some();
+    let written = || written_beside(&folder, "sunset-4-2-a4", "sheet.png").is_some();
 
     let unanswered = trixelate_asking(&[picture, "--width", "4", "--colours", "2"]);
     let written_unanswered = written();
@@ -233,7 +234,7 @@ fn a_landscape_sheet_lies_on_its_side() {
         "--landscape",
     ]);
 
-    let sheet = written_beside(&folder, "sunset-4-8-a4-landscape", "sheet")
+    let sheet = written_beside(&folder, "sunset-4-8-a4-landscape", "sheet.png")
         .and_then(|path| fs::read(path).ok())
         .and_then(|bytes| png_file::read(&bytes).ok());
     assert_eq!(
@@ -339,7 +340,7 @@ fn asked_for_a_preview_the_command_writes_the_sheet_coloured_in_beside_its_pictu
     let output = titled_as_its_master.to_str().unwrap_or_default();
     let named = trixelate(&[arguments.as_slice(), &["--output", output]].concat());
 
-    let preview = written_beside(&folder, "twelve-4-12-a5", "preview").unwrap_or_default();
+    let preview = written_beside(&folder, "twelve-4-12-a5", "preview.png").unwrap_or_default();
     assert!(beside.status.success(), "{}", text(&beside.stderr));
     assert!(text(&beside.stdout).contains(&preview.display().to_string()));
     assert!(named.status.success(), "{}", text(&named.stderr));
@@ -392,8 +393,8 @@ fn an_output_naming_a_folder_or_no_file_at_all_gets_the_sheet_under_its_stamped_
         "{}",
         text(&into_no_file.stderr)
     );
-    assert!(written_beside(&inside, "sunset-4-8-a4", "sheet").is_some());
-    assert!(written_beside(&folder, "sunset-5-8-a4", "sheet").is_some());
+    assert!(written_beside(&inside, "sunset-4-8-a4", "sheet.png").is_some());
+    assert!(written_beside(&folder, "sunset-5-8-a4", "sheet.png").is_some());
     assert!(
         text(&into_no_file_nowhere.stderr).contains("nowhere/../sunset-6-8-a4-"),
         "{}",
@@ -564,7 +565,7 @@ fn a_poster_on_a2_takes_80_cells_across_on_a_page_printed_at_150_dots_per_inch()
     let run = trixelate(&[picture.to_str().unwrap_or_default(), "--format", "a2"]);
 
     assert!(run.status.success(), "{}", text(&run.stderr));
-    let bytes = written_beside(&folder, "sunset-80-8-a2", "sheet")
+    let bytes = written_beside(&folder, "sunset-80-8-a2", "sheet.png")
         .and_then(|poster| fs::read(poster).ok())
         .unwrap_or_default();
     let page = png_file::read(&bytes).map(|sheet| (sheet.width(), sheet.height()));
@@ -583,8 +584,8 @@ fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds() {
 
     assert!(on_a4.status.success(), "{}", text(&on_a4.stderr));
     assert!(on_a5.status.success(), "{}", text(&on_a5.stderr));
-    assert!(written_beside(&folder, "sunset-48-8-a4", "sheet").is_some());
-    assert!(written_beside(&folder, "sunset-32-8-a5", "sheet").is_some());
+    assert!(written_beside(&folder, "sunset-48-8-a4", "sheet.png").is_some());
+    assert!(written_beside(&folder, "sunset-32-8-a5", "sheet.png").is_some());
 }
 
 #[test]
@@ -606,7 +607,7 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse() {
 
 #[test]
 fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
-    let cases: [&[&str]; 7] = [
+    let cases: [&[&str]; 8] = [
         &["missing.png", "--width", "0"],
         &["missing.png", "--width", "4", "--colours", "25"],
         &["missing.png", "--width", "4", "--colours", "two"],
@@ -614,6 +615,7 @@ fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
         &["missing.png", "--width", "4", "--margin", "4"],
         &["missing.png", "--width", "4", "--margin", "21"],
         &["missing.png", "--width", "4", "--format", "letter"],
+        &["missing.png", "--pieces", "--preview"],
     ];
 
     for arguments in cases {
@@ -622,4 +624,31 @@ fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
         assert_eq!(run.status.code(), Some(2), "{arguments:?}");
         assert!(!text(&run.stderr).contains("cannot read"), "{arguments:?}");
     }
+}
+
+#[test]
+fn asked_for_pieces_the_command_writes_a_pdf_of_a4_pages_beside_its_picture_named_as_pieces_and_says_how_many()
+ {
+    let folder = folder("pieces");
+    let picture = a_picture_in(&folder);
+
+    let run = trixelate(&[
+        picture.to_str().unwrap_or_default(),
+        "--format",
+        "a2",
+        "--pieces",
+    ]);
+
+    let pdf = written_beside(&folder, "sunset-80-8-a2", "pieces.pdf")
+        .and_then(|pieces| fs::read(pieces).ok())
+        .unwrap_or_default();
+    let pages = String::from_utf8_lossy(&pdf)
+        .matches("/Type /Page ")
+        .count();
+    assert!(run.status.success(), "{}", text(&run.stderr));
+    assert!(pdf.starts_with(b"%PDF-"));
+    assert_eq!(pages, 8);
+    assert!(
+        text(&run.stdout).contains(": 8 A4 pages, 2 across and 4 down, to print at actual size")
+    );
 }
