@@ -1,32 +1,88 @@
 //! A sheet cut into A4 pieces, for a printer that takes nothing bigger: each piece prints its part of the sheet at actual
 //! size, and the pieces glued together make the sheet again.
 
-use crate::sheet::Sheet;
+use crate::layout::dots;
+use crate::sheet::{Paper, Sheet};
+
+const A4_MILLIMETRES: (u32, u32) = (210, 297);
+/// The blank paper around a piece's part of the sheet, wider than any home printer leaves unprinted.
+const MARGIN_MM: u32 = 10;
+/// The strip of the sheet a piece shares with the next, for the next one to be glued over.
+const OVERLAP_MM: u32 = 10;
 
 /// A sheet cut into A4 pieces, in columns and rows.
 pub struct Pieces<'a> {
     sheet: &'a Sheet,
+    cutting: Cutting,
+}
+
+/// How a sheet is cut: the piece's page, in dots at the sheet's dots per inch, and how many pieces across and down.
+#[derive(Clone, Copy)]
+struct Cutting {
+    page: (u32, u32),
+    across: u32,
+    down: u32,
 }
 
 /// Cuts a sheet into the fewest A4 pieces that cover it, lying whichever way needs fewer, the sheet's own way when
 /// both need as many.
 pub fn cut(sheet: &Sheet) -> Pieces<'_> {
-    Pieces { sheet }
+    let dots_per_inch = sheet.dots_per_inch();
+    let (short, long) = (
+        dots(A4_MILLIMETRES.0, dots_per_inch),
+        dots(A4_MILLIMETRES.1, dots_per_inch),
+    );
+    let (own_way, other_way) = if sheet.width() > sheet.height() {
+        ((long, short), (short, long))
+    } else {
+        ((short, long), (long, short))
+    };
+    let [own, other] = [own_way, other_way].map(|page| Cutting::of(sheet, page));
+    let cutting = if other.count() < own.count() {
+        other
+    } else {
+        own
+    };
+    Pieces { sheet, cutting }
+}
+
+impl Cutting {
+    fn of(sheet: &Sheet, page: (u32, u32)) -> Cutting {
+        let dots_per_inch = sheet.dots_per_inch();
+        let (margin, overlap) = (
+            dots(MARGIN_MM, dots_per_inch),
+            dots(OVERLAP_MM, dots_per_inch),
+        );
+        let part = (page.0 - 2 * margin, page.1 - 2 * margin);
+        let step = (part.0 - overlap, part.1 - overlap);
+        let pieces_along =
+            |length: u32, part: u32, step: u32| 1 + length.saturating_sub(part).div_ceil(step);
+        Cutting {
+            page,
+            across: pieces_along(sheet.width(), part.0, step.0),
+            down: pieces_along(sheet.height(), part.1, step.1),
+        }
+    }
+
+    fn count(self) -> u32 {
+        self.across * self.down
+    }
 }
 
 impl Pieces<'_> {
     pub fn across(&self) -> u32 {
-        0
+        self.cutting.across
     }
 
     pub fn down(&self) -> u32 {
-        0
+        self.cutting.down
     }
 
     /// The piece in a column and a row, from the top left one at 0 and 0, none past the last.
-    pub fn piece(&self, _column: u32, _row: u32) -> Option<Sheet> {
-        let _ = self.sheet;
-        None
+    pub fn piece(&self, column: u32, row: u32) -> Option<Sheet> {
+        let Cutting { page, .. } = self.cutting;
+        (column < self.across() && row < self.down())
+            .then(|| Paper::blank(page.0, page.1).into_sheet(self.sheet.dots_per_inch()))
     }
 }
 

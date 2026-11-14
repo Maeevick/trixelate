@@ -91,7 +91,7 @@ pub enum Orientation {
 
 const TENTHS_OF_MILLIMETRE_PER_INCH: u32 = 254;
 
-fn dots(millimetres: u32, dots_per_inch: u32) -> u32 {
+pub(crate) fn dots(millimetres: u32, dots_per_inch: u32) -> u32 {
     dots_of_tenths(millimetres * 10, dots_per_inch)
 }
 

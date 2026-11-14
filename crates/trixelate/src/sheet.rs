@@ -70,10 +70,7 @@ fn drawn_with(
     draw_the_legend(&mut paper, colouring, layout);
     write_the_credit(&mut paper, layout);
     write_the_title(&mut paper, layout);
-    Sheet {
-        page: paper.into_picture(),
-        dots_per_inch: layout.dots_per_inch(),
-    }
+    paper.into_sheet(layout.dots_per_inch())
 }
 
 /// Fills each cell with its colour inside its outline, as a child who coloured it in would.
@@ -204,14 +201,15 @@ fn outline_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) 
     }
 }
 
-struct Paper {
+/// The paper a page is drawn on, dot by dot, white until drawn on.
+pub(crate) struct Paper {
     width: u32,
     height: u32,
     dots: Vec<Rgb>,
 }
 
 impl Paper {
-    fn blank(width: u32, height: u32) -> Paper {
+    pub(crate) fn blank(width: u32, height: u32) -> Paper {
         Paper {
             width,
             height,
@@ -219,7 +217,7 @@ impl Paper {
         }
     }
 
-    fn fill(&mut self, left: u32, top: u32, width: u32, height: u32, colour: Rgb) {
+    pub(crate) fn fill(&mut self, left: u32, top: u32, width: u32, height: u32, colour: Rgb) {
         for y in top..(top + height).min(self.height) {
             for x in left..(left + width).min(self.width) {
                 self.dots[(y * self.width + x) as usize] = colour;
@@ -248,7 +246,7 @@ impl Paper {
     }
 
     /// Writes a number centred in a box given by its top left corner and its size.
-    fn write(
+    pub(crate) fn write(
         &mut self,
         number: &str,
         scale: u32,
@@ -264,8 +262,12 @@ impl Paper {
         }
     }
 
-    fn into_picture(self) -> Picture {
-        Picture::painted(self.width, self.height, self.dots)
+    /// The paper drawn on, as a sheet printed at its dots per inch.
+    pub(crate) fn into_sheet(self, dots_per_inch: u32) -> Sheet {
+        Sheet {
+            page: Picture::painted(self.width, self.height, self.dots),
+            dots_per_inch,
+        }
     }
 }
 
