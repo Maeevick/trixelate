@@ -140,10 +140,13 @@ pub fn preview_file_name(picture_file_name: &str, order: &Order) -> String {
 
 /// A sheet's or a preview's file name stamped with the moment it was made, in UTC to the second, before what it is and
 /// its extension, so that a sheet made again never takes an older one's name: `goblin-48-8-a4-20261111T142915Z.sheet.png`.
-/// A name with neither gets its stamp at the end.
+/// A name with neither gets its stamp at the end. Sheets already made under that name in that second number this one
+/// after its stamp, from two: `goblin-48-8-a4-20261111T142915Z-2.sheet.png`.
 pub fn stamped(file_name: &str, seconds_since_1970: u64, made_before: u32) -> String {
-    let _ = made_before;
-    let stamp = utc(seconds_since_1970);
+    let stamp = match made_before {
+        0 => utc(seconds_since_1970),
+        _ => format!("{}-{}", utc(seconds_since_1970), made_before + 1),
+    };
     match file_name.rsplitn(3, '.').collect::<Vec<_>>()[..] {
         [extension, what, name] => format!("{name}-{stamp}.{what}.{extension}"),
         _ => format!("{file_name}-{stamp}"),
