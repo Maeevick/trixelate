@@ -35,10 +35,14 @@ install: ## the command line, on this machine
 web: ## the page, served at http://127.0.0.1:8080 and rebuilt on every change
 	cd crates/trixelate-web && trunk serve --cargo-profile web
 
-web-build: ## the page, built for any static host in crates/trixelate-web/dist, failing without its Content-Security-Policy
+web-build: ## the page, built for any static host in crates/trixelate-web/dist, failing without a Content-Security-Policy that hashes its script and style
 	cd crates/trixelate-web && trunk build --release --cargo-profile web-release
-	@grep -q '<meta http-equiv="Content-Security-Policy"' crates/trixelate-web/dist/index.html \
-		|| { echo "the built page carries no Content-Security-Policy: see crates/trixelate-csp"; exit 1; }
+	@page=crates/trixelate-web/dist/index.html; \
+	policy=$$(grep -n -o '<meta http-equiv="Content-Security-Policy" content="[^"]*"' $$page | head -1); \
+	script=$$(grep -n -m1 '<script' $$page | cut -d: -f1); \
+	[ -n "$$policy" ] && [ -n "$$script" ] && [ "$${policy%%:*}" -lt "$$script" ] \
+		&& grep -Eq "script-src [^;]*'sha256-" <<< "$$policy" && grep -Eq "style-src [^;]*'sha256-" <<< "$$policy" \
+		|| { echo "the built page carries no Content-Security-Policy before its first script, hashing its script and style: see crates/trixelate-csp"; exit 1; }
 
 LIGHTHOUSE_PORT := 8090
 LIGHTHOUSE_PAGE := http://127.0.0.1:$(LIGHTHOUSE_PORT)/
