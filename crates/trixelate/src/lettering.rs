@@ -407,16 +407,22 @@ pub fn ink(text: &str, scale: u32) -> Vec<(u32, u32)> {
         .collect()
 }
 
-/// The largest scale at which a text fits in a box, none when it does not fit even at one dot per dot.
+/// The largest scale at which a text fits in a box, none when it does not fit even at one dot per dot, nor when it
+/// holds nothing to write.
 pub fn largest_scale_fitting(text: &str, width: u32, height: u32) -> Option<u32> {
     let (width_at_one, height_at_one) = size(text, 1);
-    Some((width / width_at_one).min(height / height_at_one)).filter(|&scale| scale > 0)
+    width
+        .checked_div(width_at_one)
+        .map(|across| across.min(height / height_at_one))
+        .filter(|&scale| scale > 0)
 }
 
-/// A text's width and height in dots at a scale, from the left of its first character to the right of its last.
+/// A text's width and height in dots at a scale, from the left of its first character to the right of its last, no
+/// width at all for a text with no character.
 pub fn size(text: &str, scale: u32) -> (u32, u32) {
     let characters = text.chars().count() as u32;
-    let width = characters * (GLYPH_WIDTH + SPACE_BETWEEN_CHARACTERS) - SPACE_BETWEEN_CHARACTERS;
+    let width = (characters * (GLYPH_WIDTH + SPACE_BETWEEN_CHARACTERS))
+        .saturating_sub(SPACE_BETWEEN_CHARACTERS);
     (width * scale, GLYPH_HEIGHT * scale)
 }
 
