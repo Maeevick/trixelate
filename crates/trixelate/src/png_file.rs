@@ -59,7 +59,7 @@ pub fn write(sheet: &Picture, dots_per_inch: u32) -> Result<Vec<u8>, CannotWrite
     encoded(sheet, dots_per_inch, Compression::Balanced)
 }
 
-/// Writes a sheet as `write` does, five times faster and four times bigger, for a screen to show.
+/// Writes a sheet as `write` does, faster and bigger, for a screen to show.
 pub(crate) fn write_to_show(
     sheet: &Picture,
     dots_per_inch: u32,

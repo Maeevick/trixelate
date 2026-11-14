@@ -36,8 +36,7 @@ impl Sheet {
         png_file::write(&self.page, self.dots_per_inch)
     }
 
-    /// The sheet as PNG bytes encoded five times faster and four times bigger, for a screen to show rather than a
-    /// printer to keep.
+    /// The sheet as PNG bytes encoded faster and bigger, for a screen to show rather than a printer to keep.
     pub fn png_to_show(&self) -> Result<Vec<u8>, CannotWritePng> {
         png_file::write_to_show(&self.page, self.dots_per_inch)
     }
