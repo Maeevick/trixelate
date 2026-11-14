@@ -114,6 +114,11 @@ pub fn paint_preview(colouring: &Colouring, title: &str, order: Order) -> Result
         .map_err(|_| NOT_A_PNG.to_string())
 }
 
+/// Whether a sheet on this paper is offered in A4 pieces: only one bigger than a home printer takes.
+pub fn offered_in_pieces(_format: PageFormat) -> bool {
+    false
+}
+
 /// The last colouring made, kept with its picture, cells across and colours, so that a new paper, margin or
 /// orientation lays it out again without colouring the picture anew.
 #[derive(Default)]
@@ -254,6 +259,23 @@ mod tests {
         );
         assert_eq!(Settings::default().margin, 10);
         assert!(!Settings::default().landscape);
+    }
+
+    #[test]
+    fn a_sheet_bigger_than_a4_is_offered_in_pieces_and_an_a4_or_a5_one_prints_whole_at_home() {
+        let offered = PageFormat::ALL.map(|format| (format.name(), offered_in_pieces(format)));
+
+        assert_eq!(
+            offered,
+            [
+                ("A0", true),
+                ("A1", true),
+                ("A2", true),
+                ("A3", true),
+                ("A4", false),
+                ("A5", false)
+            ]
+        );
     }
 
     #[test]
