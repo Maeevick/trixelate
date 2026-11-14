@@ -115,6 +115,7 @@ pub fn App() -> impl IntoView {
     let refusal = RwSignal::new(None::<String>);
     let painted = StoredValue::new(None::<Arc<Painted>>);
     let last_colouring = StoredValue::new(LastColouring::default());
+    let latest_drop = StoredValue::new(Latest::default());
     let latest_sheet = StoredValue::new(Latest::default());
 
     let take = move |file: File| {
@@ -124,13 +125,22 @@ pub fn App() -> impl IntoView {
             return;
         }
         busy.set(true);
+        let this = latest_drop.write_value().start();
+        let still_latest = move || latest_drop.with_value(|latest| latest.still(this));
         spawn_local(async move {
-            let Some(bytes) = bytes_of(&file).await else {
+            let bytes = bytes_of(&file).await;
+            if !still_latest() {
+                return;
+            }
+            let Some(bytes) = bytes else {
                 unreadable.set(Some(not_a_picture(Some(Unreadable::NeitherPngNorJpeg))));
                 busy.set(false);
                 return;
             };
             after_the_next_paint(move || {
+                if !still_latest() {
+                    return;
+                }
                 let read = picture_file::read(&bytes)
                     .map_err(Some)
                     .and_then(|picture| {
