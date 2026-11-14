@@ -262,6 +262,22 @@ impl Paper {
         }
     }
 
+    /// Lays a part of a sheet on the paper, given by its top left corner and its size, at a place on the paper.
+    pub(crate) fn lay(
+        &mut self,
+        sheet: &Sheet,
+        (left, top): (u32, u32),
+        (width, height): (u32, u32),
+        (at_x, at_y): (u32, u32),
+    ) {
+        let dots = sheet.page.pixels();
+        for y in 0..height {
+            let from = ((top + y) * sheet.width() + left) as usize;
+            let to = ((at_y + y) * self.width + at_x) as usize;
+            self.dots[to..to + width as usize].copy_from_slice(&dots[from..from + width as usize]);
+        }
+    }
+
     /// The paper drawn on, as a sheet printed at its dots per inch.
     pub(crate) fn into_sheet(self, dots_per_inch: u32) -> Sheet {
         Sheet {

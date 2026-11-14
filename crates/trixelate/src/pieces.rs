@@ -16,10 +16,15 @@ pub struct Pieces<'a> {
     cutting: Cutting,
 }
 
-/// How a sheet is cut: the piece's page, in dots at the sheet's dots per inch, and how many pieces across and down.
+/// How a sheet is cut, in dots at its dots per inch: the piece's page and its margin, the part of the sheet each piece
+/// shows inside its margin, how far apart parts start, a part less the strip it shares with the next, and how many
+/// pieces across and down.
 #[derive(Clone, Copy)]
 struct Cutting {
     page: (u32, u32),
+    margin: u32,
+    part: (u32, u32),
+    apart: (u32, u32),
     across: u32,
     down: u32,
 }
@@ -54,13 +59,16 @@ impl Cutting {
             dots(OVERLAP_MM, dots_per_inch),
         );
         let part = (page.0 - 2 * margin, page.1 - 2 * margin);
-        let step = (part.0 - overlap, part.1 - overlap);
+        let apart = (part.0 - overlap, part.1 - overlap);
         let pieces_along =
-            |length: u32, part: u32, step: u32| 1 + length.saturating_sub(part).div_ceil(step);
+            |length: u32, part: u32, apart: u32| 1 + length.saturating_sub(part).div_ceil(apart);
         Cutting {
             page,
-            across: pieces_along(sheet.width(), part.0, step.0),
-            down: pieces_along(sheet.height(), part.1, step.1),
+            margin,
+            part,
+            apart,
+            across: pieces_along(sheet.width(), part.0, apart.0),
+            down: pieces_along(sheet.height(), part.1, apart.1),
         }
     }
 
@@ -80,9 +88,26 @@ impl Pieces<'_> {
 
     /// The piece in a column and a row, from the top left one at 0 and 0, none past the last.
     pub fn piece(&self, column: u32, row: u32) -> Option<Sheet> {
-        let Cutting { page, .. } = self.cutting;
-        (column < self.across() && row < self.down())
-            .then(|| Paper::blank(page.0, page.1).into_sheet(self.sheet.dots_per_inch()))
+        (column < self.across() && row < self.down()).then(|| self.drawn(column, row))
+    }
+
+    /// A piece: its part of the sheet laid inside its margin, on white paper where the sheet ends.
+    fn drawn(&self, column: u32, row: u32) -> Sheet {
+        let Cutting {
+            page,
+            margin,
+            part,
+            apart,
+            ..
+        } = self.cutting;
+        let (left, top) = (column * apart.0, row * apart.1);
+        let size = (
+            part.0.min(self.sheet.width() - left),
+            part.1.min(self.sheet.height() - top),
+        );
+        let mut paper = Paper::blank(page.0, page.1);
+        paper.lay(self.sheet, (left, top), size, (margin, margin));
+        paper.into_sheet(self.sheet.dots_per_inch())
     }
 }
 
