@@ -77,7 +77,7 @@ impl Order {
     /// picture's proportions, refused when the page could never number that many rows, before any cell is coloured.
     pub fn grid_for(&self, picture: &Picture) -> Result<GridSize, NoRoom> {
         let grid = GridSize::keeping_the_proportions_of(picture, self.cells_across);
-        layout::could_number(grid, self.format, self.orientation, self.margin)?;
+        layout::room_to_number(grid, self.format, self.orientation, self.margin)?;
         Ok(grid)
     }
 }

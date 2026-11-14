@@ -244,9 +244,9 @@ struct Placed {
     miniature: Miniature,
 }
 
-/// Whether a grid's cells could ever be numbered on a page, told from its size alone, before any cell is coloured: no
-/// cell smaller than the smallest that holds a digit can be, whatever the legend leaves.
-pub(crate) fn could_number(
+/// Room to number a grid's cells on a page, told from its size alone, before any cell is coloured: no cell smaller than
+/// the smallest that holds a digit can be numbered, whatever the legend leaves.
+pub(crate) fn room_to_number(
     size: GridSize,
     format: PageFormat,
     orientation: Orientation,
@@ -260,11 +260,25 @@ pub(crate) fn could_number(
         .ok_or(NoRoom::ForTheNumbersInTheCells)
 }
 
-/// The smallest cell that holds a one-digit number at the smallest scale, its outline included.
+/// The smallest cell that holds a one-digit number at the smallest scale, its thinnest outline of one dot included.
 fn smallest_numbered_cell() -> u32 {
-    let (width, height) = lettering::size("8", 1);
-    let inside = (2 * height).max((3 * width).div_ceil(2));
-    inside + 1
+    let thinnest_line = 1;
+    (1..)
+        .find(|&inside| {
+            let (width, height) = room_for_a_number_in_a_cell(inside);
+            lettering::largest_scale_fitting("8", width, height).is_some()
+        })
+        .map_or(u32::MAX, |inside| inside + thinnest_line)
+}
+
+/// The room a number takes inside its cell's outline: two thirds of it across and half of it down.
+fn room_for_a_number_in_a_cell(inside: u32) -> (u32, u32) {
+    (inside * 2 / 3, inside / 2)
+}
+
+/// The room a number takes in a legend's bubble: eleven twentieths of it across and nine down, which a circle holds.
+fn room_for_a_number_in_a_bubble(diameter: u32) -> (u32, u32) {
+    (diameter * 11 / 20, diameter * 9 / 20)
 }
 
 impl Room {
@@ -310,16 +324,13 @@ impl Layout {
 
         let widest_number = colours.to_string();
         let inside_a_cell = placed.grid.cell_side.saturating_sub(placed.line);
-        let cell_number_scale = lettering::largest_scale_fitting(
-            &widest_number,
-            inside_a_cell * 2 / 3,
-            inside_a_cell / 2,
-        )
-        .ok_or(NoRoom::ForTheNumbersInTheCells)?;
+        let (width, height) = room_for_a_number_in_a_cell(inside_a_cell);
+        let cell_number_scale = lettering::largest_scale_fitting(&widest_number, width, height)
+            .ok_or(NoRoom::ForTheNumbersInTheCells)?;
         let bubble = placed.bubble;
-        let bubble_number_scale =
-            lettering::largest_scale_fitting(&widest_number, bubble * 11 / 20, bubble * 9 / 20)
-                .ok_or(NoRoom::ForTheNumbersInTheCells)?;
+        let (width, height) = room_for_a_number_in_a_bubble(bubble);
+        let bubble_number_scale = lettering::largest_scale_fitting(&widest_number, width, height)
+            .ok_or(NoRoom::ForTheNumbersInTheCells)?;
 
         let (_, credit_height_at_one) = lettering::size(CREDIT, 1);
         let credit_scale =
