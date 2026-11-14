@@ -201,26 +201,43 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
         Written::Sheet => (make_sheet, sheet_file_name),
         Written::Preview => (make_preview, preview_file_name),
     };
-    let (default_title, default_name) = titled_and_stamped(&cli.picture, &order, named, now);
-    let (sheet_path, title) = match cli.output {
-        Some(folder) if folder.is_dir() || folder.file_name().is_none() => {
-            (folder.join(default_name), default_title)
-        }
+    let default_title = named(
+        &cli.picture
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy(),
+        &order,
+    );
+    let seconds = now
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_or(0, |since| since.as_secs());
+    let (claimed, title) = match cli.output {
+        Some(folder) if folder.is_dir() || folder.file_name().is_none() => (
+            claim_stamped(|name| folder.join(name), &default_title, seconds)?,
+            default_title,
+        ),
         Some(file) => {
             let title = file
                 .file_name()
                 .unwrap_or_default()
                 .to_string_lossy()
                 .into_owned();
-            (file, title)
+            (claim_named(file)?, title)
         }
-        None => (cli.picture.with_file_name(default_name), default_title),
+        None => (
+            claim_stamped(
+                |name| cli.picture.with_file_name(name),
+                &default_title,
+                seconds,
+            )?,
+            default_title,
+        ),
     };
     let sheet = make(&picture, order, &title).map_err(explain)?;
     let bytes = sheet
         .png()
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
-    write_sheet(&sheet_path, &bytes)?;
+    let sheet_path = claimed.write(&bytes)?;
     Ok(report::written(
         what,
         &sheet_path,
@@ -229,21 +246,83 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
     ))
 }
 
-/// Writes the sheet to a new file, never replacing one, even one that appears meanwhile or a link to another.
-fn write_sheet(path: &Path, bytes: &[u8]) -> Result<(), String> {
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(path)
-        .map_err(|error| match error.kind() {
-            ErrorKind::AlreadyExists => format!(
-                "{} already exists, and trixelate never overwrites a file: choose another --output",
-                shown(path)
-            ),
-            _ => format!("cannot write the sheet to {}: {error}", shown(path)),
-        })?;
-    file.write_all(bytes)
-        .map_err(|error| format!("cannot write the sheet to {}: {error}", shown(path)))
+/// How many sheets of one picture, with the same settings, can be written in one second before trixelate gives up.
+const MOST_SHEETS_IN_A_SECOND: u32 = 100;
+
+/// A new file claimed for the sheet before it is made, so a name already taken costs nothing, and removed again unless
+/// the sheet is written into it in full, so a failure never leaves an empty or broken sheet behind.
+struct Claimed {
+    path: PathBuf,
+    file: fs::File,
+    written: bool,
+}
+
+impl Claimed {
+    /// A new file at a path, never one already there, nor a link to another.
+    fn new(path: PathBuf) -> std::io::Result<Claimed> {
+        let file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)?;
+        Ok(Claimed {
+            path,
+            file,
+            written: false,
+        })
+    }
+
+    /// Writes the sheet into its file in full, and says where it went.
+    fn write(mut self, bytes: &[u8]) -> Result<PathBuf, String> {
+        self.file
+            .write_all(bytes)
+            .map_err(|error| cannot_write(&self.path, error))?;
+        self.written = true;
+        Ok(self.path.clone())
+    }
+}
+
+impl Drop for Claimed {
+    fn drop(&mut self) {
+        if !self.written {
+            let _ = fs::remove_file(&self.path);
+        }
+    }
+}
+
+/// The file named as the output, refused when it already exists.
+fn claim_named(path: PathBuf) -> Result<Claimed, String> {
+    Claimed::new(path.clone()).map_err(|error| match error.kind() {
+        ErrorKind::AlreadyExists => format!(
+            "{} already exists, and trixelate never overwrites a file: choose another --output",
+            shown(&path)
+        ),
+        _ => cannot_write(&path, error),
+    })
+}
+
+/// A file trixelate names itself, its title stamped with the second it was made, numbered after the stamp when sheets
+/// made that second already took the name.
+fn claim_stamped(
+    place: impl Fn(&str) -> PathBuf,
+    title: &str,
+    seconds: u64,
+) -> Result<Claimed, String> {
+    for made_before in 0..MOST_SHEETS_IN_A_SECOND {
+        let path = place(&stamped(title, seconds, made_before));
+        match Claimed::new(path.clone()) {
+            Ok(claimed) => return Ok(claimed),
+            Err(error) if error.kind() == ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(cannot_write(&path, error)),
+        }
+    }
+    Err(format!(
+        "{MOST_SHEETS_IN_A_SECOND} sheets named {} already exist from that second, and trixelate never overwrites a file: try again in a second",
+        shown(&place(&stamped(title, seconds, 0)))
+    ))
+}
+
+fn cannot_write(path: &Path, error: std::io::Error) -> String {
+    format!("cannot write the sheet to {}: {error}", shown(path))
 }
 
 /// Reads a picture from a file, refusing anything but a file, and a file too heavy for any picture, before reading it.
@@ -281,25 +360,6 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
             shown(path)
         ),
     })
-}
-
-/// What a sheet or its preview is titled and called beside its picture or in the folder given as its output: titled
-/// after its picture alone, its file stamped with the second it was made so that it never takes an older sheet's name.
-fn titled_and_stamped(
-    picture: &Path,
-    order: &Order,
-    named: Naming,
-    now: SystemTime,
-) -> (String, String) {
-    let title = named(
-        &picture.file_name().unwrap_or_default().to_string_lossy(),
-        order,
-    );
-    let seconds = now
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .map_or(0, |since| since.as_secs());
-    let file_name = stamped(&title, seconds, 0);
-    (title, file_name)
 }
 
 fn explain(no_room: NoRoom) -> String {
