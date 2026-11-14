@@ -1,4 +1,5 @@
-//! The command line: reads a PNG picture, makes its colour-by-number sheet and writes it as a PNG.
+//! The command line: reads a PNG or JPEG picture, makes its colour-by-number sheet and writes it as a PNG, or its pieces
+//! as a PDF.
 
 mod answer;
 mod report;
@@ -20,8 +21,8 @@ use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::sheet::Sheet;
 use trixelate::warning::warnings_for;
 use trixelate::{
-    Order, Refusal, make_preview, make_sheet, picture_file, preview_file_name, sheet_file_name,
-    stamped,
+    Order, Refusal, make_preview, make_sheet, picture_file, pieces, pieces_file_name,
+    preview_file_name, sheet_file_name, stamped,
 };
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -55,13 +56,17 @@ struct Cli {
     #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET, value_parser = margin)]
     margin: Margin,
 
-    /// Where to write the sheet: a new file, or a folder to write it in under its default name [default: beside the picture, as <picture>-<width>-<colours>-<format>-<UTC second>.sheet.png, with -landscape after the format when asked, and .preview.png for a preview]
+    /// Where to write the sheet: a new file, or a folder to write it in under its default name [default: beside the picture, as <picture>-<width>-<colours>-<format>-<UTC second>.sheet.png, with -landscape after the format when asked, .preview.png for a preview and .pieces.pdf for pieces]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
     /// Write the sheet's preview instead: the sheet as it looks once coloured in, every cell filled with its colour
     #[arg(long)]
     preview: bool,
+
+    /// Write the sheet cut into A4 pieces instead, for a home printer, as one PDF to print at actual size: each piece marked where to cut it and saying its row and column, the next glued over the 10 mm they share
+    #[arg(long, conflicts_with = "preview")]
+    pieces: bool,
 
     /// Go ahead without asking when the sheet is warned of: under 16 cells across or 4 colours
     #[arg(short, long)]
@@ -183,6 +188,14 @@ fn sure() -> bool {
     std::io::stdin().lock().read_line(&mut answer).is_ok() && said_yes(&answer)
 }
 
+/// What the command is asked to write: the sheet, its preview or its pieces.
+#[derive(Clone, Copy)]
+enum Asked {
+    Sheet,
+    Preview,
+    Pieces,
+}
+
 /// How the command draws what it writes, from a picture, its order and its file name.
 type Making = fn(&Picture, Order, &str) -> Result<Sheet, NoRoom>;
 /// How the command names what it writes, from its picture's file name and its order.
@@ -192,14 +205,15 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
     let started = Instant::now();
     let picture = read_picture(&cli.picture)?;
     let grid = order.grid_for(&picture).map_err(explain)?;
-    let what = if cli.preview {
-        Written::Preview
-    } else {
-        Written::Sheet
+    let asked = match (cli.preview, cli.pieces) {
+        (true, _) => Asked::Preview,
+        (_, true) => Asked::Pieces,
+        _ => Asked::Sheet,
     };
-    let (make, named): (Making, Naming) = match what {
-        Written::Sheet | Written::Pieces { .. } => (make_sheet, sheet_file_name),
-        Written::Preview => (make_preview, preview_file_name),
+    let (make, named): (Making, Naming) = match asked {
+        Asked::Sheet => (make_sheet, sheet_file_name),
+        Asked::Preview => (make_preview, preview_file_name),
+        Asked::Pieces => (make_sheet, pieces_file_name),
     };
     let default_title = named(
         &cli.picture
@@ -234,9 +248,23 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
         ),
     };
     let sheet = make(&picture, order, &title).map_err(explain)?;
-    let bytes = sheet
-        .png()
-        .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
+    let png = || {
+        sheet
+            .png()
+            .map_err(|_| "the sheet could not be encoded as a PNG".to_string())
+    };
+    let (what, bytes) = match asked {
+        Asked::Sheet => (Written::Sheet, png()?),
+        Asked::Preview => (Written::Preview, png()?),
+        Asked::Pieces => {
+            let pieces = pieces::cut(&sheet);
+            let pdf = pieces
+                .pdf()
+                .map_err(|_| "the pieces could not be written as a PDF".to_string())?;
+            let (across, down) = (pieces.across(), pieces.down());
+            (Written::Pieces { across, down }, pdf)
+        }
+    };
     let sheet_path = claimed.write(&bytes)?;
     Ok(report::written(
         what,
