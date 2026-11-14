@@ -298,7 +298,7 @@ fn titled_and_stamped(
     let seconds = now
         .duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |since| since.as_secs());
-    let file_name = stamped(&title, seconds);
+    let file_name = stamped(&title, seconds, 0);
     (title, file_name)
 }
 
