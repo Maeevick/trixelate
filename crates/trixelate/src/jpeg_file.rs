@@ -137,13 +137,18 @@ mod tests {
             })
             .collect();
         let tiff = [order, &number(tags.len() as u16), &entries, &[0, 0, 0, 0]].concat();
+        with_exif_block(&tiff)
+    }
+
+    /// The red-cornered JPEG carrying this EXIF block, whatever it holds.
+    fn with_exif_block(tiff: &[u8]) -> Vec<u8> {
         let length = (2 + 6 + tiff.len()) as u16;
         [
             &RED_CORNER[..2],
             &[0xFF, 0xE1],
             &length.to_be_bytes(),
             b"Exif\x00\x00",
-            &tiff,
+            tiff,
             &RED_CORNER[2..],
         ]
         .concat()
@@ -232,6 +237,34 @@ mod tests {
         let read = photos.map(|photo| read(&photo).map(|picture| red_corner_of(&picture)));
 
         assert_eq!(read, [(); 3].map(|_| Ok((16, 8, "top left".to_string()))));
+    }
+
+    #[test]
+    fn a_photo_whose_exif_block_is_malformed_or_points_past_its_end_is_read_as_stored_not_turned() {
+        let tiff = [
+            b"MM\x00\x2a\x00\x00\x00\x08".as_slice(),
+            &[0, 1],
+            &[0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 6, 0, 0],
+            &[0, 0, 0, 0],
+        ]
+        .concat();
+        let pointing_to = |offset: &[u8]| [&tiff[..4], offset, &tiff[8..]].concat();
+        let blocks = [
+            tiff.clone(),
+            [b"XX", &tiff[2..]].concat(),
+            tiff[..19].to_vec(),
+            [&tiff[..8], &[0xFF, 0xFF, 0x01, 0x0F], &tiff[12..]].concat(),
+            pointing_to(&[0xFF, 0xFF, 0xFF, 0xFF]),
+            pointing_to(&[0xFF, 0xFF, 0xFF, 0xF0]),
+            tiff[..6].to_vec(),
+        ];
+
+        let read = blocks
+            .map(|block| read(&with_exif_block(&block)).map(|picture| red_corner_of(&picture)));
+
+        let as_stored = Ok((16, 8, "top left".to_string()));
+        assert_eq!(read[0], Ok((8, 16, "top right".to_string())));
+        assert_eq!(read[1..], [(); 6].map(|_| as_stored.clone()));
     }
 
     #[test]
