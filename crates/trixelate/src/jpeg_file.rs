@@ -26,17 +26,67 @@ pub fn read(bytes: &[u8]) -> Result<Picture, NotAJpeg> {
     let size = decoder.info().ok_or(NotAJpeg)?;
     let stored = Picture::from_rgba(u32::from(size.width), u32::from(size.height), &rgba)
         .map_err(|_| NotAJpeg)?;
-    let orientation = decoder.exif().and_then(|exif| orientation(exif));
-    Ok(turned(stored, orientation.unwrap_or(AS_STORED)))
+    let how = decoder.exif().and_then(|exif| how_stored(exif));
+    Ok(turned(stored, how.unwrap_or(HowStored::AsShown)))
 }
 
-/// The EXIF orientation of a photo stored the way it is shown.
-const AS_STORED: u16 = 1;
+/// How a camera stored a photo against the way it is shown, as the EXIF orientation 1 to 8 says.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum HowStored {
+    /// 1: stored as shown.
+    AsShown,
+    /// 2: stored mirrored, left to right.
+    MirroredLeftToRight,
+    /// 3: stored upside down.
+    UpsideDown,
+    /// 4: stored mirrored, top to bottom.
+    MirroredTopToBottom,
+    /// 5: stored mirrored along its diagonal from the top left.
+    MirroredAlongItsDiagonal,
+    /// 6: stored a quarter turn anticlockwise.
+    QuarterTurnedAnticlockwise,
+    /// 7: stored mirrored along its diagonal from the top right.
+    MirroredAlongItsOtherDiagonal,
+    /// 8: stored a quarter turn clockwise.
+    QuarterTurnedClockwise,
+}
+
+impl HowStored {
+    /// How the EXIF orientation with this number says the photo was stored, none outside 1 to 8.
+    fn numbered(number: u16) -> Option<HowStored> {
+        use HowStored::*;
+        [
+            AsShown,
+            MirroredLeftToRight,
+            UpsideDown,
+            MirroredTopToBottom,
+            MirroredAlongItsDiagonal,
+            QuarterTurnedAnticlockwise,
+            MirroredAlongItsOtherDiagonal,
+            QuarterTurnedClockwise,
+        ]
+        .get(usize::from(number).checked_sub(1)?)
+        .copied()
+    }
+
+    /// Whether the photo was stored on its side, its width and height swapped.
+    fn on_its_side(self) -> bool {
+        use HowStored::*;
+        matches!(
+            self,
+            MirroredAlongItsDiagonal
+                | QuarterTurnedAnticlockwise
+                | MirroredAlongItsOtherDiagonal
+                | QuarterTurnedClockwise
+        )
+    }
+}
+
 /// The EXIF tag saying how a camera turned the photo it stored.
 const ORIENTATION_TAG: u16 = 0x0112;
 
-/// The orientation an EXIF block's first directory gives, from 1 to 8, in its own byte order.
-fn orientation(exif: &[u8]) -> Option<u16> {
+/// How an EXIF block's first directory says the photo was stored, in its own byte order.
+fn how_stored(exif: &[u8]) -> Option<HowStored> {
     let big_endian = [b"MM", b"II"]
         .iter()
         .position(|order| exif.starts_with(*order))?
@@ -62,27 +112,26 @@ fn orientation(exif: &[u8]) -> Option<u16> {
         .filter_map(|entry| first_directory.checked_add(2 + entry * 12))
         .find(|&entry| number(entry) == Some(ORIENTATION_TAG))
         .and_then(|entry| number(entry.checked_add(8)?))
-        .filter(|orientation| (1..=8).contains(orientation))
+        .and_then(HowStored::numbered)
 }
 
-/// A stored picture turned and flipped as an EXIF orientation says, so it shows upright: 2 to 4 mirror or turn it half
-/// way, 5 to 8 lay it on its side.
-fn turned(stored: Picture, orientation: u16) -> Picture {
+/// A stored picture turned and flipped as its EXIF orientation says, so it shows upright.
+fn turned(stored: Picture, how: HowStored) -> Picture {
     let (width, height) = (stored.width(), stored.height());
-    let (shown_width, shown_height) = if orientation >= 5 {
+    let (shown_width, shown_height) = if how.on_its_side() {
         (height, width)
     } else {
         (width, height)
     };
-    let stored_at = |x: u32, y: u32| match orientation {
-        2 => (width - 1 - x, y),
-        3 => (width - 1 - x, height - 1 - y),
-        4 => (x, height - 1 - y),
-        5 => (y, x),
-        6 => (y, height - 1 - x),
-        7 => (width - 1 - y, height - 1 - x),
-        8 => (width - 1 - y, x),
-        _ => (x, y),
+    let stored_at = |x: u32, y: u32| match how {
+        HowStored::AsShown => (x, y),
+        HowStored::MirroredLeftToRight => (width - 1 - x, y),
+        HowStored::UpsideDown => (width - 1 - x, height - 1 - y),
+        HowStored::MirroredTopToBottom => (x, height - 1 - y),
+        HowStored::MirroredAlongItsDiagonal => (y, x),
+        HowStored::QuarterTurnedAnticlockwise => (y, height - 1 - x),
+        HowStored::MirroredAlongItsOtherDiagonal => (width - 1 - y, height - 1 - x),
+        HowStored::QuarterTurnedClockwise => (width - 1 - y, x),
     };
     let pixels = (0..shown_height)
         .flat_map(|y| (0..shown_width).map(move |x| (x, y)))
