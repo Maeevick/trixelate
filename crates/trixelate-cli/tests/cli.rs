@@ -94,6 +94,48 @@ fn a_sheet_written_beside_its_picture_is_stamped_with_the_utc_second_it_was_made
 }
 
 #[test]
+fn a_stamped_sheet_beside_its_picture_or_in_a_folder_is_titled_without_its_stamp_the_same_sheet_as_one_named_plainly()
+ {
+    let folder = folder("titled");
+    let picture = a_picture_in(&folder);
+    let picture = picture.to_str().unwrap_or_default();
+    let (inside, plain) = (folder.join("inside"), folder.join("plain"));
+    fs::create_dir_all(&inside).unwrap_or_default();
+    fs::create_dir_all(&plain).unwrap_or_default();
+    let named_plainly = plain.join("sunset-4-8-a4.sheet.png");
+
+    trixelate(&[picture, "--width", "4"]);
+    trixelate(&[
+        picture,
+        "--width",
+        "4",
+        "-o",
+        inside.to_str().unwrap_or_default(),
+    ]);
+    trixelate(&[
+        picture,
+        "--width",
+        "4",
+        "-o",
+        named_plainly.to_str().unwrap_or_default(),
+    ]);
+
+    let sheet_in = |folder: &Path| {
+        written_beside(folder, "sunset-4-8-a4", "sheet").and_then(|path| fs::read(path).ok())
+    };
+    let plainly = fs::read(&named_plainly).ok();
+    assert!(plainly.is_some());
+    assert!(
+        sheet_in(&folder) == plainly,
+        "the sheet beside its picture differs from the one named plainly"
+    );
+    assert!(
+        sheet_in(&inside) == plainly,
+        "the sheet in a folder differs from the one named plainly"
+    );
+}
+
+#[test]
 fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_command_says_where()
 {
     let folder = folder("beside");
