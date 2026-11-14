@@ -25,29 +25,23 @@ pub(crate) fn write(pages: impl Iterator<Item = Sheet>) -> Result<Vec<u8>, Canno
     let mut kids = Vec::new();
     for (page, sheet) in (PAGE_TREE + 1..).step_by(3).zip(pages) {
         let (contents, picture) = (page + 1, page + 2);
-        let size = format!(
-            "{} {}",
-            points(sheet.width(), sheet.dots_per_inch()),
-            points(sheet.height(), sheet.dots_per_inch())
+        let (width, height) = (sheet.width(), sheet.height());
+        let (across, down) = (
+            points(width, sheet.dots_per_inch()),
+            points(height, sheet.dots_per_inch()),
         );
         pdf.object(
             page,
             format!(
-                "<< /Type /Page /Parent {PAGE_TREE} 0 R /MediaBox [0 0 {size}] \
+                "<< /Type /Page /Parent {PAGE_TREE} 0 R /MediaBox [0 0 {across} {down}] \
                  /Resources << /XObject << /Piece {picture} 0 R >> >> /Contents {contents} 0 R >>"
             )
             .as_bytes(),
         );
-        let (width, height) = (sheet.width(), sheet.height());
         pdf.stream(
             contents,
             "",
-            format!(
-                "q {} 0 0 {} 0 0 cm /Piece Do Q",
-                points(width, sheet.dots_per_inch()),
-                points(height, sheet.dots_per_inch())
-            )
-            .as_bytes(),
+            format!("q {across} 0 0 {down} 0 0 cm /Piece Do Q").as_bytes(),
         );
         let png = sheet.png().map_err(|_| CannotWritePdf)?;
         pdf.stream(
