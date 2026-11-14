@@ -189,8 +189,8 @@ impl Latest {
     }
 
     /// Whether no newer piece of work was started since this one.
-    pub fn still(&self, _work: Work) -> bool {
-        true
+    pub fn still(&self, work: Work) -> bool {
+        self.0 == work.0
     }
 }
 

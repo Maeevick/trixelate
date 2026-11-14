@@ -13,8 +13,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
 use crate::form::{
-    LastColouring, Painted, Settings, light_enough, not_a_picture, paint_preview, paint_sheet,
-    ready, warned,
+    LastColouring, Latest, Painted, Settings, light_enough, not_a_picture, paint_preview,
+    paint_sheet, ready, warned,
 };
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
@@ -115,7 +115,7 @@ pub fn App() -> impl IntoView {
     let refusal = RwSignal::new(None::<String>);
     let painted = StoredValue::new(None::<Arc<Painted>>);
     let last_colouring = StoredValue::new(LastColouring::default());
-    let latest = StoredValue::new(0_u64);
+    let latest_sheet = StoredValue::new(Latest::default());
 
     let take = move |file: File| {
         let name = file.name();
@@ -165,10 +165,9 @@ pub fn App() -> impl IntoView {
             return;
         };
         let settings = settings.get();
-        let this = latest.get_value() + 1;
-        latest.set_value(this);
         busy.set(true);
-        let still_latest = move || latest.get_value() == this;
+        let this = latest_sheet.write_value().start();
+        let still_latest = move || latest_sheet.with_value(|latest| latest.still(this));
         after_the_next_paint(move || {
             if !still_latest() {
                 return;
