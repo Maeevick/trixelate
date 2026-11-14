@@ -115,9 +115,11 @@ impl Pieces<'_> {
 mod tests {
     use super::*;
     use crate::layout::{Margin, Orientation, PageFormat};
+    use crate::lettering;
     use crate::palette::ColourCount;
     use crate::picture::{Picture, Rgb};
     use crate::{Order, make_sheet};
+    use std::collections::BTreeSet;
 
     const RED: [u8; 4] = [220, 30, 40, 255];
     const YELLOW: [u8; 4] = [250, 220, 60, 255];
@@ -190,5 +192,50 @@ mod tests {
             ],
             [0, 0]
         );
+    }
+
+    #[test]
+    fn a_piece_is_marked_where_to_cut_it_on_its_left_and_top_and_says_where_it_goes_its_margin_blank_besides()
+     {
+        let poster = sheet_on(PageFormat::A2, Orientation::Portrait);
+        let (black, grey) = (Rgb(0, 0, 0), Rgb(90, 90, 90));
+        let within = |(left, top, width, height): (u32, u32, u32, u32)| {
+            (top..top + height).flat_map(move |y| (left..left + width).map(move |x| (x, y)))
+        };
+        let cut_marks: BTreeSet<_> = [
+            (59, 23, 2, 30),
+            (59, 59 + 319 + 6, 2, 30),
+            (23, 59, 30, 2),
+            (59 + 903 + 6, 59, 30, 2),
+        ]
+        .into_iter()
+        .flat_map(within)
+        .collect();
+        let place = "row 4 of 4 - column 2 of 2";
+        let (place_width, _) = lettering::size(place, 2);
+        let written: BTreeSet<_> = lettering::ink(place, 2)
+            .into_iter()
+            .map(|(x, y)| (1754 - 59 - place_width + x, 1240 - 59 + 6 + y))
+            .collect();
+
+        let last = cut(&poster).piece(1, 3).expect("the last piece");
+
+        let the_part =
+            |(x, y): &(u32, u32)| (59..59 + 903).contains(x) && (59..59 + 319).contains(y);
+        let misdrawn = within((0, 0, 1754, 1240))
+            .filter(|dot| !the_part(dot))
+            .filter(|&(x, y)| {
+                let expected = if cut_marks.contains(&(x, y)) {
+                    black
+                } else if written.contains(&(x, y)) {
+                    grey
+                } else {
+                    Rgb::WHITE
+                };
+                last.pixel(x, y) != expected
+            })
+            .count();
+        assert!(!written.is_empty());
+        assert_eq!(misdrawn, 0);
     }
 }
