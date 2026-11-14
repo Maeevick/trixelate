@@ -3,7 +3,7 @@
 
 use crate::layout::{dots, dots_of_tenths};
 use crate::lettering;
-use crate::pdf_file::CannotWritePdf;
+use crate::pdf_file::{self, CannotWritePdf};
 use crate::sheet::{BLACK, NUMBER_GREY, Paper, Sheet};
 
 const A4_MILLIMETRES: (u32, u32) = (210, 297);
@@ -101,7 +101,9 @@ impl Pieces<'_> {
 
     /// Every piece, row after row, as a PDF of a page each that prints at actual size.
     pub fn pdf(&self) -> Result<Vec<u8>, CannotWritePdf> {
-        Ok(Vec::new())
+        let row_after_row =
+            (0..self.down()).flat_map(|row| (0..self.across()).map(move |column| (column, row)));
+        pdf_file::write(row_after_row.map(|(column, row)| self.drawn(column, row)))
     }
 
     /// A piece: its part of the sheet laid inside its margin, on white paper where the sheet ends.
