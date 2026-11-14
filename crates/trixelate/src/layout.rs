@@ -810,6 +810,16 @@ mod tests {
     }
 
     #[test]
+    fn a_sheet_named_with_nothing_has_no_title_rather_than_an_empty_one() -> Result<(), NoRoom> {
+        let square = colouring(48, 48, 8);
+
+        let untitled = upright(&square, PageFormat::A4, Margin(10))?.titled("");
+
+        assert_eq!(untitled.title(), None);
+        Ok(())
+    }
+
+    #[test]
     fn the_credit_is_printed_between_one_and_two_millimetres_tall_on_every_paper()
     -> Result<(), NoRoom> {
         let small = colouring(4, 4, 2);
