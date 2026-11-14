@@ -438,20 +438,13 @@ pub fn App() -> impl IntoView {
                     <button
                         type="button"
                         disabled=move || busy.get() || no_picture() || refused().is_some()
-                        aria-label=move || {
-                            if refused().is_some() {
-                                "Download the sheet: it doesn't fit"
-                            } else {
-                                "Download the sheet to colour in"
-                            }
-                        }
-                        title=move || refused().unwrap_or_else(|| "to colour in".to_string())
                         aria-describedby=move || refused().map(|_| DOWNLOAD_REFUSED.to_string())
                         class="group w-full rounded-full bg-stone-800 px-5 py-2.5 text-sm font-semibold text-amber-50 shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-700 disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400 disabled:shadow-none motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:w-auto"
                         on:click=move |_| download()
                     >
-                        "Sheet"
-                        <span class="ml-1.5 font-normal text-amber-200/80 group-disabled:text-stone-400">
+                        <span class="sr-only">"Download the "</span>
+                        "Sheet "
+                        <span class="font-normal text-amber-200/80 group-disabled:text-stone-400">
                             {move || {
                                 if refused().is_some() { "doesn't fit" } else { "to colour in" }
                             }}
