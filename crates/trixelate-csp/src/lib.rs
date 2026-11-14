@@ -32,24 +32,41 @@ pub fn with_policy(page: &str) -> Result<String, Refusal> {
     if !page.contains(CHARSET) {
         return Err(Refusal::NoCharset);
     }
+    if page.contains('\r') {
+        return Err(Refusal::CarriageReturns);
+    }
+    if page.contains("<!--") {
+        return Err(Refusal::Comments);
+    }
+    let lowered = page.to_ascii_lowercase();
+    if ["<script", "</script", "<style", "</style"]
+        .iter()
+        .any(|tag| lowered.matches(tag).count() != page.matches(tag).count())
+    {
+        return Err(Refusal::TagsInCapitals);
+    }
+    let (scripts, styles) = (
+        inline_bodies(page, "script")?,
+        inline_bodies(page, "style")?,
+    );
     let meta = format!(
         r#"<meta http-equiv="Content-Security-Policy" content="{}" />"#,
-        policy(page)
+        policy(&scripts, &styles)
     );
     Ok(page.replacen(CHARSET, &format!("{CHARSET}\n    {meta}"), 1))
 }
 
 /// Nothing by default; the page's own scripts, its inline loader and wasm; its inline styles; its pictures from the
 /// browser's memory; its font, and its wasm fetched, from its own address only.
-fn policy(page: &str) -> String {
+fn policy(scripts: &[&str], styles: &[&str]) -> String {
     [
         "default-src 'none'".to_string(),
         directive(
             "script-src",
             &["'self'", "'wasm-unsafe-eval'"],
-            hashes(page, "script"),
+            hashes(scripts),
         ),
-        directive("style-src", &[], hashes(page, "style")),
+        directive("style-src", &[], hashes(styles)),
         "img-src blob: data:".to_string(),
         "font-src 'self'".to_string(),
         "connect-src 'self'".to_string(),
@@ -73,9 +90,9 @@ fn directive(name: &str, sources: &[&str], hashes: Vec<String>) -> String {
     }
 }
 
-/// The SHA-256 of every inline body of a tag, as a policy names them.
-fn hashes(page: &str, tag: &str) -> Vec<String> {
-    inline_bodies(page, tag)
+/// The SHA-256 of every inline body, as a policy names them.
+fn hashes(bodies: &[&str]) -> Vec<String> {
+    bodies
         .iter()
         .map(|body| {
             format!(
@@ -86,8 +103,9 @@ fn hashes(page: &str, tag: &str) -> Vec<String> {
         .collect()
 }
 
-/// What every closed tag of a name holds between its opening and its closing, those that hold nothing left out.
-fn inline_bodies<'page>(page: &'page str, tag: &str) -> Vec<&'page str> {
+/// What every tag of a name holds between its opening and its closing, those that hold nothing left out, refused when
+/// a tag's attribute holds a `>` or a tag is never closed.
+fn inline_bodies<'page>(page: &'page str, tag: &str) -> Result<Vec<&'page str>, Refusal> {
     let (opening, closing) = (format!("<{tag}"), format!("</{tag}>"));
     let mut bodies = Vec::new();
     let mut rest = page;
@@ -97,19 +115,22 @@ fn inline_bodies<'page>(page: &'page str, tag: &str) -> Vec<&'page str> {
             rest = after_the_name;
             continue;
         }
-        let Some(end_of_the_tag) = after_the_name.find('>') else {
-            break;
-        };
+        let end_of_the_tag = after_the_name.find('>').ok_or(Refusal::UnclosedTag)?;
+        let attributes = &after_the_name[..end_of_the_tag];
+        if ['"', '\'']
+            .iter()
+            .any(|quote| attributes.matches(*quote).count() % 2 == 1)
+        {
+            return Err(Refusal::AnglesInATag);
+        }
         let held = &after_the_name[end_of_the_tag + 1..];
-        let Some(end) = held.find(&closing) else {
-            break;
-        };
+        let end = held.find(&closing).ok_or(Refusal::UnclosedTag)?;
         if end > 0 {
             bodies.push(&held[..end]);
         }
         rest = &held[end + closing.len()..];
     }
-    bodies
+    Ok(bodies)
 }
 
 #[cfg(test)]
@@ -147,6 +168,17 @@ mod tests {
             page,
             BUILT.replacen(r#"<meta charset="utf-8" />"#, policy, 1)
         );
+    }
+
+    #[test]
+    fn a_page_with_no_inline_style_allows_no_style_at_all() {
+        let page = BUILT
+            .replace("<style >body{color:red}</style>", "")
+            .replace("<style>p{margin:0}</style>", "");
+
+        let protected = with_policy(&page);
+
+        assert!(protected.is_ok_and(|page| page.contains("; style-src 'none';")));
     }
 
     #[test]
