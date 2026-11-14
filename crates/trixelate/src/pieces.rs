@@ -37,25 +37,16 @@ struct Cutting {
     down: u32,
 }
 
-/// Cuts a sheet into the fewest A4 pieces that cover it, lying whichever way needs fewer, the sheet's own way when
-/// both need as many.
+/// Cuts a sheet into the fewest A4 pieces that cover it, lying whichever way needs fewer.
 pub fn cut(sheet: &Sheet) -> Pieces<'_> {
     let dots_per_inch = sheet.dots_per_inch();
     let (short, long) = (
         dots(A4_MILLIMETRES.0, dots_per_inch),
         dots(A4_MILLIMETRES.1, dots_per_inch),
     );
-    let (own_way, other_way) = if sheet.width() > sheet.height() {
-        ((long, short), (short, long))
-    } else {
-        ((short, long), (long, short))
-    };
-    let [own, other] = [own_way, other_way].map(|page| Cutting::of(sheet, page));
-    let cutting = if other.count() < own.count() {
-        other
-    } else {
-        own
-    };
+    let [upright, on_its_side] =
+        [(short, long), (long, short)].map(|page| Cutting::of(sheet, page));
+    let cutting = std::cmp::min_by_key(upright, on_its_side, |cutting| cutting.count());
     Pieces { sheet, cutting }
 }
 
