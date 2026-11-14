@@ -198,7 +198,7 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
         Written::Sheet
     };
     let (make, named): (Making, Naming) = match what {
-        Written::Sheet => (make_sheet, sheet_file_name),
+        Written::Sheet | Written::Pieces { .. } => (make_sheet, sheet_file_name),
         Written::Preview => (make_preview, preview_file_name),
     };
     let default_title = named(

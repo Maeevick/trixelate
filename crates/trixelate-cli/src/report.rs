@@ -9,11 +9,13 @@ const CELLS_A_MINUTE: u32 = 3;
 /// How long a five-year-old keeps colouring in one go.
 const MINUTES_AN_AFTERNOON: u32 = 30;
 
-/// What the command wrote: the sheet to colour in, or its preview, coloured in.
+/// What the command wrote: the sheet to colour in, its preview, coloured in, or its pieces, so many A4 pages across and
+/// down.
 #[derive(Clone, Copy)]
 pub enum Written {
     Sheet,
     Preview,
+    Pieces { across: u32, down: u32 },
 }
 
 /// The report of a sheet or its preview written to a path, after the time it took, its grid holding a number of cells.
@@ -21,6 +23,7 @@ pub fn written(what: Written, path: &Path, took: Duration, cells: u32) -> String
     let what = match what {
         Written::Sheet => "Sheet",
         Written::Preview => "Preview",
+        Written::Pieces { .. } => "Pieces",
     };
     format!(
         "{what} written to {} in {:.2} s\n{}",
@@ -108,6 +111,21 @@ mod tests {
         );
 
         assert!(report.starts_with("Preview written to goblin-48-8-a4.preview.png in 0.21 s\n"));
+    }
+
+    #[test]
+    fn pieces_say_how_many_a4_pages_they_are_across_and_down_to_print_at_actual_size() {
+        let report = written(
+            Written::Pieces { across: 2, down: 4 },
+            Path::new("goblin-80-8-a2.pieces.pdf"),
+            Duration::from_millis(213),
+            2304,
+        );
+
+        assert!(report.starts_with(
+            "Pieces written to goblin-80-8-a2.pieces.pdf in 0.21 s: 8 A4 pages, 2 across and 4 down, \
+             to print at actual size\n2,304 cells to colour"
+        ));
     }
 
     #[test]
