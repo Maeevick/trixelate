@@ -200,16 +200,22 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
         Written::Sheet => (make_sheet, sheet_file_name),
         Written::Preview => (make_preview, preview_file_name),
     };
-    let default_name = named_and_stamped(&cli.picture, &order, named, now);
-    let sheet_path = match cli.output {
+    let (default_title, default_name) = titled_and_stamped(&cli.picture, &order, named, now);
+    let (sheet_path, title) = match cli.output {
         Some(folder) if folder.is_dir() || folder.file_name().is_none() => {
-            folder.join(default_name)
+            (folder.join(default_name), default_title)
         }
-        Some(file) => file,
-        None => cli.picture.with_file_name(default_name),
+        Some(file) => {
+            let title = file
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned();
+            (file, title)
+        }
+        None => (cli.picture.with_file_name(default_name), default_title),
     };
-    let file_name = sheet_path.file_name().unwrap_or_default().to_string_lossy();
-    let sheet = make(&picture, order, &file_name).map_err(explain)?;
+    let sheet = make(&picture, order, &title).map_err(explain)?;
     let bytes = sheet
         .png()
         .map_err(|_| "the sheet could not be encoded as a PNG".to_string())?;
@@ -276,14 +282,23 @@ fn read_picture(path: &Path) -> Result<Picture, String> {
     })
 }
 
-/// What a sheet or its preview is called beside its picture or in the folder given as its output: named after its
-/// picture and stamped with the second it was made, so that it never takes an older sheet's name.
-fn named_and_stamped(picture: &Path, order: &Order, named: Naming, now: SystemTime) -> String {
-    let name = picture.file_name().unwrap_or_default().to_string_lossy();
+/// What a sheet or its preview is titled and called beside its picture or in the folder given as its output: titled
+/// after its picture alone, its file stamped with the second it was made so that it never takes an older sheet's name.
+fn titled_and_stamped(
+    picture: &Path,
+    order: &Order,
+    named: Naming,
+    now: SystemTime,
+) -> (String, String) {
+    let title = named(
+        &picture.file_name().unwrap_or_default().to_string_lossy(),
+        order,
+    );
     let seconds = now
         .duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |since| since.as_secs());
-    stamped(&named(&name, order), seconds)
+    let file_name = stamped(&title, seconds);
+    (title, file_name)
 }
 
 fn explain(no_room: NoRoom) -> String {
