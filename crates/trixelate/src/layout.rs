@@ -876,7 +876,7 @@ mod tests {
     }
 
     #[test]
-    fn the_credit_is_printed_between_one_and_two_millimetres_tall_on_every_paper()
+    fn the_credit_is_printed_as_tall_as_its_letters_fit_under_two_millimetres_on_every_paper()
     -> Result<(), NoRoom> {
         let small = colouring(4, 4, 2);
         let papers = [
@@ -894,7 +894,7 @@ mod tests {
         });
 
         for tall in tenths_of_millimetre_tall {
-            assert!((10..20).contains(&tall?), "{tall:?} tenths of a millimetre");
+            assert!((15..20).contains(&tall?), "{tall:?} tenths of a millimetre");
         }
         Ok(())
     }
