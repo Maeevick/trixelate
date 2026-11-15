@@ -16,6 +16,7 @@ pub struct CannotWritePdf;
 const POINTS_PER_INCH: f64 = 72.0;
 const CATALOG: u32 = 1;
 const PAGE_TREE: u32 = 2;
+const INFO: u32 = 3;
 
 /// Writes pages as a PDF, in their order, each page as big as its picture printed at its dots per inch.
 pub(crate) fn write(pages: impl Iterator<Item = Sheet>) -> Result<Vec<u8>, CannotWritePdf> {
@@ -69,7 +70,7 @@ pub(crate) fn write(pages: impl Iterator<Item = Sheet>) -> Result<Vec<u8>, Canno
         )
         .as_bytes(),
     );
-    Ok(pdf.ended())
+    Ok(pdf.ended(false))
 }
 
 /// A length in dots printed at so many dots per inch, in PDF's points, seventy-two to the inch.
@@ -114,8 +115,14 @@ impl Pdf {
         self.object(number, &body);
     }
 
-    /// The PDF ended with its cross-reference table, each object's start in the order of their numbers.
-    fn ended(mut self) -> Vec<u8> {
+    /// The PDF ended with its cross-reference table, each object's start in the order of their numbers, and its
+    /// information when it has one.
+    fn ended(mut self, informed: bool) -> Vec<u8> {
+        let info = if informed {
+            format!(" /Info {INFO} 0 R")
+        } else {
+            String::new()
+        };
         self.starts.sort_unstable();
         let table_starts = self.bytes.len();
         let count = self.starts.len() + 1;
@@ -124,7 +131,7 @@ impl Pdf {
             table.push_str(&format!("{start:010} 00000 n \n"));
         }
         table.push_str(&format!(
-            "trailer\n<< /Size {count} /Root {CATALOG} 0 R >>\nstartxref\n{table_starts}\n%%EOF\n"
+            "trailer\n<< /Size {count} /Root {CATALOG} 0 R{info} >>\nstartxref\n{table_starts}\n%%EOF\n"
         ));
         self.bytes.extend_from_slice(table.as_bytes());
         self.bytes
@@ -286,7 +293,27 @@ fn number_to(value: f64, decimals: usize) -> String {
 }
 
 /// Writes pages as a PDF, in their order, every character they write a form drawn in the fill colour of the moment.
-pub(crate) fn write_pages(pages: &[Page], characters: &BTreeSet<char>) -> Vec<u8> {
+/// What a PDF says of itself: its title, subject and keywords, what made it, and when.
+pub(crate) struct About {
+    pub(crate) title: String,
+    pub(crate) subject: String,
+    pub(crate) keywords: String,
+    pub(crate) creator: String,
+    pub(crate) producer: String,
+    /// The moment it was made, in PDF's form: `D:20261111142915Z`.
+    pub(crate) made: String,
+}
+
+/// A text string in UTF-16, any character written as it is.
+fn text(value: &str) -> String {
+    let units: String = value
+        .encode_utf16()
+        .map(|unit| format!("{unit:04X}"))
+        .collect();
+    format!("<FEFF{units}>")
+}
+
+pub(crate) fn write_pages(pages: &[Page], characters: &BTreeSet<char>, about: &About) -> Vec<u8> {
     let mut pdf = Pdf {
         bytes: b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n".to_vec(),
         starts: Vec::new(),
@@ -295,9 +322,22 @@ pub(crate) fn write_pages(pages: &[Page], characters: &BTreeSet<char>) -> Vec<u8
         CATALOG,
         format!("<< /Type /Catalog /Pages {PAGE_TREE} 0 R >>").as_bytes(),
     );
+    pdf.object(
+        INFO,
+        format!(
+            "<< /Title {} /Subject {} /Keywords {} /Creator {} /Producer {} /CreationDate ({}) >>",
+            text(&about.title),
+            text(&about.subject),
+            text(&about.keywords),
+            text(&about.creator),
+            text(&about.producer),
+            about.made
+        )
+        .as_bytes(),
+    );
     let mut forms = Vec::new();
     let (width, height) = lettering::CHARACTER;
-    for (number, character) in (PAGE_TREE + 1..).zip(characters) {
+    for (number, character) in (INFO + 1..).zip(characters) {
         let dots: String = lettering::ink(&character.to_string(), 1)
             .into_iter()
             .map(|(x, y)| format!("{x} {} 1 1 re\n", height - 1 - y))
@@ -310,7 +350,7 @@ pub(crate) fn write_pages(pages: &[Page], characters: &BTreeSet<char>) -> Vec<u8
         forms.push(format!("/L{} {number} 0 R", u32::from(*character)));
     }
     let resources = format!("<< /XObject << {} >> >>", forms.join(" "));
-    let first_page = PAGE_TREE + 1 + characters.len() as u32;
+    let first_page = INFO + 1 + characters.len() as u32;
     let mut kids = Vec::new();
     for (page, drawn) in (first_page..).step_by(2).zip(pages) {
         let contents = page + 1;
@@ -335,5 +375,5 @@ pub(crate) fn write_pages(pages: &[Page], characters: &BTreeSet<char>) -> Vec<u8
         )
         .as_bytes(),
     );
-    pdf.ended()
+    pdf.ended(true)
 }

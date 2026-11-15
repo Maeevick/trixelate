@@ -134,20 +134,42 @@ pub fn preview_of(colouring: &Colouring, order: Order, file_name: &str) -> Resul
     ))
 }
 
+/// Where trixelate's code lives, under the MIT licence.
+pub const SOURCE: &str = "https://github.com/Maeevick/trixelate";
+/// Where trixelate's page lives, to make a sheet in a browser.
+pub const WEBSITE: &str = "https://trixelate.maeevick.com";
+
 /// The sheet of a colouring as a PDF of one page at its paper's size, drawn in shapes rather than dots, so it prints
-/// sharp at any size.
+/// sharp at any size, saying its title, when it was made, in seconds since 1970, and the trixelate that made it.
 pub fn sheet_pdf(
     colouring: &Colouring,
     order: Order,
     file_name: &str,
     made: u64,
 ) -> Result<Vec<u8>, NoRoom> {
-    let _ = made;
     let drawing = sheet::drawing(colouring, &lay_out(colouring, order)?.titled(file_name));
     Ok(pdf_file::write_pages(
         &[pdf_file::page_of(&drawing)],
         &pdf_file::characters_of(&drawing),
+        &about(
+            file_name,
+            "A colour-by-number sheet, to colour in by hand",
+            made,
+        ),
     ))
+}
+
+/// What a PDF made by trixelate says of itself.
+fn about(title: &str, subject: &str, made: u64) -> pdf_file::About {
+    let version = env!("CARGO_PKG_VERSION");
+    pdf_file::About {
+        title: title.to_string(),
+        subject: subject.to_string(),
+        keywords: "colour by number, pixel art, trixelate".to_string(),
+        creator: format!("trixelate {version}, {WEBSITE}"),
+        producer: format!("trixelate {version}, under the MIT licence, {SOURCE}"),
+        made: format!("D:{}", utc(made).replace('T', "")),
+    }
 }
 
 fn lay_out(colouring: &Colouring, order: Order) -> Result<Layout, NoRoom> {
@@ -465,7 +487,7 @@ mod tests {
 
     #[test]
     fn a_sheets_pdf_says_its_title_when_it_was_made_and_the_trixelate_that_made_it_with_where_it_lives()
-    -> Result<(), NoRoom> {
+     {
         let (colouring, order) = four_colours_on_a5();
         let version = env!("CARGO_PKG_VERSION");
 
@@ -474,7 +496,8 @@ mod tests {
             order,
             "goblin (2)-12-4-a5.sheet.pdf",
             1_794_407_355,
-        )?;
+        )
+        .expect("room");
 
         let info = pdf_reading::info_of(&pdf);
         let expected: BTreeMap<String, String> = [
@@ -502,7 +525,6 @@ mod tests {
         .map(|(key, value)| (key.to_string(), value))
         .into();
         assert_eq!(info, expected);
-        Ok(())
     }
 
     #[test]
