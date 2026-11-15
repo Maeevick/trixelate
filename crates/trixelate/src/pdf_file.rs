@@ -190,16 +190,13 @@ pub(crate) fn page_of(drawing: &Drawing) -> Page {
             } => {
                 content.push_str(&format!("{}\n", colour_of(*colour)));
                 let size = in_points(f64::from(*scale));
-                let bottom = in_points(height - f64::from(top + lettering::size("0", *scale).1));
+                let (_, tall) = lettering::CHARACTER;
+                let bottom = in_points(height - f64::from(top + tall * scale));
                 for (place, character) in (0..).zip(text.chars()) {
                     if lettering::ink(&character.to_string(), 1).is_empty() {
                         continue;
                     }
-                    let x = left
-                        + place
-                            * lettering::size("00", *scale)
-                                .0
-                                .saturating_sub(lettering::size("0", *scale).0);
+                    let x = left + place * lettering::ADVANCE * scale;
                     content.push_str(&format!(
                         "q {} 0 0 {} {} {} cm /L{} Do Q\n",
                         number(size),
@@ -299,12 +296,12 @@ pub(crate) fn write_pages(pages: &[Page], characters: &BTreeSet<char>) -> Vec<u8
         format!("<< /Type /Catalog /Pages {PAGE_TREE} 0 R >>").as_bytes(),
     );
     let mut forms = Vec::new();
+    let (width, height) = lettering::CHARACTER;
     for (number, character) in (PAGE_TREE + 1..).zip(characters) {
         let dots: String = lettering::ink(&character.to_string(), 1)
             .into_iter()
-            .map(|(x, y)| format!("{x} {} 1 1 re\n", lettering::size("0", 1).1 - 1 - y))
+            .map(|(x, y)| format!("{x} {} 1 1 re\n", height - 1 - y))
             .collect();
-        let (width, height) = lettering::size("0", 1);
         pdf.stream(
             number,
             &format!("/Type /XObject /Subtype /Form /BBox [0 0 {width} {height}] "),

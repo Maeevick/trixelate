@@ -5,6 +5,11 @@ const GLYPH_WIDTH: u32 = 5;
 const GLYPH_HEIGHT: u32 = 7;
 const SPACE_BETWEEN_CHARACTERS: u32 = 1;
 
+/// A character's box at one dot per dot, five dots wide and seven tall.
+pub const CHARACTER: (u32, u32) = (GLYPH_WIDTH, GLYPH_HEIGHT);
+/// How far each character starts from the one before it, at one dot per dot.
+pub const ADVANCE: u32 = GLYPH_WIDTH + SPACE_BETWEEN_CHARACTERS;
+
 /// Each digit's rows from the top, the leftmost dot in the highest of five bits.
 const DIGITS: [[u8; GLYPH_HEIGHT as usize]; 10] = [
     [
