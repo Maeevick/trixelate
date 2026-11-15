@@ -608,7 +608,7 @@ mod tests {
     }
 
     #[test]
-    fn a_posters_pieces_are_a_pdf_of_an_a4_page_each_its_sheet_drawn_in_a_window_inside_the_margin_each_starting_where_the_last_shares_its_strip()
+    fn a_sheets_pieces_are_a_pdf_of_an_a4_page_each_its_sheet_drawn_in_a_window_inside_the_margin_each_starting_where_the_last_ends()
      {
         let (colouring, _) = four_colours_on_a5();
         let order = Order::new(
@@ -621,7 +621,7 @@ mod tests {
         .expect("an order");
         let sheet = sheet_pdf(&colouring, order, "goblin-12-4-a2.pieces.pdf", 0).expect("room");
         let (_, drawing) = pdf_reading::pages_of(&sheet).remove(0);
-        let (margin, part, apart) = (118.0, (2244.0, 3272.0), (2126.0, 3154.0));
+        let (margin, part, apart) = (118.0, (2244.0, 3272.0), (2244.0, 3272.0));
         let points = |dots: f64| dots * 72.0 / 300.0;
 
         let pdf = pieces_pdf(&colouring, order, "goblin-12-4-a2.pieces.pdf", 0)
@@ -670,7 +670,7 @@ mod tests {
     }
 
     #[test]
-    fn a_piece_is_marked_where_to_cut_it_on_its_left_and_top_and_says_where_it_goes_its_margin_blank_besides()
+    fn a_piece_is_framed_by_fine_dashed_lines_across_the_page_to_cut_along_and_says_where_it_goes_its_margin_blank_besides()
      {
         let (colouring, _) = four_colours_on_a5();
         let order = Order::new(
@@ -686,15 +686,19 @@ mod tests {
         let within = |(left, top, width, height): (u32, u32, u32, u32)| {
             (top..top + height).flat_map(move |y| (left..left + width).map(move |x| (x, y)))
         };
-        let cut_marks: BTreeSet<_> = [
-            (margin, margin - 12 - 59, 4, 59),
-            (margin, margin + part.1 + 12, 4, 59),
-            (margin - 12 - 59, margin, 59, 4),
-            (margin + part.0 + 12, margin, 59, 4),
-        ]
-        .into_iter()
-        .flat_map(within)
-        .collect();
+        let (dash, every, thin) = (35, 59, 2);
+        let dashed = |along: u32| along % every < dash;
+        let across: Vec<_> = [margin - thin, margin + part.1]
+            .into_iter()
+            .flat_map(|top| within((0, top, 2480, thin)))
+            .filter(|&(x, _)| dashed(x))
+            .collect();
+        let down: Vec<_> = [margin - thin, margin + part.0]
+            .into_iter()
+            .flat_map(|left| within((left, 0, thin, 3508)))
+            .filter(|&(_, y)| dashed(y))
+            .collect();
+        let cut_marks: BTreeSet<_> = across.into_iter().chain(down).collect();
         let place = "row 2 of 2 - column 2 of 2";
         let (place_width, _) = lettering::size(place, 5);
         let written: BTreeSet<_> = lettering::ink(place, 5)
@@ -727,7 +731,7 @@ mod tests {
             .filter(|&(x, y)| dots[(y * width + x) as usize] != Rgb::WHITE)
             .count();
         assert_eq!((width, height), (2480, 3508));
-        assert!(!written.is_empty() && inked_in_the_window > 0);
+        assert!(!written.is_empty() && !cut_marks.is_empty() && inked_in_the_window > 0);
         assert_eq!(misdrawn, 0);
     }
 

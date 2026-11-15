@@ -192,7 +192,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_poster_takes_as_many_a4_pieces_as_its_paper_holds_a4_pages_shrunk_to_88_percent_and_a_sheet_none()
+    fn a_sheet_on_a2_or_a3_takes_as_many_a4_pieces_as_its_paper_holds_a4_pages_shrunk_to_90_percent_and_on_a4_or_a5_none()
      {
         let (upright, on_its_side) = (Orientation::Portrait, Orientation::Landscape);
 
@@ -218,10 +218,10 @@ mod tests {
         assert_eq!(
             cuts,
             [
-                Some((2, 2, false, 88)),
-                Some((2, 2, true, 88)),
-                Some((1, 2, true, 88)),
-                Some((2, 1, false, 88)),
+                Some((2, 2, false, 90)),
+                Some((2, 2, true, 90)),
+                Some((1, 2, true, 90)),
+                Some((2, 1, false, 90)),
                 None,
                 None
             ]
