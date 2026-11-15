@@ -260,7 +260,14 @@ pub fn App() -> impl IntoView {
             let pieces = last_colouring
                 .write_value()
                 .for_order(&picture, order)
-                .and_then(|colouring| paint_pieces(&colouring, &name, order));
+                .and_then(|colouring| {
+                    paint_pieces(
+                        &colouring,
+                        &name,
+                        order,
+                        (js_sys::Date::now() / 1000.0) as u64,
+                    )
+                });
             match pieces {
                 Ok(pieces) => save(&pieces.bytes, PDF, &pieces.name),
                 Err(why) => refusal.set(Some(why)),

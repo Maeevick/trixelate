@@ -10,9 +10,10 @@ use trixelate::layout::{
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
+use trixelate::pieces::Pieces;
 use trixelate::warning::warnings_for;
 use trixelate::{
-    Order, Refusal, colour, pieces, pieces_file_name, preview_of, sheet_file_name, sheet_of,
+    Order, Refusal, colour, pieces_file_name, pieces_pdf, preview_of, sheet_file_name, sheet_of,
     sheet_pdf,
 };
 
@@ -105,7 +106,7 @@ pub struct Painted {
 }
 
 const NOT_A_PNG: &str = "The sheet could not be turned into a PNG. That one is on us.";
-const NOT_A_PDF: &str = "The pieces could not be turned into a PDF. That one is on us.";
+const PRINTS_WHOLE: &str = "This sheet prints whole at home: pieces are for an A3 or A2 poster.";
 
 /// A colouring's sheet painted on the order's page, named after the picture, encoded fast to be shown only, or why it
 /// cannot be.
@@ -147,21 +148,22 @@ pub fn paint_preview(colouring: &Colouring, title: &str, order: Order) -> Result
 
 /// Whether a sheet on this paper is offered in A4 pieces: only one bigger than a home printer takes.
 pub fn offered_in_pieces(format: PageFormat) -> bool {
-    !matches!(format, PageFormat::A4 | PageFormat::A5)
+    Pieces::of(format, Orientation::Portrait).is_some()
 }
 
-/// A colouring's sheet cut into A4 pieces, as a PDF named after the picture, or why it cannot be.
+/// A colouring's sheet cut into A4 pieces, as a PDF named after the picture and saying when it was made, in seconds
+/// since 1970, or why it cannot be.
 pub fn paint_pieces(
     colouring: &Colouring,
     picture_name: &str,
     order: Order,
+    made: u64,
 ) -> Result<Painted, String> {
     let name = pieces_file_name(picture_name, &order);
-    let sheet = sheet_of(colouring, order, &name).map_err(explain)?;
     Ok(Painted {
-        bytes: pieces::cut(&sheet)
-            .pdf()
-            .map_err(|_| NOT_A_PDF.to_string())?,
+        bytes: pieces_pdf(colouring, order, &name, made)
+            .map_err(explain)?
+            .ok_or_else(|| PRINTS_WHOLE.to_string())?,
         name,
     })
 }
@@ -444,7 +446,7 @@ mod tests {
 
         let painted = ready(poster).and_then(|order| {
             let colouring = coloured(&picture, order)?;
-            paint_pieces(&colouring, "red-yellow.png", order)
+            paint_pieces(&colouring, "red-yellow.png", order, 0)
         });
 
         let (name, pages) = painted
@@ -457,7 +459,7 @@ mod tests {
             })
             .unwrap_or_default();
         assert_eq!(name, "red-yellow-2-4-a2.pieces.pdf");
-        assert_eq!(pages, Some(8));
+        assert_eq!(pages, Some(4));
     }
 
     #[test]

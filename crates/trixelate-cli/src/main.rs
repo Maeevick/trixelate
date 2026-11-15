@@ -20,8 +20,8 @@ use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::warning::warnings_for;
 use trixelate::{
-    Order, Refusal, colour, picture_file, pieces, pieces_file_name, preview_file_name, preview_pdf,
-    sheet_file_name, sheet_of, sheet_pdf, stamped,
+    Order, Refusal, colour, picture_file, pieces_file_name, pieces_pdf, preview_file_name,
+    preview_pdf, sheet_file_name, sheet_pdf, stamped,
 };
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -121,15 +121,21 @@ fn asked_way_up(cli: &Cli) -> Option<Orientation> {
 fn ordered(cli: &Cli) -> Result<Order, String> {
     let format = PageFormat::from(cli.format);
     let orientation = asked_way_up(cli).unwrap_or(Orientation::Portrait);
-    Order::new(cells_across(cli), colours(cli), format, orientation, cli.margin).map_err(|refusal| {
-        match refusal {
+    let order = Order::new(cells_across(cli), colours(cli), format, orientation, cli.margin)
+        .map_err(|refusal| match refusal {
             Refusal::NoCellAcross => "a grid needs at least one cell across".to_string(),
             Refusal::MoreCellsAcrossThanThePaperHolds { most } => format!(
                 "an {} sheet holds at most {most} cells across: try a smaller --width or a bigger --format",
                 format.name()
             ),
-        }
-    })
+        })?;
+    if cli.pieces && order.pieces().is_none() {
+        return Err(format!(
+            "an {} sheet prints whole at home: --pieces is for an A3 or A2 poster",
+            format.name()
+        ));
+    }
+    Ok(order)
 }
 
 fn colour_count(raw: &str) -> Result<ColourCount, String> {
@@ -268,11 +274,11 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
             preview_pdf(&colouring, order, &title, seconds).map_err(explain)?,
         ),
         Asked::Pieces => {
-            let sheet = sheet_of(&colouring, order, &title).map_err(explain)?;
-            let pieces = pieces::cut(&sheet);
-            let pdf = pieces
-                .pdf()
-                .map_err(|_| "the pieces could not be written as a PDF".to_string())?;
+            let whole = || format!("an {} sheet prints whole at home", order.format().name());
+            let pieces = order.pieces().ok_or_else(whole)?;
+            let pdf = pieces_pdf(&colouring, order, &title, seconds)
+                .map_err(explain)?
+                .ok_or_else(whole)?;
             let (across, down) = (pieces.across(), pieces.down());
             (Written::Pieces { across, down }, pdf)
         }

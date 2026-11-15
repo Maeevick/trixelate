@@ -704,8 +704,8 @@ fn asked_for_pieces_the_command_writes_a_pdf_of_a4_pages_beside_its_picture_name
         .count();
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert!(pdf.starts_with(b"%PDF-"));
-    assert_eq!(pages, 8);
+    assert_eq!(pages, 4);
     assert!(
-        text(&run.stdout).contains(": 8 A4 pages, 2 across and 4 down, to print at actual size")
+        text(&run.stdout).contains(": 4 A4 pages, 2 across and 2 down, to print at actual size")
     );
 }
