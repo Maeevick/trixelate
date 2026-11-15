@@ -574,7 +574,8 @@ fn a_poster_on_a2_takes_80_cells_across_on_a_page_printed_at_300_dots_per_inch()
 }
 
 #[test]
-fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds() {
+fn without_a_width_or_colours_a_sheet_takes_its_papers_usual_32_cells_and_4_colours_on_a4_24_and_4_on_a5()
+ {
     let folder = folder("default-width");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
@@ -584,8 +585,8 @@ fn without_a_width_the_grid_takes_the_most_cells_across_its_paper_holds() {
 
     assert!(on_a4.status.success(), "{}", text(&on_a4.stderr));
     assert!(on_a5.status.success(), "{}", text(&on_a5.stderr));
-    assert!(written_beside(&folder, "sunset-48-8-a4", "sheet.png").is_some());
-    assert!(written_beside(&folder, "sunset-32-8-a5", "sheet.png").is_some());
+    assert!(written_beside(&folder, "sunset-32-4-a4", "sheet.png").is_some());
+    assert!(written_beside(&folder, "sunset-24-4-a5", "sheet.png").is_some());
 }
 
 #[test]
