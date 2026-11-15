@@ -38,6 +38,11 @@ impl Default for Settings {
 }
 
 impl Settings {
+    /// The settings for a picture dropped in: the paper on its side when the picture suits it, upright otherwise.
+    pub fn for_picture(self, _picture: &Picture) -> Settings {
+        self
+    }
+
     /// The settings on another paper, the cells across and the colours following it when they were the old paper's
     /// usual, as the command line takes a paper's usual unless told otherwise, and the cells never more than it holds.
     pub fn on_paper(self, format: PageFormat) -> Settings {
@@ -282,6 +287,32 @@ mod tests {
         );
         assert_eq!(Settings::default().margin, 10);
         assert!(!Settings::default().landscape);
+    }
+
+    #[test]
+    fn a_picture_dropped_in_lays_the_paper_the_way_it_suits_on_its_side_once_a_tenth_wider_than_tall()
+     {
+        let picture = |width, height| {
+            Picture::from_rgba(
+                width,
+                height,
+                &[220, 30, 40, 255].repeat((width * height) as usize),
+            )
+            .expect("a picture")
+        };
+        let on_its_side = Settings {
+            landscape: true,
+            ..Settings::default()
+        };
+
+        let landscape = [
+            Settings::default().for_picture(&picture(4, 3)),
+            on_its_side.for_picture(&picture(3, 3)),
+            on_its_side.for_picture(&picture(3, 4)),
+        ]
+        .map(|settings| settings.landscape);
+
+        assert_eq!(landscape, [true, false, false]);
     }
 
     #[test]

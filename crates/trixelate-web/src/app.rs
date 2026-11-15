@@ -158,6 +158,7 @@ pub fn App() -> impl IntoView {
                 match read {
                     Ok((picture, shown_from)) => {
                         unreadable.set(None);
+                        settings.update(|settings| *settings = settings.for_picture(&picture));
                         dropped.set(Some(Dropped {
                             name,
                             picture: Arc::new(picture),
