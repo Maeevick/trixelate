@@ -813,7 +813,7 @@ mod tests {
     }
 
     #[test]
-    fn a_posters_bubbles_grow_to_sixteen_millimetres_wide_twice_a_sheets_for_a_legend_seen_from_further()
+    fn a_sheets_bubbles_grow_to_sixteen_millimetres_wide_on_every_paper_for_a_legend_read_at_a_glance()
      {
         let small = colouring(4, 4, 2);
         let papers = [
@@ -830,7 +830,10 @@ mod tests {
             })
         });
 
-        assert_eq!(tenths_of_millimetre_wide, [Ok(160), Ok(78), Ok(78), Ok(78)]);
+        assert_eq!(
+            tenths_of_millimetre_wide,
+            [Ok(160), Ok(157), Ok(157), Ok(157)]
+        );
     }
 
     #[test]
