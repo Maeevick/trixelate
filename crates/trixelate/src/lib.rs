@@ -134,6 +134,14 @@ pub fn preview_of(colouring: &Colouring, order: Order, file_name: &str) -> Resul
     ))
 }
 
+/// The sheet of a colouring as a PDF of one page at its paper's size, drawn in shapes rather than dots, so it prints
+/// sharp at any size.
+pub fn sheet_pdf(colouring: &Colouring, order: Order, file_name: &str) -> Result<Vec<u8>, NoRoom> {
+    lay_out(colouring, order)?;
+    let _ = file_name;
+    Ok(Vec::new())
+}
+
 fn lay_out(colouring: &Colouring, order: Order) -> Result<Layout, NoRoom> {
     Layout::of(colouring, order.format, order.orientation, order.margin)
 }
@@ -391,6 +399,54 @@ mod tests {
             ]
         );
         assert!(laid[0].as_ref().is_ok_and(|sheet| sheet.width() == 1748));
+    }
+
+    #[test]
+    fn a_sheet_written_as_a_pdf_draws_every_dot_of_the_sheet_in_shapes_on_a_page_of_its_papers_size()
+    -> Result<(), NoRoom> {
+        let picture = Picture::from_rgba(
+            3,
+            2,
+            &[
+                [220, 30, 40, 255],
+                [250, 220, 60, 255],
+                [20, 60, 200, 255],
+                [20, 60, 200, 255],
+                [250, 220, 60, 255],
+                [30, 30, 30, 255],
+            ]
+            .concat(),
+        )
+        .expect("a picture");
+        let order = Order::new(
+            12,
+            ColourCount::new(4).expect("a count"),
+            PageFormat::A5,
+            Orientation::Portrait,
+            Margin::new(10).expect("a margin"),
+        )
+        .expect("an order");
+        let colouring = colour(&picture, order)?;
+        let sheet = sheet_of(&colouring, order, "goblin-12-4-a5.sheet.pdf")?;
+
+        let pdf = sheet_pdf(&colouring, order, "goblin-12-4-a5.sheet.pdf")?;
+
+        let pages: Vec<_> = pdf_reading::pages_drawn(&pdf, 300)
+            .into_iter()
+            .map(|(width, height, dots)| {
+                let differing = dots
+                    .iter()
+                    .enumerate()
+                    .filter(|&(at, dot)| {
+                        let (x, y) = (at as u32 % width, at as u32 / width);
+                        x >= sheet.width() || y >= sheet.height() || sheet.pixel(x, y) != *dot
+                    })
+                    .count();
+                (width, height, differing)
+            })
+            .collect();
+        assert_eq!(pages, [(sheet.width(), sheet.height(), 0)]);
+        Ok(())
     }
 
     #[test]

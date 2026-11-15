@@ -1,6 +1,8 @@
-//! Reading back the PDFs the crate writes, for its tests: its objects and their dictionaries.
+//! Reading back the PDFs the crate writes, for its tests: its objects, their dictionaries, and its pages drawn dot by dot.
 
 use std::collections::BTreeMap;
+
+use crate::picture::Rgb;
 
 /// Every object of a PDF by its number, from where its cross-reference table says it starts, which must be there.
 pub(crate) fn objects_of(pdf: &[u8]) -> BTreeMap<u32, &[u8]> {
@@ -57,4 +59,241 @@ pub(crate) fn numbers_referred_to(text: &str, key: &str) -> Vec<u32> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// Each page of a PDF drawn dot by dot at so many dots per inch, white until drawn on: its width, its height and its
+/// dots row after row. Only what the crate writes is read: filled rectangles and circles, colours, saved and restored
+/// states, scalings and moves, and forms drawn in them.
+pub(crate) fn pages_drawn(pdf: &[u8], dots_per_inch: u32) -> Vec<(u32, u32, Vec<Rgb>)> {
+    let objects = objects_of(pdf);
+    let tree = number_after(&dictionary_of(&objects, 1), "/Pages ");
+    numbers_referred_to(&dictionary_of(&objects, tree), "/Kids [")
+        .into_iter()
+        .map(|page| {
+            let dictionary = dictionary_of(&objects, page);
+            let media_box: Vec<f64> = dictionary
+                .split_once("/MediaBox [")
+                .and_then(|(_, rest)| rest.split_once(']'))
+                .map(|(numbers, _)| {
+                    numbers
+                        .split_whitespace()
+                        .filter_map(|n| n.parse().ok())
+                        .collect()
+                })
+                .unwrap_or_default();
+            let scale = f64::from(dots_per_inch) / 72.0;
+            let (width, height) = (
+                (media_box[2] * scale).round() as u32,
+                (media_box[3] * scale).round() as u32,
+            );
+            let forms: BTreeMap<String, u32> = dictionary
+                .split_once("/XObject <<")
+                .and_then(|(_, rest)| rest.split_once(">>"))
+                .map(|(entries, _)| {
+                    entries
+                        .split(" 0 R")
+                        .filter_map(|entry| {
+                            let (name, number) = entry.trim().split_once(' ')?;
+                            Some((name.to_string(), number.parse().ok()?))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            let mut drawn = Drawn {
+                width,
+                height,
+                page_height: media_box[3],
+                scale,
+                dots: vec![Rgb::WHITE; width as usize * height as usize],
+            };
+            let contents = number_after(&dictionary, "/Contents ");
+            drawn.run(
+                &stream_of(&objects, contents),
+                &mut State::default(),
+                &forms,
+                &objects,
+            );
+            (width, height, drawn.dots)
+        })
+        .collect()
+}
+
+/// A stream object's data, as long as its dictionary says.
+pub(crate) fn stream_of(objects: &BTreeMap<u32, &[u8]>, number: u32) -> String {
+    let dictionary = dictionary_of(objects, number);
+    let length = number_after(&dictionary, "/Length ") as usize;
+    let object = objects.get(&number).copied().unwrap_or_default();
+    let starts = dictionary.len() + "stream\n".len();
+    String::from_utf8_lossy(&object[starts..starts + length]).into_owned()
+}
+
+/// What a page's drawing keeps between operators: its scaling and move, its colour, and its states saved.
+#[derive(Clone, Copy)]
+struct Matrix {
+    across: f64,
+    down: f64,
+    right: f64,
+    up: f64,
+}
+
+#[derive(Clone)]
+struct State {
+    matrix: Matrix,
+    colour: Rgb,
+    clip: Option<(f64, f64, f64, f64)>,
+}
+
+impl Default for State {
+    fn default() -> State {
+        State {
+            matrix: Matrix {
+                across: 1.0,
+                down: 1.0,
+                right: 0.0,
+                up: 0.0,
+            },
+            colour: Rgb(0, 0, 0),
+            clip: None,
+        }
+    }
+}
+
+struct Drawn {
+    width: u32,
+    height: u32,
+    page_height: f64,
+    scale: f64,
+    dots: Vec<Rgb>,
+}
+
+/// A part of a path: a rectangle, or the points of a curved outline.
+enum Part {
+    Rectangle(f64, f64, f64, f64),
+    Points(Vec<(f64, f64)>),
+}
+
+impl Drawn {
+    /// A point in the current scaling and move, in dots from the page's top left corner.
+    fn dot(&self, matrix: Matrix, (x, y): (f64, f64)) -> (f64, f64) {
+        (
+            (matrix.across * x + matrix.right) * self.scale,
+            (self.page_height - (matrix.down * y + matrix.up)) * self.scale,
+        )
+    }
+
+    fn run(
+        &mut self,
+        content: &str,
+        state: &mut State,
+        forms: &BTreeMap<String, u32>,
+        objects: &BTreeMap<u32, &[u8]>,
+    ) {
+        let mut saved = Vec::new();
+        let mut operands: Vec<f64> = Vec::new();
+        let mut path: Vec<Part> = Vec::new();
+        let mut name = String::new();
+        for token in content.split_whitespace() {
+            if let Ok(number) = token.parse() {
+                operands.push(number);
+                continue;
+            }
+            if token.starts_with('/') {
+                name = token.to_string();
+                continue;
+            }
+            match (token, operands.as_slice()) {
+                ("q", []) => saved.push(state.clone()),
+                ("Q", []) => *state = saved.pop().expect("a saved state"),
+                ("cm", &[across, 0.0, 0.0, down, right, up]) => {
+                    let m = state.matrix;
+                    state.matrix = Matrix {
+                        across: m.across * across,
+                        down: m.down * down,
+                        right: m.across * right + m.right,
+                        up: m.down * up + m.up,
+                    };
+                }
+                ("rg", &[red, green, blue]) => {
+                    let channel = |share: f64| (share * 255.0).round() as u8;
+                    state.colour = Rgb(channel(red), channel(green), channel(blue));
+                }
+                ("re", &[x, y, width, height]) => path.push(Part::Rectangle(x, y, width, height)),
+                ("m", &[x, y]) => path.push(Part::Points(vec![(x, y)])),
+                ("c", &[x1, y1, x2, y2, x3, y3]) => {
+                    if let Some(Part::Points(points)) = path.last_mut() {
+                        points.extend([(x1, y1), (x2, y2), (x3, y3)]);
+                    }
+                }
+                ("h", []) => {}
+                ("W", []) => {
+                    if let Some(Part::Rectangle(x, y, width, height)) = path.first() {
+                        let (left, bottom) = self.dot(state.matrix, (*x, *y));
+                        let (right, top) = self.dot(state.matrix, (x + width, y + height));
+                        state.clip = Some((left, top, right, bottom));
+                    }
+                }
+                ("n", []) => path.clear(),
+                ("f", []) => {
+                    for part in path.drain(..) {
+                        self.fill(&part, state);
+                    }
+                }
+                ("Do", []) => {
+                    let form = forms.get(&name).copied().expect("a form drawn by name");
+                    let mut inside = state.clone();
+                    self.run(&stream_of(objects, form), &mut inside, forms, objects);
+                }
+                (operator, operands) => panic!("{operator} unread, with {operands:?}"),
+            }
+            operands.clear();
+        }
+    }
+
+    fn fill(&mut self, part: &Part, state: &State) {
+        let (mut left, mut top, mut right, mut bottom) = match part {
+            Part::Rectangle(x, y, width, height) => {
+                let (left, bottom) = self.dot(state.matrix, (*x, *y));
+                let (right, top) = self.dot(state.matrix, (x + width, y + height));
+                (left, top, right, bottom)
+            }
+            Part::Points(points) => {
+                let dots: Vec<_> = points.iter().map(|&p| self.dot(state.matrix, p)).collect();
+                let least =
+                    |pick: fn(&(f64, f64)) -> f64| dots.iter().map(pick).fold(f64::MAX, f64::min);
+                let most =
+                    |pick: fn(&(f64, f64)) -> f64| dots.iter().map(pick).fold(f64::MIN, f64::max);
+                (least(|d| d.0), least(|d| d.1), most(|d| d.0), most(|d| d.1))
+            }
+        };
+        let disc = matches!(part, Part::Points(_)).then(|| {
+            let radius = ((right - left) / 2.0).round();
+            let centre = (
+                ((left + right) / 2.0 - 0.5).round(),
+                ((top + bottom) / 2.0 - 0.5).round(),
+            );
+            (centre, radius)
+        });
+        if let Some((clip_left, clip_top, clip_right, clip_bottom)) = state.clip {
+            (left, top, right, bottom) = (
+                left.max(clip_left),
+                top.max(clip_top),
+                right.min(clip_right),
+                bottom.min(clip_bottom),
+            );
+        }
+        let span = |from: f64, to: f64, most: u32| {
+            (from.round().max(0.0) as u32)..(to.round().max(0.0) as u32).min(most)
+        };
+        for y in span(top, bottom, self.height) {
+            for x in span(left, right, self.width) {
+                let inside = disc.is_none_or(|((centre_x, centre_y), radius)| {
+                    (f64::from(x) - centre_x).powi(2) + (f64::from(y) - centre_y).powi(2)
+                        <= radius.powi(2)
+                });
+                if inside {
+                    self.dots[(y * self.width + x) as usize] = state.colour;
+                }
+            }
+        }
+    }
 }
