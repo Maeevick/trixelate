@@ -99,10 +99,11 @@ pub(crate) fn page_of(drawing: &Drawing) -> Page {
                 );
                 content.push_str(&format!("{} ", colour_of(BLACK)));
                 content.push_str(&circle(centre, in_points(f64::from(radius))));
-                if radius > *outline {
-                    content.push_str(&format!("{} ", colour_of(*colour)));
-                    content.push_str(&circle(centre, in_points(f64::from(radius - outline))));
-                }
+                content.push_str(&format!("{} ", colour_of(*colour)));
+                content.push_str(&circle(
+                    centre,
+                    in_points(f64::from(radius.saturating_sub(*outline))),
+                ));
             }
             Mark::Letters {
                 text,
