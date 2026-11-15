@@ -72,12 +72,20 @@ pub fn most_cells_across(format: PageFormat) -> u32 {
 /// The cells across a sheet on a paper has unless asked otherwise, fewer than it holds so that each cell is big enough
 /// for a child.
 pub fn usual_cells_across(format: PageFormat) -> u32 {
-    most_cells_across(format)
+    match format {
+        PageFormat::A2 => 64,
+        PageFormat::A3 => 48,
+        PageFormat::A4 => 32,
+        PageFormat::A5 => 24,
+    }
 }
 
 /// The colours a sheet on a paper has unless asked otherwise: four on the small papers, eight on the big ones.
-pub fn usual_colours(_format: PageFormat) -> ColourCount {
-    ColourCount::IN_A_SMALL_BOX
+pub fn usual_colours(format: PageFormat) -> ColourCount {
+    match format {
+        PageFormat::A2 | PageFormat::A3 => ColourCount::IN_A_SMALL_BOX,
+        PageFormat::A4 | PageFormat::A5 => ColourCount::IN_A_TINY_BOX,
+    }
 }
 
 /// Which way up the paper lies: upright, or on its side.
