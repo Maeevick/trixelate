@@ -18,6 +18,8 @@ impl ColourCount {
     pub const MOST: usize = 24;
     /// Eight colours, a small box of crayons, unless asked otherwise.
     pub const IN_A_SMALL_BOX: ColourCount = ColourCount(8);
+    /// Four colours, the fewest a sheet keeps as pixel art, for the youngest.
+    pub const IN_A_TINY_BOX: ColourCount = ColourCount(4);
 
     pub fn new(count: usize) -> Result<ColourCount, ColourCountOutOfRange> {
         (Self::FEWEST..=Self::MOST)

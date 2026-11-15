@@ -5,6 +5,7 @@ use std::fmt;
 use crate::colouring::Colouring;
 use crate::grid::GridSize;
 use crate::lettering;
+use crate::palette::ColourCount;
 
 /// The paper a sheet is drawn for, its sides given upright.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -66,6 +67,17 @@ pub fn most_cells_across(format: PageFormat) -> u32 {
         PageFormat::A4 => 48,
         PageFormat::A5 => 32,
     }
+}
+
+/// The cells across a sheet on a paper has unless asked otherwise, fewer than it holds so that each cell is big enough
+/// for a child.
+pub fn usual_cells_across(format: PageFormat) -> u32 {
+    most_cells_across(format)
+}
+
+/// The colours a sheet on a paper has unless asked otherwise: four on the small papers, eight on the big ones.
+pub fn usual_colours(_format: PageFormat) -> ColourCount {
+    ColourCount::IN_A_SMALL_BOX
 }
 
 /// Which way up the paper lies: upright, or on its side.
@@ -543,7 +555,6 @@ fn row_of_bubbles(
 mod tests {
     use super::*;
     use crate::grid::GridSize;
-    use crate::palette::ColourCount;
     use crate::picture::Picture;
 
     fn colouring(columns: u32, rows: u32, colours: usize) -> Colouring {
@@ -705,6 +716,23 @@ mod tests {
         assert_eq!(too_thin, Err(MarginOutOfRange));
         assert!(layout.title().is_some());
         Ok(())
+    }
+
+    #[test]
+    fn a_sheet_has_64_cells_across_and_8_colours_on_a2_48_and_8_on_a3_32_and_4_on_a4_and_24_and_4_on_a5_unless_asked()
+     {
+        let usual = PageFormat::ALL.map(|format| {
+            (
+                format.name(),
+                usual_cells_across(format),
+                usual_colours(format).get(),
+            )
+        });
+
+        assert_eq!(
+            usual,
+            [("A2", 64, 8), ("A3", 48, 8), ("A4", 32, 4), ("A5", 24, 4)]
+        );
     }
 
     #[test]
