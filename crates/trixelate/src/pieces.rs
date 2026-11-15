@@ -11,19 +11,20 @@ use crate::pdf_file;
 use crate::sheet::{BLACK, NUMBER_GREY};
 
 const A4_MILLIMETRES: (u32, u32) = (210, 297);
-/// The blank paper around a piece's part of the sheet, wider than home printers usually leave unprinted.
+/// The blank paper around a piece's part of the sheet, cut away: wider than home printers usually leave unprinted, and
+/// room for where the piece goes to be read before it is.
 const MARGIN_MM: u32 = 10;
-/// The strip of the sheet a piece shares with the next, for the next one to be glued over.
-const OVERLAP_MM: u32 = 10;
-/// A cut mark starts a millimetre from the edge it marks, runs five and is three tenths of a millimetre thick.
-const CUT_MARK_GAP_MM: u32 = 1;
-const CUT_MARK_LENGTH_MM: u32 = 5;
-const CUT_MARK_THICKNESS_TENTHS_OF_MM: u32 = 3;
+/// A cut line is dashed, three millimetres every five, two tenths of a millimetre thick, just outside the part.
+const DASH_MM: u32 = 3;
+const DASH_EVERY_MM: u32 = 5;
+const CUT_LINE_TENTHS_OF_MM: u32 = 2;
+/// Where a piece goes is written a millimetre under its part.
+const UNDER_THE_PART_MM: u32 = 1;
 /// A piece says where it goes in letters about three millimetres tall.
 const PLACE_TENTHS_OF_MM_TALL: u32 = 30;
 
-/// How a poster is cut into A4 pieces for a home printer: how many across and down, the page each is printed on, upright
-/// or on its side, and how much the poster shrinks for its pieces to be as many as the A4 pages its paper is made of.
+/// How a sheet is cut into A4 pieces for a home printer: how many across and down, the page each is printed on, upright
+/// or on its side, and how much the sheet shrinks for its pieces to be as many as the A4 pages its paper is made of.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Pieces {
     across: u32,
@@ -45,10 +46,7 @@ impl Pieces {
             dots(sheet_mm.0, dots_per_inch),
             dots(sheet_mm.1, dots_per_inch),
         );
-        let (margin, overlap) = (
-            dots(MARGIN_MM, dots_per_inch),
-            dots(OVERLAP_MM, dots_per_inch),
-        );
+        let margin = dots(MARGIN_MM, dots_per_inch);
         let [upright, on_its_side] =
             [A4_MILLIMETRES, (A4_MILLIMETRES.1, A4_MILLIMETRES.0)].map(|page_mm| {
                 let (across, down) = (
@@ -59,9 +57,7 @@ impl Pieces {
                     dots(page_mm.0, dots_per_inch),
                     dots(page_mm.1, dots_per_inch),
                 );
-                let covered = |pieces: u32, page: u32| {
-                    f64::from(pieces * (page - 2 * margin) - (pieces - 1) * overlap)
-                };
+                let covered = |pieces: u32, page: u32| f64::from(pieces * (page - 2 * margin));
                 let scale = (covered(across, page.0) / f64::from(sheet.0))
                     .min(covered(down, page.1) / f64::from(sheet.1))
                     .min(1.0);
@@ -96,17 +92,13 @@ impl Pieces {
     }
 
     /// Each piece of a sheet's drawing as a page, row after row: the sheet shrunk and moved for its part to fill the
-    /// window inside the margin, the window starting where the last piece's shared strip does, and in the margin the
-    /// marks to cut along and where the piece goes. Also every character the pages write.
+    /// window inside the margin, the window starting where the last piece's ends, and in the margin the dashed lines to
+    /// cut along and where the piece goes. Also every character the pages write.
     pub(crate) fn pages(&self, sheet: &Drawing) -> (Vec<pdf_file::Page>, BTreeSet<char>) {
         let dots_per_inch = sheet.dots_per_inch();
         let points = |dots: f64| dots * 72.0 / f64::from(dots_per_inch);
-        let (margin, overlap) = (
-            dots(MARGIN_MM, dots_per_inch),
-            dots(OVERLAP_MM, dots_per_inch),
-        );
+        let margin = dots(MARGIN_MM, dots_per_inch);
         let part = (self.page.0 - 2 * margin, self.page.1 - 2 * margin);
-        let apart = (part.0 - overlap, part.1 - overlap);
         let drawn = String::from_utf8_lossy(&pdf_file::page_of(sheet).content).into_owned();
         let mut characters = pdf_file::characters_of(sheet);
         let mut pages = Vec::new();
@@ -114,7 +106,7 @@ impl Pieces {
             (0..self.down).flat_map(|row| (0..self.across).map(move |column| (column, row)))
         {
             let mut around = Drawing::blank(self.page.0, self.page.1, dots_per_inch);
-            mark_where_to_cut(&mut around, margin, part, dots_per_inch);
+            frame_with_cut_lines(&mut around, margin, part, dots_per_inch);
             let place = format!(
                 "row {} of {} - column {} of {}",
                 row + 1,
@@ -126,9 +118,9 @@ impl Pieces {
             characters.extend(pdf_file::characters_of(&around));
             let page = pdf_file::page_of(&around);
             let moved = (
-                points(f64::from(margin) - f64::from(column * apart.0)),
+                points(f64::from(margin) - f64::from(column * part.0)),
                 points(
-                    f64::from(self.page.1 - margin + row * apart.1)
+                    f64::from(self.page.1 - margin + row * part.1)
                         - self.scale * f64::from(sheet.height()),
                 ),
             );
@@ -151,22 +143,30 @@ impl Pieces {
     }
 }
 
-/// Marks a piece where to cut it: along its window's left and top edges, a little past each end, to trim the margin
-/// that the pieces before it are glued over.
-fn mark_where_to_cut(
+/// Frames a piece's part with fine dashed lines just outside it, across the whole page, for scissors or a ruler to cut
+/// along on every side, the pieces then butted edge to edge.
+fn frame_with_cut_lines(
     around: &mut Drawing,
     margin: u32,
     (width, height): (u32, u32),
     dots_per_inch: u32,
 ) {
-    let gap = dots(CUT_MARK_GAP_MM, dots_per_inch);
-    let length = dots(CUT_MARK_LENGTH_MM, dots_per_inch);
-    let thickness = dots_of_tenths(CUT_MARK_THICKNESS_TENTHS_OF_MM, dots_per_inch).max(1);
-    let (before, after) = (margin - gap - length, margin + gap);
-    around.fill(margin, before, thickness, length, BLACK);
-    around.fill(margin, after + height, thickness, length, BLACK);
-    around.fill(before, margin, length, thickness, BLACK);
-    around.fill(after + width, margin, length, thickness, BLACK);
+    let (page_width, page_height) = (width + 2 * margin, height + 2 * margin);
+    let thin = dots_of_tenths(CUT_LINE_TENTHS_OF_MM, dots_per_inch).max(1);
+    let (dash, every) = (
+        dots(DASH_MM, dots_per_inch),
+        dots(DASH_EVERY_MM, dots_per_inch),
+    );
+    for top in [margin - thin, margin + height] {
+        for left in (0..page_width).step_by(every as usize) {
+            around.fill(left, top, dash.min(page_width - left), thin, BLACK);
+        }
+    }
+    for left in [margin - thin, margin + width] {
+        for top in (0..page_height).step_by(every as usize) {
+            around.fill(left, top, thin, dash.min(page_height - top), BLACK);
+        }
+    }
 }
 
 /// Writes where a piece goes in grey, under its window, flush with its right margin.
@@ -182,7 +182,7 @@ fn say_where_it_goes(
     let size = lettering::size(place, scale);
     let corner = (
         page.0 - margin - size.0,
-        page.1 - margin + dots(CUT_MARK_GAP_MM, dots_per_inch),
+        page.1 - margin + dots(UNDER_THE_PART_MM, dots_per_inch),
     );
     around.letters(place, scale, corner, NUMBER_GREY);
 }
