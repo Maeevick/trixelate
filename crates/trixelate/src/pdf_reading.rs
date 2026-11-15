@@ -303,3 +303,36 @@ impl Drawn {
         }
     }
 }
+
+/// A PDF's information, by key: its text strings decoded from UTF-16, its dates as written.
+pub(crate) fn info_of(pdf: &[u8]) -> BTreeMap<String, String> {
+    let objects = objects_of(pdf);
+    let trailer = String::from_utf8_lossy(pdf)
+        .rsplit_once("trailer")
+        .map(|(_, trailer)| trailer.to_string())
+        .unwrap_or_default();
+    let dictionary = dictionary_of(&objects, number_after(&trailer, "/Info "));
+    let mut info = BTreeMap::new();
+    let mut rest = dictionary.as_str();
+    while let Some((_, after)) = rest.split_once('/') {
+        let key_ends = after.find([' ', '<', '(']).unwrap_or(after.len());
+        let (key, value) = after.split_at(key_ends);
+        let value = value.trim_start();
+        let (text, after) = if let Some(hex) = value.strip_prefix('<') {
+            let (hex, after) = hex.split_once('>').unwrap_or_default();
+            let units: Vec<u16> = (0..hex.len())
+                .step_by(4)
+                .filter_map(|at| u16::from_str_radix(hex.get(at..at + 4)?, 16).ok())
+                .collect();
+            assert_eq!(units.first(), Some(&0xFEFF), "a text string in UTF-16");
+            (String::from_utf16_lossy(&units[1..]), after)
+        } else {
+            let literal = value.strip_prefix('(').unwrap_or_default();
+            let (literal, after) = literal.split_once(')').unwrap_or_default();
+            (literal.to_string(), after)
+        };
+        info.insert(key.to_string(), text);
+        rest = after;
+    }
+    info
+}

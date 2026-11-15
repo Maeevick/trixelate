@@ -136,7 +136,13 @@ pub fn preview_of(colouring: &Colouring, order: Order, file_name: &str) -> Resul
 
 /// The sheet of a colouring as a PDF of one page at its paper's size, drawn in shapes rather than dots, so it prints
 /// sharp at any size.
-pub fn sheet_pdf(colouring: &Colouring, order: Order, file_name: &str) -> Result<Vec<u8>, NoRoom> {
+pub fn sheet_pdf(
+    colouring: &Colouring,
+    order: Order,
+    file_name: &str,
+    made: u64,
+) -> Result<Vec<u8>, NoRoom> {
+    let _ = made;
     let drawing = sheet::drawing(colouring, &lay_out(colouring, order)?.titled(file_name));
     Ok(pdf_file::write_pages(
         &[pdf_file::page_of(&drawing)],
@@ -236,6 +242,7 @@ fn named_after(picture_file_name: &str, order: &Order, what_and_its_extension: &
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
 
     fn order(columns: u32, format: PageFormat) -> Order {
         Order::new(
@@ -403,9 +410,8 @@ mod tests {
         assert!(laid[0].as_ref().is_ok_and(|sheet| sheet.width() == 1748));
     }
 
-    #[test]
-    fn a_sheet_written_as_a_pdf_draws_every_dot_of_the_sheet_in_shapes_on_a_page_of_its_papers_size()
-    -> Result<(), NoRoom> {
+    /// A three by two picture of four colours, one of them dark, coloured for a sheet of 12 cells across on A5.
+    fn four_colours_on_a5() -> (Colouring, Order) {
         let picture = Picture::from_rgba(
             3,
             2,
@@ -428,10 +434,16 @@ mod tests {
             Margin::new(10).expect("a margin"),
         )
         .expect("an order");
-        let colouring = colour(&picture, order)?;
+        (colour(&picture, order).expect("room"), order)
+    }
+
+    #[test]
+    fn a_sheet_written_as_a_pdf_draws_every_dot_of_the_sheet_in_shapes_on_a_page_of_its_papers_size()
+    -> Result<(), NoRoom> {
+        let (colouring, order) = four_colours_on_a5();
         let sheet = sheet_of(&colouring, order, "goblin-12-4-a5.sheet.pdf")?;
 
-        let pdf = sheet_pdf(&colouring, order, "goblin-12-4-a5.sheet.pdf")?;
+        let pdf = sheet_pdf(&colouring, order, "goblin-12-4-a5.sheet.pdf", 0)?;
 
         let pages: Vec<_> = pdf_reading::pages_drawn(&pdf, 300)
             .into_iter()
@@ -448,6 +460,48 @@ mod tests {
             })
             .collect();
         assert_eq!(pages, [(sheet.width(), sheet.height(), 0)]);
+        Ok(())
+    }
+
+    #[test]
+    fn a_sheets_pdf_says_its_title_when_it_was_made_and_the_trixelate_that_made_it_with_where_it_lives()
+    -> Result<(), NoRoom> {
+        let (colouring, order) = four_colours_on_a5();
+        let version = env!("CARGO_PKG_VERSION");
+
+        let pdf = sheet_pdf(
+            &colouring,
+            order,
+            "goblin (2)-12-4-a5.sheet.pdf",
+            1_794_407_355,
+        )?;
+
+        let info = pdf_reading::info_of(&pdf);
+        let expected: BTreeMap<String, String> = [
+            ("CreationDate", "D:20261111142915Z".to_string()),
+            (
+                "Creator",
+                format!("trixelate {version}, https://trixelate.maeevick.com"),
+            ),
+            (
+                "Keywords",
+                "colour by number, pixel art, trixelate".to_string(),
+            ),
+            (
+                "Producer",
+                format!(
+                    "trixelate {version}, under the MIT licence, https://github.com/Maeevick/trixelate"
+                ),
+            ),
+            (
+                "Subject",
+                "A colour-by-number sheet, to colour in by hand".to_string(),
+            ),
+            ("Title", "goblin (2)-12-4-a5.sheet.pdf".to_string()),
+        ]
+        .map(|(key, value)| (key.to_string(), value))
+        .into();
+        assert_eq!(info, expected);
         Ok(())
     }
 
