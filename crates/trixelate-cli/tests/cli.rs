@@ -647,6 +647,22 @@ fn more_cells_across_than_the_paper_holds_are_refused_as_misuse() {
 }
 
 #[test]
+fn pieces_of_an_a4_or_a5_sheet_are_refused_as_misuse_since_a_home_printer_takes_it_whole() {
+    let on_a4 = trixelate(&["missing.png", "--pieces"]);
+    let on_a5 = trixelate(&["missing.png", "--pieces", "--format", "a5"]);
+
+    assert_eq!(
+        [&on_a4, &on_a5].map(|run| run.status.code()),
+        [Some(2), Some(2)]
+    );
+    assert!(
+        text(&on_a4.stderr)
+            .contains("an A4 sheet prints whole at home: --pieces is for an A3 or A2 poster")
+    );
+    assert!(text(&on_a5.stderr).contains("an A5 sheet prints whole at home"));
+}
+
+#[test]
 fn wrong_arguments_are_refused_as_misuse_before_any_picture_is_read() {
     let cases: [&[&str]; 8] = [
         &["missing.png", "--width", "0"],
