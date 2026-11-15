@@ -644,7 +644,7 @@ mod tests {
     }
 
     #[test]
-    fn a_preview_is_named_like_its_sheet_as_a_preview() {
+    fn a_preview_is_named_like_its_sheet_as_a_preview_in_a_pdf() {
         let order = order(48, PageFormat::A4);
 
         let names = [
@@ -654,7 +654,7 @@ mod tests {
 
         assert_eq!(
             names,
-            ["goblin-48-2-a4.preview.png", "my.photo-48-2-a4.preview.png"]
+            ["goblin-48-2-a4.preview.pdf", "my.photo-48-2-a4.preview.pdf"]
         );
     }
 
