@@ -12,8 +12,8 @@ trixelate reads a PNG or a JPEG, simplifies it into a grid of square cells, find
 
 - **Made for children**: big square cells outlined in light grey, numbers in dark grey rather than black, and a legend whose numbers take black or white, whichever reads better on their bubble.
 - **A model to copy from**: every sheet shows the picture in miniature in the page's top left corner, in its colours and without numbers, for the youngest to see what they are making, and is titled with its file name. Its preview shows the whole sheet coloured in, before a single crayon is out.
-- **Ready to print**: a PDF drawn in shapes rather than dots, sharp at any size and light without a compressor, on A2, A3, A4 or A5, lying the way the picture suits unless told otherwise; an A2 poster has bubbles twice as wide. The PDF says its title, when it was made and the trixelate that made it, with where its code and page live.
-- **Posters from a home printer**: an A2 or A3 also comes cut into the A4 pages its paper is made of, 4 for an A2 and 2 for an A3, in one PDF that prints at actual size. Each piece is marked where to cut it and says its row and column; glued together, the poster is 88% of its paper, its margins and shared strips taking the rest.
+- **Ready to print**: a PDF drawn in shapes rather than dots, sharp at any size and light without a compressor, on A2, A3, A4 or A5, lying the way the picture suits unless told otherwise, with bubbles up to 16 mm wide on every paper. The PDF says its title, when it was made and the trixelate that made it, with where its code and page live.
+- **Big sheets from a home printer**: an A2 or A3 sheet also comes cut into the A4 pages its paper is made of, 4 for an A2 and 2 for an A3, in one PDF that prints at actual size. Each piece is framed by dashed lines to cut along and says its row and column; taped edge to edge, the sheet is 90% of its paper, the borders cut away taking the rest.
 - **Safe by default**: a sheet that would not fit, cells too small for their numbers or a margin outside 5 to 20 mm is refused with what to try instead. A picture over 50 megapixels, a file over 100 MB or anything but a file is refused before it is read. No file is ever overwritten, not even through a link: a sheet beside its picture is stamped with the second it was made, and an `--output` that already exists is refused.
 - **Small**: the library needs only `png` and `zune-jpeg`, the command line adds `clap`, the page adds Leptos; the digits and letters are drawn from a five-by-seven pixel font, with no font file, and the PDF is written by hand, with no PDF library.
 
@@ -40,7 +40,7 @@ trixelate [OPTIONS] <PICTURE>
 | `<PICTURE>` | The PNG or JPEG picture to turn into a sheet, of any colour type and depth, up to 50 megapixels and 100 MB, a photo turned upright as its camera says; the sheet, its preview and its pieces are always PDFs | |
 | `--width` | Cells across the grid; the rows follow from the picture's proportions, so it is never stretched. At most 80 on A2, 64 on A3, 48 on A4 and 32 on A5 | 64 on A2, 48 on A3, 32 on A4, 24 on A5 |
 | `-c`, `--colours` | Colours in the palette, from 2 to 24 (`--colors` works too) | 8 on A2 and A3, 4 on A4 and A5 |
-| `-f`, `--format` | The paper: `a3`, `a4` or `a5`, or the poster `a2` | `a4` |
+| `-f`, `--format` | The paper: `a2`, `a3`, `a4` or `a5` | `a4` |
 | `--landscape` | Lay the paper on its side | the way the picture suits: on its side once it is a tenth wider than tall, upright otherwise, a square included |
 | `--portrait` | Stand the paper upright; not with `--landscape` | the way the picture suits |
 | `-m`, `--margin` | The blank paper around the sheet, in millimetres, from 5 for the title and the credit to 20, leaving the room to the cells | 10 |
@@ -53,7 +53,7 @@ Exit codes: `0` the sheet is written, `1` the picture or the sheet failed, or th
 
 ## In the browser
 
-The same sheets without a command line or a server, the page needing Rust 1.89 rather than 1.88: drop a picture in, set the sheet up, look at it beside your picture, slide the line across it to see it coloured in, then download it as a PDF, and a poster's A4 pieces too. A picture dropped in lays the paper the way it suits, the box left free to change. The picture never leaves the browser, and the browser makes sure of it: the built page's Content-Security-Policy lets it fetch from its own address only, and run only its own script.
+The same sheets without a command line or a server, the page needing Rust 1.89 rather than 1.88: drop a picture in, set the sheet up, look at it beside your picture, slide the line across it to see it coloured in, then download it as a PDF, and an A2 or A3 sheet's A4 pieces too. A picture dropped in lays the paper the way it suits, the box left free to change. The picture never leaves the browser, and the browser makes sure of it: the built page's Content-Security-Policy lets it fetch from its own address only, and run only its own script.
 
 ```sh
 rustup target add wasm32-unknown-unknown
@@ -75,14 +75,14 @@ make web-smoke  # the built page opened in a headless Chrome, failing unless it 
 8. **A small credit is written at the bottom right**, in the margin: made with trixelate, and where it lives.
 9. **The page is written as a PDF in shapes**: filled rectangles for the cells, the lines and the miniature, circles of four curves for the bubbles, and each character a form drawn once and placed wherever it is written. It prints sharp at any size and stays light with no compressor, and says its title, when it was made, and the trixelate that made it with where its code and page live.
 
-## How a poster is cut into pieces
+## How a big sheet is cut into pieces
 
-1. **A poster takes the A4 pages its paper is made of**: 4 for an A2, the pieces lying as the poster does, and 2 for an A3, the pieces lying the other way. An A4 or A5 prints whole at home.
-2. **Each piece prints its part of the poster inside a 10 mm margin**, wider than home printers usually leave unprinted, and shares a 10 mm strip with the pieces to its right and below. For the pieces to stay as many as the pages, the poster shrinks to fit: glued together, it is 88% of its paper.
-3. **Cut marks show the left and top edges of each part**, and its row and column are written under it, at the right: `row 2 of 2 - column 1 of 2`.
-4. **The pieces come as one PDF, an A4 page each, row after row**, each drawing the poster's own shapes, shrunk and clipped to its window.
+1. **An A2 or A3 sheet takes the A4 pages its paper is made of**: 4 for an A2, the pieces lying as the sheet does, and 2 for an A3, the pieces lying the other way. An A4 or A5 prints whole at home.
+2. **Each piece prints its part of the sheet inside a 10 mm border that is cut away**, wider than home printers usually leave unprinted, and the next piece starts exactly where it ends: nothing overlaps, nothing to line up. For the pieces to stay as many as the pages, the sheet shrinks to fit: taped together, it is 90% of its paper, its own margin still around it.
+3. **Fine dashed lines frame each part**, across the whole page for a ruler or a guillotine, and its row and column are written under it, at the right, to read before cutting: `row 2 of 2 - column 1 of 2`.
+4. **The pieces come as one PDF, an A4 page each, row after row**, each drawing the sheet's own shapes, shrunk and clipped to its window.
 
-Print it at actual size (100%, not "fit to page"). Cut each piece along its marks on the left and top, then glue it over the pieces to its left and above, matching the picture.
+Print it at actual size (100%, not "fit to page"). Cut each piece along its dashed lines, on all four sides, then lay the pieces edge to edge in their rows and columns and tape them together from the back.
 
 ![A twelve-colour sheet on A5: the twelve colours in miniature in the top left corner, the legend beside them, the grid of numbered cells below, the file name on top](docs/twelve-a5.sheet.png)
 
