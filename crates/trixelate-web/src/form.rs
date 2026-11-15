@@ -268,13 +268,13 @@ mod tests {
     }
 
     #[test]
-    fn the_form_starts_on_an_a4_sheet_as_many_cells_across_as_it_holds_in_eight_colours_with_a_ten_millimetre_margin()
+    fn the_form_starts_on_an_a4_sheet_with_its_usual_32_cells_across_and_4_colours_and_a_ten_millimetre_margin()
      {
         let order = ready(Settings::default());
 
         assert_eq!(
             order.map(|order| (order.cells_across(), order.colours().get(), order.format())),
-            Ok((48, 8, PageFormat::A4))
+            Ok((32, 4, PageFormat::A4))
         );
         assert_eq!(Settings::default().margin, 10);
         assert!(!Settings::default().landscape);
