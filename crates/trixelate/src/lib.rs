@@ -196,7 +196,7 @@ pub fn pieces_pdf(
     Ok(order.pieces().map(|pieces| {
         let (pages, characters) = pieces.pages(&drawing);
         let subject =
-            "A colour-by-number poster in A4 pieces, to print at actual size and glue together";
+            "A colour-by-number sheet in A4 pieces, to print at actual size, cut along the dashes and tape edge to edge";
         pdf_file::write_pages(&pages, &characters, &about(file_name, subject, made))
     }))
 }

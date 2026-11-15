@@ -106,7 +106,7 @@ pub struct Painted {
 }
 
 const NOT_A_PNG: &str = "The sheet could not be turned into a PNG. That one is on us.";
-const PRINTS_WHOLE: &str = "This sheet prints whole at home: pieces are for an A3 or A2 poster.";
+const PRINTS_WHOLE: &str = "This sheet prints whole at home: pieces are for an A3 or A2 sheet.";
 
 /// A colouring's sheet painted on the order's page, named after the picture, encoded fast to be shown only, or why it
 /// cannot be.
@@ -436,15 +436,15 @@ mod tests {
     }
 
     #[test]
-    fn the_pieces_of_a_poster_are_painted_as_one_pdf_of_a4_pages_named_as_pieces() {
+    fn the_pieces_of_an_a2_sheet_are_painted_as_one_pdf_of_a4_pages_named_as_pieces() {
         let picture = red_and_yellow();
-        let poster = Settings {
+        let on_a2 = Settings {
             format: PageFormat::A2,
             width: 2,
             ..Settings::default()
         };
 
-        let painted = ready(poster).and_then(|order| {
+        let painted = ready(on_a2).and_then(|order| {
             let colouring = coloured(&picture, order)?;
             paint_pieces(&colouring, "red-yellow.png", order, 0)
         });

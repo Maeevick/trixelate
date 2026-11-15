@@ -122,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    fn a_poster_written_as_png_tells_printers_its_150_dots_per_inch() {
+    fn a_picture_written_as_png_at_150_dots_per_inch_tells_printers_so() {
         let sheet = Picture::from_rgba(1, 1, &[220, 30, 40, 255]).expect("a picture");
 
         let bytes = write(&sheet, 150).unwrap_or_default();

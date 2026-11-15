@@ -43,7 +43,7 @@ struct Cli {
     #[arg(short, long, visible_alias = "colors", value_parser = colour_count)]
     colours: Option<ColourCount>,
 
-    /// The paper the sheet is drawn for, at 300 dots per inch: A3 to A5, or an A2 poster
+    /// The paper the sheet is drawn for, from A2 to A5
     #[arg(short, long, value_enum, default_value_t = Format::A4)]
     format: Format,
 
@@ -131,7 +131,7 @@ fn ordered(cli: &Cli) -> Result<Order, String> {
         })?;
     if cli.pieces && order.pieces().is_none() {
         return Err(format!(
-            "an {} sheet prints whole at home: --pieces is for an A3 or A2 poster",
+            "an {} sheet prints whole at home: --pieces is for an A3 or A2 sheet",
             format.name()
         ));
     }

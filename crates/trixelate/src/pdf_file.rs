@@ -1,6 +1,6 @@
 //! Pages written as a PDF in shapes rather than dots, for any reader to print sharp at actual size: filled rectangles,
 //! circles drawn as four curves, and each character a form drawn once and placed wherever it is written, which keeps
-//! a poster light without a compressor.
+//! a big sheet light without a compressor.
 
 use std::collections::BTreeSet;
 

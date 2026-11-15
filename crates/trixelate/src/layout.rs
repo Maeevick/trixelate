@@ -18,7 +18,7 @@ pub enum PageFormat {
 }
 
 impl PageFormat {
-    /// Every paper, the posters first, the biggest first.
+    /// Every paper, the biggest first.
     pub const ALL: [PageFormat; 4] = [
         PageFormat::A2,
         PageFormat::A3,
@@ -36,7 +36,7 @@ impl PageFormat {
         }
     }
 
-    /// How finely the paper is printed: 300 dots per inch, a poster as finely as a sheet held in hand.
+    /// How finely the paper is printed: 300 dots per inch, on every paper.
     pub fn dots_per_inch(self) -> u32 {
         300
     }

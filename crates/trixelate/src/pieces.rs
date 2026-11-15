@@ -1,6 +1,6 @@
-//! A poster cut into A4 pieces for a home printer: as many as the A4 pages its paper is made of, each printing its part
-//! of the poster a little smaller inside a margin the printer leaves blank, and the pieces glued together make the
-//! poster again.
+//! A sheet cut into A4 pieces for a home printer: as many as the A4 pages its paper is made of, each printing its part
+//! of the sheet a little smaller inside a margin cut away along dashed lines, and the pieces taped edge to edge make
+//! the sheet again.
 
 use std::collections::BTreeSet;
 

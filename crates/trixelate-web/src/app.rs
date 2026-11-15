@@ -445,14 +445,10 @@ pub fn App() -> impl IntoView {
                                 }
                             }
                         >
-                            <optgroup label="Sheets">
-                                <option value="a3">"A3"</option>
-                                <option value="a4" selected>"A4"</option>
-                                <option value="a5">"A5"</option>
-                            </optgroup>
-                            <optgroup label="Poster">
-                                <option value="a2">"A2"</option>
-                            </optgroup>
+                            <option value="a2">"A2"</option>
+                            <option value="a3">"A3"</option>
+                            <option value="a4" selected>"A4"</option>
+                            <option value="a5">"A5"</option>
                         </select>
                     </label>
                     <label class="flex flex-col gap-1 text-sm font-medium">

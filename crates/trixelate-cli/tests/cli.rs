@@ -601,14 +601,14 @@ fn page_size(pdf: &[u8]) -> Option<String> {
 }
 
 #[test]
-fn a_poster_on_a2_takes_64_cells_across_and_8_colours_on_a_page_of_its_size() {
-    let folder = folder("poster");
+fn a_sheet_on_a2_takes_64_cells_across_and_8_colours_on_a_page_of_its_size() {
+    let folder = folder("on-a2");
     let picture = a_picture_in(&folder);
     let run = trixelate(&[picture.to_str().unwrap_or_default(), "--format", "a2"]);
 
     assert!(run.status.success(), "{}", text(&run.stderr));
     let bytes = written_beside(&folder, "sunset-64-8-a2", "sheet.pdf")
-        .and_then(|poster| fs::read(poster).ok())
+        .and_then(|sheet| fs::read(sheet).ok())
         .unwrap_or_default();
     assert_eq!(page_size(&bytes).as_deref(), Some("1190.64 1683.84"));
 }
