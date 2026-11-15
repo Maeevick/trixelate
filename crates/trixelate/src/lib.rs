@@ -210,6 +210,9 @@ fn pdf_of(drawing: &drawing::Drawing, about: pdf_file::About) -> Vec<u8> {
     )
 }
 
+/// Whose the rights over a sheet are: the picture's, which the user chose, and its use the user's alone.
+const RIGHTS: &str = "Made from a picture the user chose: its copyright and licence still apply to this sheet, and the user alone is responsible for how the picture and the sheet are used; trixelate is not.";
+
 /// What a PDF made by trixelate says of itself.
 fn about(title: &str, subject: &str, made: u64) -> pdf_file::About {
     let version = env!("CARGO_PKG_VERSION");
@@ -219,6 +222,7 @@ fn about(title: &str, subject: &str, made: u64) -> pdf_file::About {
         keywords: "colour by number, pixel art, trixelate".to_string(),
         creator: format!("trixelate {version}, {WEBSITE}"),
         producer: format!("trixelate {version}, under the MIT licence, {SOURCE}"),
+        rights: RIGHTS.to_string(),
         made: format!("D:{}", utc(made).replace('T', "")),
     }
 }

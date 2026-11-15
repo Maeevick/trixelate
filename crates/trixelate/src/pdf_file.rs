@@ -214,6 +214,8 @@ pub(crate) struct About {
     pub(crate) keywords: String,
     pub(crate) creator: String,
     pub(crate) producer: String,
+    /// Whose the rights over what the PDF shows are.
+    pub(crate) rights: String,
     /// The moment it was made, in PDF's form: `D:20261111142915Z`.
     pub(crate) made: String,
 }
@@ -240,12 +242,13 @@ pub(crate) fn write_pages(pages: &[Page], characters: &BTreeSet<char>, about: &A
     pdf.object(
         INFO,
         format!(
-            "<< /Title {} /Subject {} /Keywords {} /Creator {} /Producer {} /CreationDate ({}) >>",
+            "<< /Title {} /Subject {} /Keywords {} /Creator {} /Producer {} /Rights {} /CreationDate ({}) >>",
             text(&about.title),
             text(&about.subject),
             text(&about.keywords),
             text(&about.creator),
             text(&about.producer),
+            text(&about.rights),
             about.made
         )
         .as_bytes(),
