@@ -41,15 +41,6 @@ impl PageFormat {
         300
     }
 
-    /// How wide a legend's bubble may grow, in tenths of a millimetre: eight millimetres on a sheet held in hand, big
-    /// enough for its number and leaving the room to the cells, sixteen on a poster seen from further.
-    fn widest_bubble_tenths_of_mm(self) -> u32 {
-        match self {
-            PageFormat::A2 => 160,
-            PageFormat::A3 | PageFormat::A4 | PageFormat::A5 => 80,
-        }
-    }
-
     pub(crate) fn millimetres(self) -> (u32, u32) {
         match self {
             PageFormat::A2 => (420, 594),
@@ -109,6 +100,9 @@ impl Orientation {
 }
 
 const TENTHS_OF_MILLIMETRE_PER_INCH: u32 = 254;
+/// How wide a legend's bubble may grow, in tenths of a millimetre: sixteen millimetres on every paper, its number read
+/// at a glance.
+const WIDEST_BUBBLE_TENTHS_OF_MM: u32 = 160;
 
 pub(crate) fn dots(millimetres: u32, dots_per_inch: u32) -> u32 {
     dots_of_tenths(millimetres * 10, dots_per_inch)
@@ -315,7 +309,7 @@ impl Room {
             width: page_width - 2 * margin_dots,
             height: page_height - 2 * margin_dots,
             dots_per_inch,
-            widest_bubble: dots_of_tenths(format.widest_bubble_tenths_of_mm(), dots_per_inch),
+            widest_bubble: dots_of_tenths(WIDEST_BUBBLE_TENTHS_OF_MM, dots_per_inch),
         };
         ((page_width, page_height), room)
     }
@@ -830,10 +824,7 @@ mod tests {
             })
         });
 
-        assert_eq!(
-            tenths_of_millimetre_wide,
-            [Ok(160), Ok(157), Ok(157), Ok(157)]
-        );
+        assert_eq!(tenths_of_millimetre_wide, [Ok(160); 4]);
     }
 
     #[test]
@@ -858,15 +849,15 @@ mod tests {
         let long = upright(&square, PageFormat::A4, Margin(10))?.titled(&long_name);
         let thin_margin = on_its_side(&square, Margin(5))?.titled(name);
 
-        let (width, height) = lettering::size(name, 5);
-        assert_eq!(titled.bubble_number_scale(), 5);
+        let (width, height) = lettering::size(name, 8);
+        assert_eq!(titled.bubble_number_scale(), 10);
         assert_eq!(
             titled.title(),
             Some(Title {
                 text: name.to_string(),
                 left: 118 + (2244 - width) / 2,
                 top: (118 - height) / 2,
-                scale: 5,
+                scale: 8,
             })
         );
         assert_eq!(long.title().map(|title| title.scale), Some(1));
@@ -1044,7 +1035,7 @@ mod tests {
     }
 
     #[test]
-    fn bubbles_are_eight_millimetres_wide_when_the_row_has_room_and_shrink_to_share_a_long_row()
+    fn bubbles_are_sixteen_millimetres_wide_when_the_row_has_room_and_shrink_to_share_a_long_row()
     -> Result<(), NoRoom> {
         let (few, many) = (colouring(4, 4, 2), colouring(6, 4, 24));
         let content_width = 2480 - 2 * 236;
@@ -1056,8 +1047,8 @@ mod tests {
         let (first, last) = (bubbles[0], bubbles[bubbles.len() - 1]);
         let row_width =
             last.centre_x + last.diameter / 2 + 1 - (first.centre_x - first.diameter / 2);
-        assert_eq!(roomy.bubbles()[0].diameter, 93);
-        assert!(first.diameter < 93);
+        assert_eq!(roomy.bubbles()[0].diameter, 189);
+        assert!(first.diameter < 189);
         assert!(row_width <= content_width && content_width - row_width < first.diameter);
         Ok(())
     }
