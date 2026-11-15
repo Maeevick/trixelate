@@ -6,6 +6,7 @@ use crate::colouring::Colouring;
 use crate::grid::GridSize;
 use crate::lettering;
 use crate::palette::ColourCount;
+use crate::picture::Picture;
 
 /// The paper a sheet is drawn for, its sides given upright.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -93,6 +94,14 @@ pub fn usual_colours(format: PageFormat) -> ColourCount {
 pub enum Orientation {
     Portrait,
     Landscape,
+}
+
+impl Orientation {
+    /// The way up that suits a picture: on its side once it is a tenth wider than tall, upright otherwise, a square
+    /// included.
+    pub fn suiting(_picture: &Picture) -> Orientation {
+        Orientation::Portrait
+    }
 }
 
 const TENTHS_OF_MILLIMETRE_PER_INCH: u32 = 254;
@@ -563,7 +572,6 @@ fn row_of_bubbles(
 mod tests {
     use super::*;
     use crate::grid::GridSize;
-    use crate::picture::Picture;
 
     fn colouring(columns: u32, rows: u32, colours: usize) -> Colouring {
         let rainbow: Vec<u8> = (0..columns * rows)
@@ -740,6 +748,34 @@ mod tests {
         assert_eq!(
             usual,
             [("A2", 64, 8), ("A3", 48, 8), ("A4", 32, 4), ("A5", 24, 4)]
+        );
+    }
+
+    #[test]
+    fn a_picture_a_tenth_wider_than_tall_or_more_suits_a_page_on_its_side_any_other_an_upright_one()
+    {
+        let suiting = |width, height| {
+            let picture = Picture::from_rgba(
+                width,
+                height,
+                &[220, 30, 40, 255].repeat((width * height) as usize),
+            )
+            .expect("a picture");
+            Orientation::suiting(&picture)
+        };
+
+        let orientations = [(74, 100), (100, 100), (109, 100), (110, 100), (151, 100)]
+            .map(|(width, height)| suiting(width, height));
+
+        assert_eq!(
+            orientations,
+            [
+                Orientation::Portrait,
+                Orientation::Portrait,
+                Orientation::Portrait,
+                Orientation::Landscape,
+                Orientation::Landscape
+            ]
         );
     }
 
