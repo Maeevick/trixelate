@@ -29,48 +29,41 @@ const PLACE_TENTHS_OF_MM_TALL: u32 = 30;
 pub struct Pieces {
     across: u32,
     down: u32,
-    page: (u32, u32),
+    on_their_side: bool,
     scale: f64,
 }
 
 impl Pieces {
-    /// The pieces a sheet on a paper lying one way is cut into, none for a paper a home printer takes whole.
+    /// The pieces a sheet on a paper lying one way is cut into, none for a paper a home printer takes whole: an A2 is
+    /// four A4 pages lying its way, two across and two down, and an A3 two lying the other way, one above the other.
     pub fn of(format: PageFormat, orientation: Orientation) -> Option<Pieces> {
-        let dots_per_inch = format.dots_per_inch();
-        let lying = |(short, long): (u32, u32)| match orientation {
-            Orientation::Portrait => (short, long),
-            Orientation::Landscape => (long, short),
+        let (across, down, on_their_side) = match format {
+            PageFormat::A2 => (2, 2, false),
+            PageFormat::A3 => (1, 2, true),
+            PageFormat::A4 | PageFormat::A5 => return None,
         };
-        let sheet_mm = lying(format.millimetres());
-        let sheet = (
-            dots(sheet_mm.0, dots_per_inch),
-            dots(sheet_mm.1, dots_per_inch),
-        );
+        let (across, down, on_their_side) = match orientation {
+            Orientation::Portrait => (across, down, on_their_side),
+            Orientation::Landscape => (down, across, !on_their_side),
+        };
+        let dots_per_inch = format.dots_per_inch();
+        let (short, long) = format.millimetres();
+        let sheet = match orientation {
+            Orientation::Portrait => (dots(short, dots_per_inch), dots(long, dots_per_inch)),
+            Orientation::Landscape => (dots(long, dots_per_inch), dots(short, dots_per_inch)),
+        };
+        let page = a4_page(on_their_side, dots_per_inch);
         let margin = dots(MARGIN_MM, dots_per_inch);
-        let [upright, on_its_side] =
-            [A4_MILLIMETRES, (A4_MILLIMETRES.1, A4_MILLIMETRES.0)].map(|page_mm| {
-                let (across, down) = (
-                    sheet_mm.0.div_ceil(page_mm.0),
-                    sheet_mm.1.div_ceil(page_mm.1),
-                );
-                let page = (
-                    dots(page_mm.0, dots_per_inch),
-                    dots(page_mm.1, dots_per_inch),
-                );
-                let covered = |pieces: u32, page: u32| f64::from(pieces * (page - 2 * margin));
-                let scale = (covered(across, page.0) / f64::from(sheet.0))
-                    .min(covered(down, page.1) / f64::from(sheet.1))
-                    .min(1.0);
-                Pieces {
-                    across,
-                    down,
-                    page,
-                    scale,
-                }
-            });
-        let fewer =
-            std::cmp::min_by_key(upright, on_its_side, |pieces| pieces.across * pieces.down);
-        (fewer.across * fewer.down > 1).then_some(fewer)
+        let covered = |pieces: u32, page: u32| f64::from(pieces * (page - 2 * margin));
+        let scale = (covered(across, page.0) / f64::from(sheet.0))
+            .min(covered(down, page.1) / f64::from(sheet.1))
+            .min(1.0);
+        Some(Pieces {
+            across,
+            down,
+            on_their_side,
+            scale,
+        })
     }
 
     pub fn across(&self) -> u32 {
@@ -88,7 +81,7 @@ impl Pieces {
 
     /// Whether each piece is printed on an A4 page on its side.
     pub fn on_their_side(&self) -> bool {
-        self.page.0 > self.page.1
+        self.on_their_side
     }
 
     /// Each piece of a sheet's drawing as a page, row after row: the sheet shrunk and moved for its part to fill the
@@ -96,17 +89,18 @@ impl Pieces {
     /// cut along and where the piece goes. Also every character the pages write.
     pub(crate) fn pages(&self, sheet: &Drawing) -> (Vec<pdf_file::Page>, BTreeSet<char>) {
         let dots_per_inch = sheet.dots_per_inch();
+        let a4 = a4_page(self.on_their_side, dots_per_inch);
         let points = |dots: f64| dots * 72.0 / f64::from(dots_per_inch);
         let margin = dots(MARGIN_MM, dots_per_inch);
-        let part = (self.page.0 - 2 * margin, self.page.1 - 2 * margin);
+        let part = (a4.0 - 2 * margin, a4.1 - 2 * margin);
         let drawn = String::from_utf8_lossy(&pdf_file::page_of(sheet).content).into_owned();
         let mut characters = pdf_file::characters_of(sheet);
         let mut pages = Vec::new();
         for (column, row) in
             (0..self.down).flat_map(|row| (0..self.across).map(move |column| (column, row)))
         {
-            let mut around = Drawing::blank(self.page.0, self.page.1, dots_per_inch);
-            frame_with_cut_lines(&mut around, margin, self.page, dots_per_inch);
+            let mut around = Drawing::blank(a4.0, a4.1, dots_per_inch);
+            frame_with_cut_lines(&mut around, margin, a4, dots_per_inch);
             let place = format!(
                 "row {} of {} - column {} of {}",
                 row + 1,
@@ -114,13 +108,13 @@ impl Pieces {
                 column + 1,
                 self.across
             );
-            say_where_it_goes(&mut around, &place, self.page, margin, dots_per_inch);
+            say_where_it_goes(&mut around, &place, a4, margin, dots_per_inch);
             characters.extend(pdf_file::characters_of(&around));
             let page = pdf_file::page_of(&around);
             let moved = (
                 points(f64::from(margin) - f64::from(column * part.0)),
                 points(
-                    f64::from(self.page.1 - margin + row * part.1)
+                    f64::from(a4.1 - margin + row * part.1)
                         - self.scale * f64::from(sheet.height()),
                 ),
             );
@@ -140,6 +134,19 @@ impl Pieces {
             pages.push(pdf_file::Page { content, ..page });
         }
         (pages, characters)
+    }
+}
+
+/// An A4 page in dots, upright or on its side.
+fn a4_page(on_its_side: bool, dots_per_inch: u32) -> (u32, u32) {
+    let (short, long) = (
+        dots(A4_MILLIMETRES.0, dots_per_inch),
+        dots(A4_MILLIMETRES.1, dots_per_inch),
+    );
+    if on_its_side {
+        (long, short)
+    } else {
+        (short, long)
     }
 }
 
