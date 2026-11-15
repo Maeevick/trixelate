@@ -201,14 +201,12 @@ pub(crate) fn number(value: f64) -> String {
 
 pub(crate) fn number_to(value: f64, decimals: usize) -> String {
     let written = format!("{value:.decimals$}");
-    let trimmed = written.trim_end_matches('0').trim_end_matches('.');
-    match trimmed {
-        "-0" | "" => "0".to_string(),
-        _ => trimmed.to_string(),
-    }
+    written
+        .trim_end_matches('0')
+        .trim_end_matches('.')
+        .to_string()
 }
 
-/// Writes pages as a PDF, in their order, every character they write a form drawn in the fill colour of the moment.
 /// What a PDF says of itself: its title, subject and keywords, what made it, and when.
 pub(crate) struct About {
     pub(crate) title: String,
@@ -229,6 +227,7 @@ fn text(value: &str) -> String {
     format!("<FEFF{units}>")
 }
 
+/// Writes pages as a PDF, in their order, every character they write a form drawn in the fill colour of the moment.
 pub(crate) fn write_pages(pages: &[Page], characters: &BTreeSet<char>, about: &About) -> Vec<u8> {
     let mut pdf = Pdf {
         bytes: b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n".to_vec(),

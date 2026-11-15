@@ -106,7 +106,7 @@ impl Pieces {
             (0..self.down).flat_map(|row| (0..self.across).map(move |column| (column, row)))
         {
             let mut around = Drawing::blank(self.page.0, self.page.1, dots_per_inch);
-            frame_with_cut_lines(&mut around, margin, part, dots_per_inch);
+            frame_with_cut_lines(&mut around, margin, self.page, dots_per_inch);
             let place = format!(
                 "row {} of {} - column {} of {}",
                 row + 1,
@@ -148,10 +148,10 @@ impl Pieces {
 fn frame_with_cut_lines(
     around: &mut Drawing,
     margin: u32,
-    (width, height): (u32, u32),
+    (page_width, page_height): (u32, u32),
     dots_per_inch: u32,
 ) {
-    let (page_width, page_height) = (width + 2 * margin, height + 2 * margin);
+    let (width, height) = (page_width - 2 * margin, page_height - 2 * margin);
     let thin = dots_of_tenths(CUT_LINE_TENTHS_OF_MM, dots_per_inch).max(1);
     let (dash, every) = (
         dots(DASH_MM, dots_per_inch),
@@ -159,12 +159,12 @@ fn frame_with_cut_lines(
     );
     for top in [margin - thin, margin + height] {
         for left in (0..page_width).step_by(every as usize) {
-            around.fill(left, top, dash.min(page_width - left), thin, BLACK);
+            around.fill(left, top, dash, thin, BLACK);
         }
     }
     for left in [margin - thin, margin + width] {
         for top in (0..page_height).step_by(every as usize) {
-            around.fill(left, top, thin, dash.min(page_height - top), BLACK);
+            around.fill(left, top, thin, dash, BLACK);
         }
     }
 }
