@@ -284,8 +284,8 @@ fn a_twelve_colour_picture_in(folder: &Path) -> PathBuf {
     path
 }
 
-/// Compares a sheet with its golden master, a PDF byte for byte but for the moment it was made and a PNG dot for dot,
-/// or writes the master when TRIXELATE_BLESS is set.
+/// Compares a sheet with its golden master, byte for byte but for the moment it was made, or writes the master when
+/// TRIXELATE_BLESS is set.
 fn matches_golden(sheet: &Path, golden: &str) -> bool {
     let golden = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/golden")
@@ -293,18 +293,7 @@ fn matches_golden(sheet: &Path, golden: &str) -> bool {
     if std::env::var_os("TRIXELATE_BLESS").is_some() {
         fs::copy(sheet, &golden).expect("the golden master written");
     }
-    if golden
-        .extension()
-        .is_some_and(|extension| extension == "pdf")
-    {
-        let read = |path: &Path| fs::read(path).ok().map(undated);
-        return read(sheet).is_some() && read(sheet) == read(&golden);
-    }
-    let read = |path: &Path| {
-        fs::read(path)
-            .ok()
-            .and_then(|bytes| png_file::read(&bytes).ok())
-    };
+    let read = |path: &Path| fs::read(path).ok().map(undated);
     read(sheet).is_some() && read(sheet) == read(&golden)
 }
 
@@ -372,7 +361,7 @@ fn asked_for_a_preview_the_command_writes_the_sheet_coloured_in_beside_its_pictu
  {
     let folder = folder("preview");
     let picture = a_twelve_colour_picture_in(&folder);
-    let titled_as_its_master = folder.join("twelve-4-12-a5.preview.png");
+    let titled_as_its_master = folder.join("twelve-4-12-a5.preview.pdf");
     let arguments = [
         picture.to_str().unwrap_or_default(),
         "--width",
@@ -388,13 +377,13 @@ fn asked_for_a_preview_the_command_writes_the_sheet_coloured_in_beside_its_pictu
     let output = titled_as_its_master.to_str().unwrap_or_default();
     let named = trixelate(&[arguments.as_slice(), &["--output", output]].concat());
 
-    let preview = written_beside(&folder, "twelve-4-12-a5", "preview.png").unwrap_or_default();
+    let preview = written_beside(&folder, "twelve-4-12-a5", "preview.pdf").unwrap_or_default();
     assert!(beside.status.success(), "{}", text(&beside.stderr));
     assert!(text(&beside.stdout).contains(&preview.display().to_string()));
     assert!(named.status.success(), "{}", text(&named.stderr));
     assert!(matches_golden(
         &titled_as_its_master,
-        "twelve-a5.preview.png"
+        "twelve-a5.preview.pdf"
     ));
 }
 

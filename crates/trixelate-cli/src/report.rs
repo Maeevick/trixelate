@@ -111,12 +111,12 @@ mod tests {
     fn a_preview_says_it_is_one_where_it_went_and_how_fast() {
         let report = written(
             Written::Preview,
-            Path::new("goblin-48-8-a4.preview.png"),
+            Path::new("goblin-48-8-a4.preview.pdf"),
             Duration::from_millis(213),
             2304,
         );
 
-        assert!(report.starts_with("Preview written to goblin-48-8-a4.preview.png in 0.21 s\n"));
+        assert!(report.starts_with("Preview written to goblin-48-8-a4.preview.pdf in 0.21 s\n"));
     }
 
     #[test]

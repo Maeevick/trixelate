@@ -1,5 +1,5 @@
 //! The command line: reads a PNG or JPEG picture, makes its colour-by-number sheet and writes it as a PDF, its preview
-//! as a PNG or its pieces as a PDF.
+//! as a PDF too or its pieces as a PDF.
 
 mod answer;
 mod report;
@@ -20,7 +20,7 @@ use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::warning::warnings_for;
 use trixelate::{
-    Order, Refusal, colour, picture_file, pieces, pieces_file_name, preview_file_name, preview_of,
+    Order, Refusal, colour, picture_file, pieces, pieces_file_name, preview_file_name, preview_pdf,
     sheet_file_name, sheet_of, sheet_pdf, stamped,
 };
 
@@ -59,7 +59,7 @@ struct Cli {
     #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET, value_parser = margin)]
     margin: Margin,
 
-    /// Where to write the sheet: a new file, or a folder to write it in under its default name [default: beside the picture, as <picture>-<width>-<colours>-<format>-<UTC second>.sheet.pdf, with -landscape after the format when asked, .preview.png for a preview and .pieces.pdf for pieces]
+    /// Where to write the sheet: a new file, or a folder to write it in under its default name [default: beside the picture, as <picture>-<width>-<colours>-<format>-<UTC second>.sheet.pdf, with -landscape after the format when asked, .preview.pdf for a preview and .pieces.pdf for pieces]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -263,13 +263,10 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
             Written::Sheet,
             sheet_pdf(&colouring, order, &title, seconds).map_err(explain)?,
         ),
-        Asked::Preview => {
-            let preview = preview_of(&colouring, order, &title).map_err(explain)?;
-            let png = preview
-                .png()
-                .map_err(|_| "the preview could not be encoded as a PNG".to_string())?;
-            (Written::Preview, png)
-        }
+        Asked::Preview => (
+            Written::Preview,
+            preview_pdf(&colouring, order, &title, seconds).map_err(explain)?,
+        ),
         Asked::Pieces => {
             let sheet = sheet_of(&colouring, order, &title).map_err(explain)?;
             let pieces = pieces::cut(&sheet);

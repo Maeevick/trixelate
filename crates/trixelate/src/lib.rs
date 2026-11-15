@@ -220,7 +220,7 @@ pub fn pieces_file_name(picture_file_name: &str, order: &Order) -> String {
 /// What a sheet's preview made from a picture file is called: named like its sheet, as a preview, so the two sit side
 /// by side.
 pub fn preview_file_name(picture_file_name: &str, order: &Order) -> String {
-    named_after(picture_file_name, order, "preview.png")
+    named_after(picture_file_name, order, "preview.pdf")
 }
 
 /// A sheet's or a preview's file name stamped with the moment it was made, in UTC to the second, before what it is and
