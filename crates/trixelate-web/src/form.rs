@@ -4,7 +4,9 @@
 use std::sync::Arc;
 
 use trixelate::colouring::Colouring;
-use trixelate::layout::{Margin, NoRoom, Orientation, PageFormat, most_cells_across};
+use trixelate::layout::{
+    Margin, NoRoom, Orientation, PageFormat, most_cells_across, usual_cells_across, usual_colours,
+};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
@@ -26,8 +28,8 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Settings {
         Settings {
-            width: most_cells_across(PageFormat::A4),
-            colours: ColourCount::IN_A_SMALL_BOX.get(),
+            width: usual_cells_across(PageFormat::A4),
+            colours: usual_colours(PageFormat::A4).get(),
             format: PageFormat::A4,
             landscape: false,
             margin: Margin::AROUND_A_SHEET.millimetres(),
@@ -352,12 +354,12 @@ mod tests {
                 Ok((
                     Some((2480, 3508)),
                     Some((2480, 3508)),
-                    "red-yellow-48-8-a4.sheet.png".to_string()
+                    "red-yellow-32-4-a4.sheet.png".to_string()
                 )),
                 Ok((
                     Some((3508, 2480)),
                     Some((3508, 2480)),
-                    "red-yellow-48-8-a4-landscape.sheet.png".to_string()
+                    "red-yellow-32-4-a4-landscape.sheet.png".to_string()
                 )),
             ]
         );
@@ -386,7 +388,7 @@ mod tests {
                 (pieces.name, pages)
             })
             .unwrap_or_default();
-        assert_eq!(name, "red-yellow-2-8-a2.pieces.pdf");
+        assert_eq!(name, "red-yellow-2-4-a2.pieces.pdf");
         assert_eq!(pages, Some(8));
     }
 
