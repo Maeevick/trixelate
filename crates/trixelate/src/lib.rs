@@ -674,7 +674,7 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_is_named_after_its_picture_then_its_cells_across_colours_paper_and_any_landscape_then_what_it_is()
+    fn a_sheet_is_named_after_its_picture_then_its_cells_across_colours_paper_and_any_landscape_as_a_sheet_in_a_pdf()
      {
         let named = |picture, (columns, colours), format, orientation| {
             let order = Order::new(
@@ -699,10 +699,10 @@ mod tests {
         assert_eq!(
             names,
             [
-                "goblin-48-8-a4.sheet.png",
-                "my.photo-64-12-a3-landscape.sheet.png",
-                "goblin-48-2-a4-landscape.sheet.png",
-                "goblin-32-8-a5.sheet.png"
+                "goblin-48-8-a4.sheet.pdf",
+                "my.photo-64-12-a3-landscape.sheet.pdf",
+                "goblin-48-2-a4-landscape.sheet.pdf",
+                "goblin-32-8-a5.sheet.pdf"
             ]
         );
     }
