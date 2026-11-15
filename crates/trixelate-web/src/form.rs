@@ -473,29 +473,36 @@ mod tests {
     }
 
     #[test]
-    fn the_cells_across_follow_the_paper_when_they_were_the_most_it_holds_or_are_more_than_the_new_one_holds()
+    fn the_cells_and_colours_follow_the_paper_when_they_were_its_usual_the_cells_too_when_more_than_the_new_one_holds()
      {
-        let across = |width, from, to| {
+        let moved = |width, colours, from, to| {
             let settings = Settings {
                 width,
+                colours,
                 format: from,
                 ..Settings::default()
             };
             let moved = settings.on_paper(to);
-            (moved.format.name(), moved.width)
+            (moved.format.name(), moved.width, moved.colours)
         };
 
-        let widths = [
-            across(48, PageFormat::A4, PageFormat::A5),
-            across(48, PageFormat::A4, PageFormat::A2),
-            across(20, PageFormat::A4, PageFormat::A5),
-            across(40, PageFormat::A4, PageFormat::A5),
-            across(20, PageFormat::A4, PageFormat::A2),
+        let settings = [
+            moved(32, 4, PageFormat::A4, PageFormat::A5),
+            moved(32, 4, PageFormat::A4, PageFormat::A2),
+            moved(20, 4, PageFormat::A4, PageFormat::A2),
+            moved(40, 6, PageFormat::A4, PageFormat::A5),
+            moved(20, 6, PageFormat::A4, PageFormat::A2),
         ];
 
         assert_eq!(
-            widths,
-            [("A5", 32), ("A2", 80), ("A5", 20), ("A5", 32), ("A2", 20)]
+            settings,
+            [
+                ("A5", 24, 4),
+                ("A2", 64, 8),
+                ("A2", 20, 8),
+                ("A5", 32, 6),
+                ("A2", 20, 6)
+            ]
         );
     }
 
