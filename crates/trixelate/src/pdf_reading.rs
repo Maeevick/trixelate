@@ -140,6 +140,8 @@ struct Matrix {
 struct State {
     matrix: Matrix,
     colour: Rgb,
+    /// The rectangle drawing is clipped to, in dots: its left, top, right and bottom edges.
+    clip: Option<(f64, f64, f64, f64)>,
 }
 
 impl Default for State {
@@ -152,6 +154,7 @@ impl Default for State {
                 up: 0.0,
             },
             colour: Rgb(0, 0, 0),
+            clip: None,
         }
     }
 }
@@ -165,7 +168,7 @@ struct Drawn {
 }
 
 /// The operators read, each with how many operands it takes: the last draws a form by name.
-const READ: [(&str, usize); 9] = [
+const READ: [(&str, usize); 11] = [
     ("q", 0),
     ("Q", 0),
     ("cm", 6),
@@ -174,6 +177,8 @@ const READ: [(&str, usize); 9] = [
     ("m", 2),
     ("c", 6),
     ("f", 0),
+    ("W", 0),
+    ("n", 0),
     ("Do", 0),
 ];
 
@@ -239,6 +244,14 @@ impl Drawn {
                         points.extend([(x1, y1), (x2, y2), (x3, y3)]);
                     }
                 }
+                ("W", []) => {
+                    if let Some(Part::Rectangle(x, y, width, height)) = path.first() {
+                        let (left, bottom) = self.dot(state.matrix, (*x, *y));
+                        let (right, top) = self.dot(state.matrix, (x + width, y + height));
+                        state.clip = Some((left, top, right, bottom));
+                    }
+                }
+                ("n", []) => path.clear(),
                 ("f", []) => {
                     for part in path.drain(..) {
                         self.fill(&part, state);
@@ -292,10 +305,15 @@ impl Drawn {
         };
         for y in span(top, bottom, self.height) {
             for x in span(left, right, self.width) {
-                let inside = disc.is_none_or(|((centre_x, centre_y), radius)| {
-                    (f64::from(x) - centre_x).powi(2) + (f64::from(y) - centre_y).powi(2)
-                        <= radius.powi(2)
+                let clipped = state.clip.is_some_and(|(left, top, right, bottom)| {
+                    let (x, y) = (f64::from(x) + 0.5, f64::from(y) + 0.5);
+                    x < left || x >= right || y < top || y >= bottom
                 });
+                let inside = !clipped
+                    && disc.is_none_or(|((centre_x, centre_y), radius)| {
+                        (f64::from(x) - centre_x).powi(2) + (f64::from(y) - centre_y).powi(2)
+                            <= radius.powi(2)
+                    });
                 if inside {
                     self.dots[(y * self.width + x) as usize] = state.colour;
                 }

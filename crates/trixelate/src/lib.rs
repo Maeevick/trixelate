@@ -315,7 +315,8 @@ fn named_after(picture_file_name: &str, order: &Order, what_and_its_extension: &
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::BTreeMap;
+    use crate::picture::Rgb;
+    use std::collections::{BTreeMap, BTreeSet};
 
     fn order(columns: u32, format: PageFormat) -> Order {
         Order::new(
@@ -666,6 +667,68 @@ mod tests {
             );
             assert!(content.contains(&drawing), "piece {at} draws its sheet");
         }
+    }
+
+    #[test]
+    fn a_piece_is_marked_where_to_cut_it_on_its_left_and_top_and_says_where_it_goes_its_margin_blank_besides()
+     {
+        let (colouring, _) = four_colours_on_a5();
+        let order = Order::new(
+            12,
+            ColourCount::new(4).expect("a count"),
+            PageFormat::A2,
+            Orientation::Portrait,
+            Margin::new(10).expect("a margin"),
+        )
+        .expect("an order");
+        let (black, grey) = (Rgb(0, 0, 0), Rgb(90, 90, 90));
+        let (margin, part) = (118, (2244, 3272));
+        let within = |(left, top, width, height): (u32, u32, u32, u32)| {
+            (top..top + height).flat_map(move |y| (left..left + width).map(move |x| (x, y)))
+        };
+        let cut_marks: BTreeSet<_> = [
+            (margin, margin - 12 - 59, 4, 59),
+            (margin, margin + part.1 + 12, 4, 59),
+            (margin - 12 - 59, margin, 59, 4),
+            (margin + part.0 + 12, margin, 59, 4),
+        ]
+        .into_iter()
+        .flat_map(within)
+        .collect();
+        let place = "row 2 of 2 - column 2 of 2";
+        let (place_width, _) = lettering::size(place, 5);
+        let written: BTreeSet<_> = lettering::ink(place, 5)
+            .into_iter()
+            .map(|(x, y)| (2480 - margin - place_width + x, 3508 - margin + 12 + y))
+            .collect();
+
+        let pdf = pieces_pdf(&colouring, order, "goblin-12-4-a2.pieces.pdf", 0)
+            .expect("room")
+            .expect("pieces");
+
+        let (width, height, dots) = pdf_reading::pages_drawn(&pdf, 300).remove(3);
+        let in_the_window = |&(x, y): &(u32, u32)| {
+            (margin..margin + part.0).contains(&x) && (margin..margin + part.1).contains(&y)
+        };
+        let misdrawn = within((0, 0, width, height))
+            .filter(|dot| !in_the_window(dot))
+            .filter(|&(x, y)| {
+                let expected = if cut_marks.contains(&(x, y)) {
+                    black
+                } else if written.contains(&(x, y)) {
+                    grey
+                } else {
+                    Rgb::WHITE
+                };
+                dots[(y * width + x) as usize] != expected
+            })
+            .count();
+        let inked_in_the_window = within((margin, margin, part.0, part.1))
+            .filter(|&(x, y)| dots[(y * width + x) as usize] != Rgb::WHITE)
+            .count();
+        assert_eq!((width, height), (2480, 3508));
+        assert!(!written.is_empty() && inked_in_the_window > 0);
+        assert_eq!(misdrawn, 0);
     }
 
     #[test]
