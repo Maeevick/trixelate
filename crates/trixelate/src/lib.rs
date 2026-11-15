@@ -137,9 +137,11 @@ pub fn preview_of(colouring: &Colouring, order: Order, file_name: &str) -> Resul
 /// The sheet of a colouring as a PDF of one page at its paper's size, drawn in shapes rather than dots, so it prints
 /// sharp at any size.
 pub fn sheet_pdf(colouring: &Colouring, order: Order, file_name: &str) -> Result<Vec<u8>, NoRoom> {
-    lay_out(colouring, order)?;
-    let _ = file_name;
-    Ok(Vec::new())
+    let drawing = sheet::drawing(colouring, &lay_out(colouring, order)?.titled(file_name));
+    Ok(pdf_file::write_pages(
+        &[pdf_file::page_of(&drawing)],
+        &pdf_file::characters_of(&drawing),
+    ))
 }
 
 fn lay_out(colouring: &Colouring, order: Order) -> Result<Layout, NoRoom> {

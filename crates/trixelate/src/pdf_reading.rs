@@ -140,7 +140,6 @@ struct Matrix {
 struct State {
     matrix: Matrix,
     colour: Rgb,
-    clip: Option<(f64, f64, f64, f64)>,
 }
 
 impl Default for State {
@@ -153,7 +152,6 @@ impl Default for State {
                 up: 0.0,
             },
             colour: Rgb(0, 0, 0),
-            clip: None,
         }
     }
 }
@@ -165,6 +163,19 @@ struct Drawn {
     scale: f64,
     dots: Vec<Rgb>,
 }
+
+/// The operators read, each with how many operands it takes: the last draws a form by name.
+const READ: [(&str, usize); 9] = [
+    ("q", 0),
+    ("Q", 0),
+    ("cm", 6),
+    ("rg", 3),
+    ("re", 4),
+    ("m", 2),
+    ("c", 6),
+    ("f", 0),
+    ("Do", 0),
+];
 
 /// A part of a path: a rectangle, or the points of a curved outline.
 enum Part {
@@ -201,6 +212,10 @@ impl Drawn {
                 name = token.to_string();
                 continue;
             }
+            assert!(
+                READ.contains(&(token, operands.len())),
+                "{token} unread, with {operands:?}"
+            );
             match (token, operands.as_slice()) {
                 ("q", []) => saved.push(state.clone()),
                 ("Q", []) => *state = saved.pop().expect("a saved state"),
@@ -224,33 +239,23 @@ impl Drawn {
                         points.extend([(x1, y1), (x2, y2), (x3, y3)]);
                     }
                 }
-                ("h", []) => {}
-                ("W", []) => {
-                    if let Some(Part::Rectangle(x, y, width, height)) = path.first() {
-                        let (left, bottom) = self.dot(state.matrix, (*x, *y));
-                        let (right, top) = self.dot(state.matrix, (x + width, y + height));
-                        state.clip = Some((left, top, right, bottom));
-                    }
-                }
-                ("n", []) => path.clear(),
                 ("f", []) => {
                     for part in path.drain(..) {
                         self.fill(&part, state);
                     }
                 }
-                ("Do", []) => {
+                _ => {
                     let form = forms.get(&name).copied().expect("a form drawn by name");
                     let mut inside = state.clone();
                     self.run(&stream_of(objects, form), &mut inside, forms, objects);
                 }
-                (operator, operands) => panic!("{operator} unread, with {operands:?}"),
             }
             operands.clear();
         }
     }
 
     fn fill(&mut self, part: &Part, state: &State) {
-        let (mut left, mut top, mut right, mut bottom) = match part {
+        let (left, top, right, bottom) = match part {
             Part::Rectangle(x, y, width, height) => {
                 let (left, bottom) = self.dot(state.matrix, (*x, *y));
                 let (right, top) = self.dot(state.matrix, (x + width, y + height));
@@ -273,16 +278,17 @@ impl Drawn {
             );
             (centre, radius)
         });
-        if let Some((clip_left, clip_top, clip_right, clip_bottom)) = state.clip {
-            (left, top, right, bottom) = (
-                left.max(clip_left),
-                top.max(clip_top),
-                right.min(clip_right),
-                bottom.min(clip_bottom),
-            );
-        }
+        // A rectangle covers the dots between its rounded edges; a disc, every dot whose centre is within its radius,
+        // those its circle passes through included, as the dots of a page are drawn.
+        let rounded = |edge: f64| {
+            if disc.is_some() {
+                edge.floor()
+            } else {
+                edge.round()
+            }
+        };
         let span = |from: f64, to: f64, most: u32| {
-            (from.round().max(0.0) as u32)..(to.round().max(0.0) as u32).min(most)
+            (rounded(from).max(0.0) as u32)..(to.round().max(0.0) as u32).min(most)
         };
         for y in span(top, bottom, self.height) {
             for x in span(left, right, self.width) {

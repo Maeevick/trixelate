@@ -3,7 +3,12 @@
 //! A page's picture is its PNG's compressed rows as they are: PDF reads them with the same filter and predictors
 //! (ISO 32000-1, 7.4.4.4), so no compressor is needed beside the PNG's.
 
-use crate::sheet::Sheet;
+use std::collections::BTreeSet;
+
+use crate::drawing::{Drawing, Mark};
+use crate::lettering;
+use crate::picture::Rgb;
+use crate::sheet::{BLACK, Sheet};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CannotWritePdf;
@@ -124,4 +129,214 @@ impl Pdf {
         self.bytes.extend_from_slice(table.as_bytes());
         self.bytes
     }
+}
+
+/// A page of a PDF: its size in points, and its drawing in PDF's operators, from its bottom left corner.
+pub(crate) struct Page {
+    pub(crate) width: f64,
+    pub(crate) height: f64,
+    pub(crate) content: Vec<u8>,
+}
+
+/// Four times the tangent of a quarter of a right angle, over three: how far a cubic curve's handles reach for it to
+/// follow a quarter circle within three ten-thousandths of its radius.
+const CIRCLE_HANDLE: f64 = 0.552_284_749_8;
+
+/// A drawing as a page of its size, its marks as shapes: rectangles, circles, and each character a form of its own.
+pub(crate) fn page_of(drawing: &Drawing) -> Page {
+    let dots_per_inch = f64::from(drawing.dots_per_inch());
+    let in_points = |dots: f64| dots * POINTS_PER_INCH / dots_per_inch;
+    let height = f64::from(drawing.height());
+    let mut content = String::new();
+    for mark in drawing.marks() {
+        match mark {
+            Mark::Fill {
+                left,
+                top,
+                width,
+                height: tall,
+                colour,
+            } => content.push_str(&format!(
+                "{} {} {} {} {} re f\n",
+                colour_of(*colour),
+                number(in_points(f64::from(*left))),
+                number(in_points(height - f64::from(top + tall))),
+                number(in_points(f64::from(*width))),
+                number(in_points(f64::from(*tall))),
+            )),
+            Mark::Disc {
+                disc,
+                outline,
+                colour,
+            } => {
+                let radius = disc.diameter / 2;
+                let centre = (
+                    in_points(f64::from(disc.centre_x) + 0.5),
+                    in_points(height - f64::from(disc.centre_y) - 0.5),
+                );
+                content.push_str(&format!("{} ", colour_of(BLACK)));
+                content.push_str(&circle(centre, in_points(f64::from(radius))));
+                if radius > *outline {
+                    content.push_str(&format!("{} ", colour_of(*colour)));
+                    content.push_str(&circle(centre, in_points(f64::from(radius - outline))));
+                }
+            }
+            Mark::Letters {
+                text,
+                scale,
+                left,
+                top,
+                colour,
+            } => {
+                content.push_str(&format!("{}\n", colour_of(*colour)));
+                let size = in_points(f64::from(*scale));
+                let bottom = in_points(height - f64::from(top + lettering::size("0", *scale).1));
+                for (place, character) in (0..).zip(text.chars()) {
+                    if lettering::ink(&character.to_string(), 1).is_empty() {
+                        continue;
+                    }
+                    let x = left
+                        + place
+                            * lettering::size("00", *scale)
+                                .0
+                                .saturating_sub(lettering::size("0", *scale).0);
+                    content.push_str(&format!(
+                        "q {} 0 0 {} {} {} cm /L{} Do Q\n",
+                        number(size),
+                        number(size),
+                        number(in_points(f64::from(x))),
+                        number(bottom),
+                        u32::from(character)
+                    ));
+                }
+            }
+        }
+    }
+    Page {
+        width: in_points(f64::from(drawing.width())),
+        height: in_points(height),
+        content: content.into_bytes(),
+    }
+}
+
+/// The characters a page writes with ink, each to be a form.
+pub(crate) fn characters_of(drawing: &Drawing) -> BTreeSet<char> {
+    drawing
+        .marks()
+        .iter()
+        .filter_map(|mark| match mark {
+            Mark::Letters { text, .. } => Some(text.chars()),
+            _ => None,
+        })
+        .flatten()
+        .filter(|character| !lettering::ink(&character.to_string(), 1).is_empty())
+        .collect()
+}
+
+/// A filled circle from its centre and radius, in four quarters.
+fn circle((x, y): (f64, f64), radius: f64) -> String {
+    let handle = radius * CIRCLE_HANDLE;
+    let n = |value: f64| number(value);
+    format!(
+        "{} {} m {} {} {} {} {} {} c {} {} {} {} {} {} c {} {} {} {} {} {} c {} {} {} {} {} {} c f\n",
+        n(x + radius),
+        n(y),
+        n(x + radius),
+        n(y + handle),
+        n(x + handle),
+        n(y + radius),
+        n(x),
+        n(y + radius),
+        n(x - handle),
+        n(y + radius),
+        n(x - radius),
+        n(y + handle),
+        n(x - radius),
+        n(y),
+        n(x - radius),
+        n(y - handle),
+        n(x - handle),
+        n(y - radius),
+        n(x),
+        n(y - radius),
+        n(x + handle),
+        n(y - radius),
+        n(x + radius),
+        n(y - handle),
+        n(x + radius),
+        n(y),
+    )
+}
+
+/// A colour as PDF's fill colour, each channel a share of its most.
+fn colour_of(Rgb(red, green, blue): Rgb) -> String {
+    let share = |channel: u8| number_to(f64::from(channel) / 255.0, 3);
+    format!("{} {} {} rg", share(red), share(green), share(blue))
+}
+
+/// A number written to the hundredth, as short as it reads.
+fn number(value: f64) -> String {
+    number_to(value, 2)
+}
+
+fn number_to(value: f64, decimals: usize) -> String {
+    let written = format!("{value:.decimals$}");
+    let trimmed = written.trim_end_matches('0').trim_end_matches('.');
+    match trimmed {
+        "-0" | "" => "0".to_string(),
+        _ => trimmed.to_string(),
+    }
+}
+
+/// Writes pages as a PDF, in their order, every character they write a form drawn in the fill colour of the moment.
+pub(crate) fn write_pages(pages: &[Page], characters: &BTreeSet<char>) -> Vec<u8> {
+    let mut pdf = Pdf {
+        bytes: b"%PDF-1.4\n%\xE2\xE3\xCF\xD3\n".to_vec(),
+        starts: Vec::new(),
+    };
+    pdf.object(
+        CATALOG,
+        format!("<< /Type /Catalog /Pages {PAGE_TREE} 0 R >>").as_bytes(),
+    );
+    let mut forms = Vec::new();
+    for (number, character) in (PAGE_TREE + 1..).zip(characters) {
+        let dots: String = lettering::ink(&character.to_string(), 1)
+            .into_iter()
+            .map(|(x, y)| format!("{x} {} 1 1 re\n", lettering::size("0", 1).1 - 1 - y))
+            .collect();
+        let (width, height) = lettering::size("0", 1);
+        pdf.stream(
+            number,
+            &format!("/Type /XObject /Subtype /Form /BBox [0 0 {width} {height}] "),
+            format!("{dots}f").as_bytes(),
+        );
+        forms.push(format!("/L{} {number} 0 R", u32::from(*character)));
+    }
+    let resources = format!("<< /XObject << {} >> >>", forms.join(" "));
+    let first_page = PAGE_TREE + 1 + characters.len() as u32;
+    let mut kids = Vec::new();
+    for (page, drawn) in (first_page..).step_by(2).zip(pages) {
+        let contents = page + 1;
+        pdf.object(
+            page,
+            format!(
+                "<< /Type /Page /Parent {PAGE_TREE} 0 R /MediaBox [0 0 {} {}] /Resources {resources} /Contents {contents} 0 R >>",
+                number(drawn.width),
+                number(drawn.height)
+            )
+            .as_bytes(),
+        );
+        pdf.stream(contents, "", &drawn.content);
+        kids.push(format!("{page} 0 R"));
+    }
+    pdf.object(
+        PAGE_TREE,
+        format!(
+            "<< /Type /Pages /Kids [{}] /Count {} >>",
+            kids.join(" "),
+            kids.len()
+        )
+        .as_bytes(),
+    );
+    pdf.ended()
 }

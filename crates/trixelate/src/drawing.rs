@@ -98,6 +98,22 @@ impl Drawing {
         self.letters(text, scale, corner, colour);
     }
 
+    pub(crate) fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub(crate) fn height(&self) -> u32 {
+        self.height
+    }
+
+    pub(crate) fn dots_per_inch(&self) -> u32 {
+        self.dots_per_inch
+    }
+
+    pub(crate) fn marks(&self) -> &[Mark] {
+        &self.marks
+    }
+
     /// The page drawn dot by dot, as a sheet printed at its dots per inch.
     pub(crate) fn painted(&self) -> Sheet {
         let mut paper = Paper::blank(self.width, self.height);
