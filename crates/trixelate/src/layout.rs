@@ -722,6 +722,16 @@ mod tests {
     }
 
     #[test]
+    fn the_papers_are_a2_to_a5_every_one_printed_at_300_dots_per_inch() {
+        let papers = PageFormat::ALL.map(|format| (format.name(), format.dots_per_inch()));
+
+        assert_eq!(
+            papers.to_vec(),
+            [("A2", 300), ("A3", 300), ("A4", 300), ("A5", 300)]
+        );
+    }
+
+    #[test]
     fn a_page_counts_its_millimetres_in_dots_at_300_dots_per_inch() {
         let small = colouring(4, 4, 2);
 
