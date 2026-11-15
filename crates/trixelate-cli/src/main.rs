@@ -36,13 +36,13 @@ struct Cli {
     /// The PNG or JPEG picture to turn into a sheet
     picture: PathBuf,
 
-    /// Cells across the grid, the rows following from the picture's proportions [default: the most a sheet on the paper holds: 80 on A2, 64 on A3, 48 on A4, 32 on A5]
+    /// Cells across the grid, the rows following from the picture's proportions, at most 80 on A2, 64 on A3, 48 on A4 and 32 on A5 [default: 64 on A2, 48 on A3, 32 on A4, 24 on A5]
     #[arg(long, value_parser = clap::value_parser!(u32).range(1..))]
     width: Option<u32>,
 
-    /// Colours in the palette, from 2 to 24
-    #[arg(short, long, visible_alias = "colors", default_value_t = ColourCount::IN_A_SMALL_BOX, value_parser = colour_count)]
-    colours: ColourCount,
+    /// Colours in the palette, from 2 to 24 [default: 8 on A2 and A3, 4 on A4 and A5]
+    #[arg(short, long, visible_alias = "colors", value_parser = colour_count)]
+    colours: Option<ColourCount>,
 
     /// The paper the sheet is drawn for, at 300 dots per inch: A3 to A5, or an A2 poster
     #[arg(short, long, value_enum, default_value_t = Format::A4)]
@@ -92,10 +92,16 @@ impl From<Format> for PageFormat {
     }
 }
 
-/// The cells across asked for, or else the most the paper holds.
+/// The cells across asked for, or else the paper's usual.
 fn cells_across(cli: &Cli) -> u32 {
     cli.width
-        .unwrap_or_else(|| layout::most_cells_across(cli.format.into()))
+        .unwrap_or_else(|| layout::usual_cells_across(cli.format.into()))
+}
+
+/// The colours asked for, or else the paper's usual.
+fn colours(cli: &Cli) -> ColourCount {
+    cli.colours
+        .unwrap_or_else(|| layout::usual_colours(cli.format.into()))
 }
 
 /// The order the arguments make, or why the library refuses it, worded for the command line.
@@ -106,7 +112,7 @@ fn ordered(cli: &Cli) -> Result<Order, String> {
     } else {
         layout::Orientation::Portrait
     };
-    Order::new(cells_across(cli), cli.colours, format, orientation, cli.margin).map_err(|refusal| {
+    Order::new(cells_across(cli), colours(cli), format, orientation, cli.margin).map_err(|refusal| {
         match refusal {
             Refusal::NoCellAcross => "a grid needs at least one cell across".to_string(),
             Refusal::MoreCellsAcrossThanThePaperHolds { most } => format!(
