@@ -50,7 +50,7 @@ impl PageFormat {
         }
     }
 
-    fn millimetres(self) -> (u32, u32) {
+    pub(crate) fn millimetres(self) -> (u32, u32) {
         match self {
             PageFormat::A2 => (420, 594),
             PageFormat::A3 => (297, 420),

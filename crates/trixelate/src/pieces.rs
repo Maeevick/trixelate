@@ -31,8 +31,46 @@ pub struct Pieces {
 impl Pieces {
     /// The pieces a sheet on a paper lying one way is cut into, none for a paper a home printer takes whole.
     pub fn of(format: PageFormat, orientation: Orientation) -> Option<Pieces> {
-        let _ = (format, orientation);
-        None
+        let dots_per_inch = format.dots_per_inch();
+        let lying = |(short, long): (u32, u32)| match orientation {
+            Orientation::Portrait => (short, long),
+            Orientation::Landscape => (long, short),
+        };
+        let sheet_mm = lying(format.millimetres());
+        let sheet = (
+            dots(sheet_mm.0, dots_per_inch),
+            dots(sheet_mm.1, dots_per_inch),
+        );
+        let (margin, overlap) = (
+            dots(MARGIN_MM, dots_per_inch),
+            dots(OVERLAP_MM, dots_per_inch),
+        );
+        let [upright, on_its_side] =
+            [A4_MILLIMETRES, (A4_MILLIMETRES.1, A4_MILLIMETRES.0)].map(|page_mm| {
+                let (across, down) = (
+                    sheet_mm.0.div_ceil(page_mm.0),
+                    sheet_mm.1.div_ceil(page_mm.1),
+                );
+                let page = (
+                    dots(page_mm.0, dots_per_inch),
+                    dots(page_mm.1, dots_per_inch),
+                );
+                let covered = |pieces: u32, page: u32| {
+                    f64::from(pieces * (page - 2 * margin) - (pieces - 1) * overlap)
+                };
+                let scale = (covered(across, page.0) / f64::from(sheet.0))
+                    .min(covered(down, page.1) / f64::from(sheet.1))
+                    .min(1.0);
+                Pieces {
+                    across,
+                    down,
+                    page,
+                    scale,
+                }
+            });
+        let fewer =
+            std::cmp::min_by_key(upright, on_its_side, |pieces| pieces.across * pieces.down);
+        (fewer.across * fewer.down > 1).then_some(fewer)
     }
 
     pub fn across(&self) -> u32 {
