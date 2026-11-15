@@ -559,7 +559,7 @@ fn dots_per_metre(png: &[u8]) -> Option<u32> {
 }
 
 #[test]
-fn a_poster_on_a2_takes_80_cells_across_on_a_page_printed_at_150_dots_per_inch() {
+fn a_poster_on_a2_takes_80_cells_across_on_a_page_printed_at_300_dots_per_inch() {
     let folder = folder("poster");
     let picture = a_picture_in(&folder);
     let run = trixelate(&[picture.to_str().unwrap_or_default(), "--format", "a2"]);
@@ -569,8 +569,8 @@ fn a_poster_on_a2_takes_80_cells_across_on_a_page_printed_at_150_dots_per_inch()
         .and_then(|poster| fs::read(poster).ok())
         .unwrap_or_default();
     let page = png_file::read(&bytes).map(|sheet| (sheet.width(), sheet.height()));
-    assert_eq!(page.ok(), Some((2480, 3508)));
-    assert_eq!(dots_per_metre(&bytes), Some(5906));
+    assert_eq!(page.ok(), Some((4961, 7016)));
+    assert_eq!(dots_per_metre(&bytes), Some(11811));
 }
 
 #[test]

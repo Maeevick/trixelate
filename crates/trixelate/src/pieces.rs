@@ -203,8 +203,8 @@ mod tests {
         assert_eq!(
             cuts,
             [
-                (2, 4, Some((1754, 1240, 150)), false),
-                (4, 2, Some((1240, 1754, 150)), false),
+                (2, 4, Some((3508, 2480, 300)), false),
+                (4, 2, Some((2480, 3508, 300)), false),
                 (1, 1, Some((2480, 3508, 300)), false),
             ]
         );
@@ -214,7 +214,7 @@ mod tests {
     fn each_piece_shows_its_part_of_the_sheet_10_mm_in_from_its_edges_sharing_10_mm_with_the_pieces_after_it()
      {
         let poster = sheet_on(PageFormat::A2, Orientation::Portrait);
-        let (margin, apart) = ((59, 59), (1636 - 59, 1122 - 59));
+        let (margin, apart) = ((118, 118), (3272 - 118, 2244 - 118));
 
         let pieces = cut(&poster);
 
@@ -229,8 +229,8 @@ mod tests {
         };
         assert_eq!(
             [
-                differences(0, 1, (1636, 1122)),
-                differences(1, 3, (2480 - 1577, 3508 - 3 * 1063)),
+                differences(0, 1, (3272, 2244)),
+                differences(1, 3, (4961 - 3154, 7016 - 3 * 2126)),
             ],
             [0, 0]
         );
@@ -245,26 +245,26 @@ mod tests {
             (top..top + height).flat_map(move |y| (left..left + width).map(move |x| (x, y)))
         };
         let cut_marks: BTreeSet<_> = [
-            (59, 23, 2, 30),
-            (59, 59 + 319 + 6, 2, 30),
-            (23, 59, 30, 2),
-            (59 + 903 + 6, 59, 30, 2),
+            (118, 47, 4, 59),
+            (118, 118 + 638 + 12, 4, 59),
+            (47, 118, 59, 4),
+            (118 + 1807 + 12, 118, 59, 4),
         ]
         .into_iter()
         .flat_map(within)
         .collect();
         let place = "row 4 of 4 - column 2 of 2";
-        let (place_width, _) = lettering::size(place, 2);
-        let written: BTreeSet<_> = lettering::ink(place, 2)
+        let (place_width, _) = lettering::size(place, 5);
+        let written: BTreeSet<_> = lettering::ink(place, 5)
             .into_iter()
-            .map(|(x, y)| (1754 - 59 - place_width + x, 1240 - 59 + 6 + y))
+            .map(|(x, y)| (3508 - 118 - place_width + x, 2480 - 118 + 12 + y))
             .collect();
 
         let last = cut(&poster).piece(1, 3).expect("the last piece");
 
         let the_part =
-            |(x, y): &(u32, u32)| (59..59 + 903).contains(x) && (59..59 + 319).contains(y);
-        let misdrawn = within((0, 0, 1754, 1240))
+            |(x, y): &(u32, u32)| (118..118 + 1807).contains(x) && (118..118 + 638).contains(y);
+        let misdrawn = within((0, 0, 3508, 2480))
             .filter(|dot| !the_part(dot))
             .filter(|&(x, y)| {
                 let expected = if cut_marks.contains(&(x, y)) {

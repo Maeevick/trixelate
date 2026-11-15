@@ -9,8 +9,6 @@ use crate::lettering;
 /// The paper a sheet is drawn for, its sides given upright.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PageFormat {
-    A0,
-    A1,
     A2,
     A3,
     A4,
@@ -19,9 +17,7 @@ pub enum PageFormat {
 
 impl PageFormat {
     /// Every paper, the posters first, the biggest first.
-    pub const ALL: [PageFormat; 6] = [
-        PageFormat::A0,
-        PageFormat::A1,
+    pub const ALL: [PageFormat; 4] = [
         PageFormat::A2,
         PageFormat::A3,
         PageFormat::A4,
@@ -31,8 +27,6 @@ impl PageFormat {
     /// The paper's name, as printers and shops call it.
     pub fn name(self) -> &'static str {
         match self {
-            PageFormat::A0 => "A0",
-            PageFormat::A1 => "A1",
             PageFormat::A2 => "A2",
             PageFormat::A3 => "A3",
             PageFormat::A4 => "A4",
@@ -40,28 +34,22 @@ impl PageFormat {
         }
     }
 
-    /// How finely the paper is printed: 300 dots per inch for a sheet held in hand, 150 for a poster seen from further,
-    /// which keeps a poster's page as light as a sheet's.
+    /// How finely the paper is printed: 300 dots per inch, a poster as finely as a sheet held in hand.
     pub fn dots_per_inch(self) -> u32 {
-        match self {
-            PageFormat::A0 | PageFormat::A1 | PageFormat::A2 => 150,
-            PageFormat::A3 | PageFormat::A4 | PageFormat::A5 => 300,
-        }
+        300
     }
 
     /// How wide a legend's bubble may grow, in tenths of a millimetre: eight millimetres on a sheet held in hand, big
     /// enough for its number and leaving the room to the cells, sixteen on a poster seen from further.
     fn widest_bubble_tenths_of_mm(self) -> u32 {
         match self {
-            PageFormat::A0 | PageFormat::A1 | PageFormat::A2 => 160,
+            PageFormat::A2 => 160,
             PageFormat::A3 | PageFormat::A4 | PageFormat::A5 => 80,
         }
     }
 
     fn millimetres(self) -> (u32, u32) {
         match self {
-            PageFormat::A0 => (841, 1189),
-            PageFormat::A1 => (594, 841),
             PageFormat::A2 => (420, 594),
             PageFormat::A3 => (297, 420),
             PageFormat::A4 => (210, 297),
@@ -73,8 +61,6 @@ impl PageFormat {
 /// The most cells across a grid may have on a paper, for a child to colour them.
 pub fn most_cells_across(format: PageFormat) -> u32 {
     match format {
-        PageFormat::A0 => 128,
-        PageFormat::A1 => 96,
         PageFormat::A2 => 80,
         PageFormat::A3 => 64,
         PageFormat::A4 => 48,
@@ -735,33 +721,17 @@ mod tests {
     fn a_page_counts_its_millimetres_in_dots_at_300_dots_per_inch() {
         let small = colouring(4, 4, 2);
 
-        let pages = [PageFormat::A3, PageFormat::A4, PageFormat::A5]
+        let pages = PageFormat::ALL
             .map(|format| upright(&small, format, Margin(20)))
             .map(|layout| layout.map(|layout| (layout.page_width(), layout.page_height())));
 
         assert_eq!(
             pages,
-            [Ok((3508, 4961)), Ok((2480, 3508)), Ok((1748, 2480))]
-        );
-    }
-
-    #[test]
-    fn posters_on_a2_a1_and_a0_hold_80_96_and_128_cells_across_on_pages_counted_at_150_dots_per_inch()
-     {
-        let small = colouring(4, 4, 2);
-
-        let posters = [PageFormat::A2, PageFormat::A1, PageFormat::A0].map(|format| {
-            let page = upright(&small, format, Margin(20))
-                .map(|layout| (layout.page_width(), layout.page_height()));
-            (format.name(), most_cells_across(format), page)
-        });
-
-        assert_eq!(
-            posters,
             [
-                ("A2", 80, Ok((2480, 3508))),
-                ("A1", 96, Ok((3508, 4967))),
-                ("A0", 128, Ok((4967, 7022)))
+                Ok((4961, 7016)),
+                Ok((3508, 4961)),
+                Ok((2480, 3508)),
+                Ok((1748, 2480))
             ]
         );
     }
@@ -771,8 +741,6 @@ mod tests {
      {
         let small = colouring(4, 4, 2);
         let papers = [
-            PageFormat::A0,
-            PageFormat::A1,
             PageFormat::A2,
             PageFormat::A3,
             PageFormat::A4,
@@ -786,10 +754,7 @@ mod tests {
             })
         });
 
-        assert_eq!(
-            tenths_of_millimetre_wide,
-            [Ok(157), Ok(157), Ok(157), Ok(78), Ok(78), Ok(78)]
-        );
+        assert_eq!(tenths_of_millimetre_wide, [Ok(160), Ok(78), Ok(78), Ok(78)]);
     }
 
     #[test]
@@ -845,8 +810,6 @@ mod tests {
     -> Result<(), NoRoom> {
         let small = colouring(4, 4, 2);
         let papers = [
-            PageFormat::A0,
-            PageFormat::A1,
             PageFormat::A2,
             PageFormat::A3,
             PageFormat::A4,
@@ -981,12 +944,10 @@ mod tests {
     }
 
     #[test]
-    fn a_grid_has_at_most_64_cells_across_on_a3_48_on_a4_and_32_on_a5() {
-        let formats = [PageFormat::A3, PageFormat::A4, PageFormat::A5];
+    fn a_grid_has_at_most_80_cells_across_on_a2_64_on_a3_48_on_a4_and_32_on_a5() {
+        let most = PageFormat::ALL.map(most_cells_across);
 
-        let most = formats.map(most_cells_across);
-
-        assert_eq!(most, [64, 48, 32]);
+        assert_eq!(most, [80, 64, 48, 32]);
     }
 
     #[test]

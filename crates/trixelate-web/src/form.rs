@@ -286,14 +286,7 @@ mod tests {
 
         assert_eq!(
             offered,
-            [
-                ("A0", true),
-                ("A1", true),
-                ("A2", true),
-                ("A3", true),
-                ("A4", false),
-                ("A5", false)
-            ]
+            [("A2", true), ("A3", true), ("A4", false), ("A5", false)]
         );
     }
 
@@ -492,15 +485,15 @@ mod tests {
 
         let widths = [
             across(48, PageFormat::A4, PageFormat::A5),
-            across(48, PageFormat::A4, PageFormat::A0),
+            across(48, PageFormat::A4, PageFormat::A2),
             across(20, PageFormat::A4, PageFormat::A5),
             across(40, PageFormat::A4, PageFormat::A5),
-            across(20, PageFormat::A4, PageFormat::A0),
+            across(20, PageFormat::A4, PageFormat::A2),
         ];
 
         assert_eq!(
             widths,
-            [("A5", 32), ("A0", 128), ("A5", 20), ("A5", 32), ("A0", 20)]
+            [("A5", 32), ("A2", 80), ("A5", 20), ("A5", 32), ("A2", 20)]
         );
     }
 

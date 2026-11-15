@@ -255,7 +255,7 @@ mod tests {
             ordered(49, PageFormat::A4),
             ordered(32, PageFormat::A5),
             ordered(33, PageFormat::A5),
-            ordered(128, PageFormat::A0),
+            ordered(80, PageFormat::A2),
             ordered(0, PageFormat::A4),
         ];
 
@@ -266,7 +266,7 @@ mod tests {
                 Err(Refusal::MoreCellsAcrossThanThePaperHolds { most: 48 }),
                 Ok(32),
                 Err(Refusal::MoreCellsAcrossThanThePaperHolds { most: 32 }),
-                Ok(128),
+                Ok(80),
                 Err(Refusal::NoCellAcross)
             ]
         );
