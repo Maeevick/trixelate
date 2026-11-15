@@ -166,7 +166,25 @@ pub fn preview_pdf(
     file_name: &str,
     made: u64,
 ) -> Result<Vec<u8>, NoRoom> {
-    sheet_pdf(colouring, order, file_name, made)
+    let drawing =
+        sheet::drawing_coloured_in(colouring, &lay_out(colouring, order)?.titled(file_name));
+    Ok(pdf_of(
+        &drawing,
+        about(
+            file_name,
+            "A colour-by-number sheet's preview, coloured in",
+            made,
+        ),
+    ))
+}
+
+/// A drawing as a PDF of one page, saying what it is about.
+fn pdf_of(drawing: &drawing::Drawing, about: pdf_file::About) -> Vec<u8> {
+    pdf_file::write_pages(
+        &[pdf_file::page_of(drawing)],
+        &pdf_file::characters_of(drawing),
+        &about,
+    )
 }
 
 /// What a PDF made by trixelate says of itself.
