@@ -566,7 +566,7 @@ mod tests {
     }
 
     #[test]
-    fn a_sheets_pdf_says_its_title_when_it_was_made_and_the_trixelate_that_made_it_with_where_it_lives()
+    fn a_sheets_pdf_says_its_title_when_it_was_made_the_trixelate_that_made_it_with_where_it_lives_and_whose_the_rights_are()
      {
         let (colouring, order) = four_colours_on_a5();
         let version = env!("CARGO_PKG_VERSION");
@@ -595,6 +595,10 @@ mod tests {
                 format!(
                     "trixelate {version}, under the MIT licence, https://github.com/Maeevick/trixelate"
                 ),
+            ),
+            (
+                "Rights",
+                "Made from a picture the user chose: its copyright and licence still apply to this sheet, and the user alone is responsible for how the picture and the sheet are used; trixelate is not.".to_string(),
             ),
             (
                 "Subject",
