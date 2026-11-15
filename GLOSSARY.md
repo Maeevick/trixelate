@@ -14,12 +14,12 @@ The words trixelate's code and docs use, read before naming anything.
 | **Model** | The picture as the child will have coloured it: a block of colour per cell, with no number. Every sheet shows it in miniature, and its preview at full size. |
 | **Miniature** | The model drawn small in the page's top left corner of every sheet, framed, with no number and no line, for the child to see what they are making. It is seven thirty-seconds of the grid wide, over the grid where they meet. |
 | **Preview** | A sheet as it looks once coloured in: every cell filled with its colour inside its outline, over its number, the rest of the sheet unchanged. |
-| **Page format** | The paper the sheet is drawn for: A3, A4 or A5 at 300 dots per inch, or A2, A1 and A0 posters at 150. |
-| **Orientation** | Which way up the paper lies: portrait, upright, or landscape, on its side. |
+| **Page format** | The paper the sheet is drawn for: A3, A4 or A5, or an A2 poster, every one laid out at 300 dots per inch and written in shapes. |
+| **Orientation** | Which way up the paper lies: portrait, upright, or landscape, on its side. Unless told otherwise, the way the picture suits: on its side once it is a tenth wider than tall. |
 | **Margin** | The blank paper around the sheet's content, 10 mm unless asked otherwise, from 5 mm, the room the title and the credit need, to 20 mm, leaving the room to the cells. |
 | **Legend** | The row of bubbles of a sheet: upright, right of the miniature and centred on its middle; on its side, centred at the bottom. |
 | **Credit** | The small line at the bottom right of every sheet, in its margin: made with trixelate, and where it lives. |
 | **Title** | The sheet's file name without its stamp, centred in the top margin of every sheet, as big as the bubbles' numbers. |
 | **Stamp** | The UTC second a sheet was made, written into the name of a file trixelate names itself, before what it is: `goblin-48-8-a4-20261111T142915Z.sheet.png`. It keeps a sheet made again from taking an older one's name, numbered `-2`, `-3` after it when sheets made that second took the name, and never shows on the paper. |
 | **Bubble** | A disc filled with one palette colour, its colour number written inside, up to 8 mm wide on a sheet and 16 mm on a poster. |
-| **Piece** | One A4 page of a sheet cut for a home printer: its part of the sheet inside a 10 mm margin, sharing 10 mm with the pieces to its right and below, marked where to cut on its left and top, its row and column written under it. A sheet's pieces lie whichever way needs fewer and come as one PDF, row after row. |
+| **Piece** | One A4 page of a poster cut for a home printer: its part of the poster inside a 10 mm margin, sharing 10 mm with the pieces to its right and below, marked where to cut on its left and top, its row and column written under it. A poster takes the A4 pages its paper is made of, 4 for an A2 and 2 for an A3, shrunk to 88% to fit, and they come as one PDF, row after row. |

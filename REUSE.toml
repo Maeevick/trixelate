@@ -19,6 +19,7 @@ path = [
   "crates/trixelate-web/Trunk.toml",
   "crates/trixelate-cli/tests/golden/**",
   "crates/trixelate/tests/fixtures/**",
+  "docs/**",
   "lighthouse/.gitkeep",
 ]
 SPDX-FileCopyrightText = "2026 Aurel | Maeevick"
