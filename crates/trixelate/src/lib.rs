@@ -208,7 +208,7 @@ fn lay_out(colouring: &Colouring, order: Order) -> Result<Layout, NoRoom> {
 /// the colours and the paper, then landscape when asked, so variants of one picture sit side by side
 /// without overwriting each other, then what the sheet is.
 pub fn sheet_file_name(picture_file_name: &str, order: &Order) -> String {
-    named_after(picture_file_name, order, "sheet.png")
+    named_after(picture_file_name, order, "sheet.pdf")
 }
 
 /// What a sheet's pieces made from a picture file are called: named like their sheet, as pieces, in the PDF that holds

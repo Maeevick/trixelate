@@ -94,14 +94,14 @@ mod tests {
     fn a_sheet_says_where_it_went_how_fast_and_how_many_afternoons_its_cells_will_take() {
         let report = written(
             Written::Sheet,
-            Path::new("goblin-48-8-a4.sheet.png"),
+            Path::new("goblin-48-8-a4.sheet.pdf"),
             Duration::from_millis(213),
             2304,
         );
 
         assert_eq!(
             report,
-            "Sheet written to goblin-48-8-a4.sheet.png in 0.21 s\n\
+            "Sheet written to goblin-48-8-a4.sheet.pdf in 0.21 s\n\
              2,304 cells to colour: at 3 a minute, a five-year-old needs about 12 h 48 min, \
              or 26 afternoons of half an hour, snack breaks not included."
         );

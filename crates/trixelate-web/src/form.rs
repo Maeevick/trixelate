@@ -13,6 +13,7 @@ use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::warning::warnings_for;
 use trixelate::{
     Order, Refusal, colour, pieces, pieces_file_name, preview_of, sheet_file_name, sheet_of,
+    sheet_pdf,
 };
 
 /// What the sheet is asked to be, as the form sets it.
@@ -96,8 +97,8 @@ pub fn coloured(picture: &Picture, order: Order) -> Result<Colouring, String> {
     colour(picture, order).map_err(explain)
 }
 
-/// A sheet as PNG bytes, or its pieces as a PDF, ready to save, and the name they are saved under, which the sheet's
-/// preview is titled with too, so that only their cells differ.
+/// A sheet as PNG bytes to show or a PDF to print, or its pieces as a PDF, and the name they are saved under, which
+/// the sheet's preview is titled with too, so that only their cells differ.
 pub struct Painted {
     pub bytes: Vec<u8>,
     pub name: String,
@@ -106,7 +107,7 @@ pub struct Painted {
 const NOT_A_PNG: &str = "The sheet could not be turned into a PNG. That one is on us.";
 const NOT_A_PDF: &str = "The pieces could not be turned into a PDF. That one is on us.";
 
-/// A colouring's sheet painted on the order's page, named after the picture, encoded small to be saved, or why it
+/// A colouring's sheet painted on the order's page, named after the picture, encoded fast to be shown only, or why it
 /// cannot be.
 pub fn paint_sheet(
     colouring: &Colouring,
@@ -116,7 +117,22 @@ pub fn paint_sheet(
     let name = sheet_file_name(picture_name, &order);
     let sheet = sheet_of(colouring, order, &name).map_err(explain)?;
     Ok(Painted {
-        bytes: sheet.png().map_err(|_| NOT_A_PNG.to_string())?,
+        bytes: sheet.png_to_show().map_err(|_| NOT_A_PNG.to_string())?,
+        name,
+    })
+}
+
+/// A colouring's sheet as a PDF to print, named after the picture and saying when it was made, in seconds since 1970,
+/// or why it cannot be.
+pub fn sheet_to_print(
+    colouring: &Colouring,
+    picture_name: &str,
+    order: Order,
+    made: u64,
+) -> Result<Painted, String> {
+    let name = sheet_file_name(picture_name, &order);
+    Ok(Painted {
+        bytes: sheet_pdf(colouring, order, &name, made).map_err(explain)?,
         name,
     })
 }
@@ -362,7 +378,7 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_and_its_preview_are_painted_as_png_bytes_of_their_whole_page_upright_or_on_its_side_named_as_the_sheet()
+    fn a_sheet_and_its_preview_are_painted_to_show_as_png_bytes_of_their_whole_page_upright_or_on_its_side_named_as_the_sheet()
      {
         let picture = red_and_yellow();
         let on_its_side = Settings {
@@ -390,15 +406,31 @@ mod tests {
                 Ok((
                     Some((2480, 3508)),
                     Some((2480, 3508)),
-                    "red-yellow-32-4-a4.sheet.png".to_string()
+                    "red-yellow-32-4-a4.sheet.pdf".to_string()
                 )),
                 Ok((
                     Some((3508, 2480)),
                     Some((3508, 2480)),
-                    "red-yellow-32-4-a4-landscape.sheet.png".to_string()
+                    "red-yellow-32-4-a4-landscape.sheet.pdf".to_string()
                 )),
             ]
         );
+    }
+
+    #[test]
+    fn a_sheet_to_print_is_a_pdf_of_its_whole_page_named_as_the_sheet_and_dated() {
+        let picture = red_and_yellow();
+        let order = ready(Settings::default()).expect("an order");
+        let colouring = coloured(&picture, order).expect("a colouring");
+
+        let sheet =
+            sheet_to_print(&colouring, "red-yellow.png", order, 1_794_407_355).expect("a sheet");
+
+        let text = String::from_utf8_lossy(&sheet.bytes);
+        assert!(sheet.bytes.starts_with(b"%PDF-"));
+        assert!(text.contains("/MediaBox [0 0 595.2 841.92]"));
+        assert!(text.contains("/CreationDate (D:20261111142915Z)"));
+        assert_eq!(sheet.name, "red-yellow-32-4-a4.sheet.pdf");
     }
 
     #[test]

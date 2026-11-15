@@ -1,5 +1,5 @@
-//! The command line: reads a PNG or JPEG picture, makes its colour-by-number sheet and writes it as a PNG, or its pieces
-//! as a PDF.
+//! The command line: reads a PNG or JPEG picture, makes its colour-by-number sheet and writes it as a PDF, its preview
+//! as a PNG or its pieces as a PDF.
 
 mod answer;
 mod report;
@@ -18,11 +18,10 @@ use trixelate::layout::{self, Margin, NoRoom, Orientation, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
-use trixelate::sheet::Sheet;
 use trixelate::warning::warnings_for;
 use trixelate::{
-    Order, Refusal, make_preview, make_sheet, picture_file, pieces, pieces_file_name,
-    preview_file_name, sheet_file_name, stamped,
+    Order, Refusal, colour, picture_file, pieces, pieces_file_name, preview_file_name, preview_of,
+    sheet_file_name, sheet_of, sheet_pdf, stamped,
 };
 
 /// Turns a picture into a colour-by-number pixel sheet, ready to print.
@@ -60,7 +59,7 @@ struct Cli {
     #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET, value_parser = margin)]
     margin: Margin,
 
-    /// Where to write the sheet: a new file, or a folder to write it in under its default name [default: beside the picture, as <picture>-<width>-<colours>-<format>-<UTC second>.sheet.png, with -landscape after the format when asked, .preview.png for a preview and .pieces.pdf for pieces]
+    /// Where to write the sheet: a new file, or a folder to write it in under its default name [default: beside the picture, as <picture>-<width>-<colours>-<format>-<UTC second>.sheet.pdf, with -landscape after the format when asked, .preview.png for a preview and .pieces.pdf for pieces]
     #[arg(short, long)]
     output: Option<PathBuf>,
 
@@ -208,8 +207,6 @@ enum Asked {
     Pieces,
 }
 
-/// How the command draws what it writes, from a picture, its order and its file name.
-type Making = fn(&Picture, Order, &str) -> Result<Sheet, NoRoom>;
 /// How the command names what it writes, from its picture's file name and its order.
 type Naming = fn(&str, &Order) -> String;
 
@@ -223,10 +220,10 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
         (_, true) => Asked::Pieces,
         _ => Asked::Sheet,
     };
-    let (make, named): (Making, Naming) = match asked {
-        Asked::Sheet => (make_sheet, sheet_file_name),
-        Asked::Preview => (make_preview, preview_file_name),
-        Asked::Pieces => (make_sheet, pieces_file_name),
+    let named: Naming = match asked {
+        Asked::Sheet => sheet_file_name,
+        Asked::Preview => preview_file_name,
+        Asked::Pieces => pieces_file_name,
     };
     let default_title = named(
         &cli.picture
@@ -260,16 +257,21 @@ fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
             default_title,
         ),
     };
-    let sheet = make(&picture, order, &title).map_err(explain)?;
-    let png = || {
-        sheet
-            .png()
-            .map_err(|_| "the sheet could not be encoded as a PNG".to_string())
-    };
+    let colouring = colour(&picture, order).map_err(explain)?;
     let (what, bytes) = match asked {
-        Asked::Sheet => (Written::Sheet, png()?),
-        Asked::Preview => (Written::Preview, png()?),
+        Asked::Sheet => (
+            Written::Sheet,
+            sheet_pdf(&colouring, order, &title, seconds).map_err(explain)?,
+        ),
+        Asked::Preview => {
+            let preview = preview_of(&colouring, order, &title).map_err(explain)?;
+            let png = preview
+                .png()
+                .map_err(|_| "the preview could not be encoded as a PNG".to_string())?;
+            (Written::Preview, png)
+        }
         Asked::Pieces => {
+            let sheet = sheet_of(&colouring, order, &title).map_err(explain)?;
             let pieces = pieces::cut(&sheet);
             let pdf = pieces
                 .pdf()

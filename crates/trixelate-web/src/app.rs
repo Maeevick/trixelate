@@ -13,8 +13,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
 use crate::form::{
-    LastColouring, Latest, Painted, Settings, light_enough, not_a_picture, offered_in_pieces,
-    paint_pieces, paint_preview, paint_sheet, ready, warned,
+    LastColouring, Latest, Settings, light_enough, not_a_picture, offered_in_pieces, paint_pieces,
+    paint_preview, paint_sheet, ready, sheet_to_print, warned,
 };
 
 const REPOSITORY: &str = "https://github.com/Maeevick/trixelate";
@@ -120,7 +120,6 @@ pub fn App() -> impl IntoView {
     let sliding = RwSignal::new(false);
     let busy = RwSignal::new(false);
     let refusal = RwSignal::new(None::<String>);
-    let painted = StoredValue::new(None::<Arc<Painted>>);
     let last_colouring = StoredValue::new(LastColouring::default());
     let latest_drop = StoredValue::new(Latest::default());
     let latest_sheet = StoredValue::new(Latest::default());
@@ -197,7 +196,6 @@ pub fn App() -> impl IntoView {
             let (sheet, colouring, order) = match made {
                 Ok(made) => made,
                 Err(why) => {
-                    painted.set_value(None);
                     refusal.set(Some(why));
                     busy.set(false);
                     return;
@@ -206,7 +204,6 @@ pub fn App() -> impl IntoView {
             let title = sheet.name.clone();
             coloured_in_shown.set(None);
             sheet_shown.set(ObjectUrl::of_png(&sheet.bytes).map(Arc::new));
-            painted.set_value(Some(Arc::new(sheet)));
             refusal.set(None);
             after_the_next_paint(move || {
                 if !still_latest() {
@@ -222,9 +219,29 @@ pub fn App() -> impl IntoView {
     });
 
     let download = move || {
-        if let Some(made) = painted.get_value() {
-            save(&made.bytes, PNG, &made.name);
-        }
+        let Some((picture, name)) = dropped.with_untracked(|dropped| {
+            dropped
+                .as_ref()
+                .map(|d| (d.picture.clone(), d.name.clone()))
+        }) else {
+            return;
+        };
+        let Ok(order) = ready(settings.get_untracked()) else {
+            return;
+        };
+        busy.set(true);
+        after_the_next_paint(move || {
+            let made = (js_sys::Date::now() / 1000.0) as u64;
+            let sheet = last_colouring
+                .write_value()
+                .for_order(&picture, order)
+                .and_then(|colouring| sheet_to_print(&colouring, &name, order, made));
+            match sheet {
+                Ok(sheet) => save(&sheet.bytes, PDF, &sheet.name),
+                Err(why) => refusal.set(Some(why)),
+            }
+            busy.set(false);
+        });
     };
 
     let download_pieces = move || {

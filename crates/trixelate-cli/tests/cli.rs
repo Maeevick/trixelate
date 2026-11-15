@@ -91,7 +91,7 @@ fn a_sheet_written_beside_its_picture_is_stamped_with_the_utc_second_it_was_made
 
     let run = trixelate(&[picture.to_str().unwrap_or_default(), "--width", "4"]);
 
-    let sheet = written_beside(&folder, "sunset-4-4-a4", "sheet.png");
+    let sheet = written_beside(&folder, "sunset-4-4-a4", "sheet.pdf");
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert!(
         sheet
@@ -111,7 +111,7 @@ fn a_stamped_sheet_beside_its_picture_or_in_a_folder_is_titled_without_its_stamp
     let (inside, plain) = (folder.join("inside"), folder.join("plain"));
     fs::create_dir_all(&inside).unwrap_or_default();
     fs::create_dir_all(&plain).unwrap_or_default();
-    let named_plainly = plain.join("sunset-4-4-a4.sheet.png");
+    let named_plainly = plain.join("sunset-4-4-a4.sheet.pdf");
 
     trixelate(&[picture, "--width", "4"]);
     trixelate(&[
@@ -130,9 +130,11 @@ fn a_stamped_sheet_beside_its_picture_or_in_a_folder_is_titled_without_its_stamp
     ]);
 
     let sheet_in = |folder: &Path| {
-        written_beside(folder, "sunset-4-4-a4", "sheet.png").and_then(|path| fs::read(path).ok())
+        written_beside(folder, "sunset-4-4-a4", "sheet.pdf")
+            .and_then(|path| fs::read(path).ok())
+            .map(undated)
     };
-    let plainly = fs::read(&named_plainly).ok();
+    let plainly = fs::read(&named_plainly).ok().map(undated);
     assert!(plainly.is_some());
     assert!(
         sheet_in(&folder) == plainly,
@@ -145,27 +147,24 @@ fn a_stamped_sheet_beside_its_picture_or_in_a_folder_is_titled_without_its_stamp
 }
 
 #[test]
-fn a_picture_alone_becomes_an_a4_sheet_48_cells_wide_written_beside_it_and_the_command_says_where()
-{
+fn a_picture_alone_becomes_an_a4_sheet_in_a_pdf_written_beside_it_and_the_command_says_where() {
     let folder = folder("beside");
     let picture = a_picture_in(&folder);
 
     let run = trixelate(&[picture.to_str().unwrap_or_default()]);
 
-    let sheet_path = written_beside(&folder, "sunset-32-4-a4", "sheet.png").unwrap_or_default();
-    let sheet = fs::read(&sheet_path)
-        .ok()
-        .and_then(|bytes| png_file::read(&bytes).ok());
+    let sheet_path = written_beside(&folder, "sunset-32-4-a4", "sheet.pdf").unwrap_or_default();
+    let sheet = fs::read(&sheet_path).ok();
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert_eq!(
-        sheet.map(|sheet| (sheet.width(), sheet.height())),
-        Some((2480, 3508))
+        sheet.as_deref().and_then(page_size).as_deref(),
+        Some(A4_UPRIGHT)
     );
     assert!(text(&run.stdout).contains(&sheet_path.display().to_string()));
 }
 
 #[test]
-fn a_jpeg_photo_becomes_a_sheet_beside_it_as_a_png() {
+fn a_jpeg_photo_becomes_a_sheet_beside_it_as_a_pdf() {
     let folder = folder("jpeg");
     let photo = folder.join("photo.jpg");
     fs::copy(
@@ -177,13 +176,12 @@ fn a_jpeg_photo_becomes_a_sheet_beside_it_as_a_png() {
 
     let run = trixelate(&[photo.to_str().unwrap_or_default(), "--width", "8"]);
 
-    let sheet = written_beside(&folder, "photo-8-4-a4", "sheet.png")
-        .and_then(|path| fs::read(path).ok())
-        .and_then(|bytes| png_file::read(&bytes).ok());
+    let sheet =
+        written_beside(&folder, "photo-8-4-a4", "sheet.pdf").and_then(|path| fs::read(path).ok());
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert_eq!(
-        sheet.map(|sheet| (sheet.width(), sheet.height())),
-        Some((2480, 3508))
+        sheet.as_deref().and_then(page_size).as_deref(),
+        Some(A4_UPRIGHT)
     );
 }
 
@@ -196,7 +194,7 @@ fn the_command_says_what_it_wrote_where_how_fast_and_how_long_a_five_year_old_wi
 
     let sheet = text(&trixelate(&[picture, "--width", "4"]).stdout);
 
-    let written = written_beside(&folder, "sunset-4-4-a4", "sheet.png").unwrap_or_default();
+    let written = written_beside(&folder, "sunset-4-4-a4", "sheet.pdf").unwrap_or_default();
     assert!(sheet.starts_with(&format!("Sheet written to {} in ", written.display())));
     assert!(sheet.contains(" s\n"));
     assert!(sheet.contains("12 cells to colour"));
@@ -207,7 +205,7 @@ fn a_sheet_of_few_cells_or_few_colours_is_warned_of_and_written_only_once_the_us
     let folder = folder("warned");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
-    let written = || written_beside(&folder, "sunset-4-2-a4-landscape", "sheet.png").is_some();
+    let written = || written_beside(&folder, "sunset-4-2-a4-landscape", "sheet.pdf").is_some();
 
     let unanswered = trixelate_asking(&[picture, "--width", "4", "--colours", "2"]);
     let written_unanswered = written();
@@ -240,12 +238,11 @@ fn a_landscape_sheet_lies_on_its_side() {
         "--landscape",
     ]);
 
-    let sheet = written_beside(&folder, "sunset-4-4-a4-landscape", "sheet.png")
-        .and_then(|path| fs::read(path).ok())
-        .and_then(|bytes| png_file::read(&bytes).ok());
+    let sheet = written_beside(&folder, "sunset-4-4-a4-landscape", "sheet.pdf")
+        .and_then(|path| fs::read(path).ok());
     assert_eq!(
-        sheet.map(|sheet| (sheet.width(), sheet.height())),
-        Some((3508, 2480)),
+        sheet.as_deref().and_then(page_size).as_deref(),
+        Some(A4_ON_ITS_SIDE),
         "{}",
         text(&run.stderr)
     );
@@ -261,16 +258,18 @@ fn a_sheet_lies_the_way_its_picture_suits_unless_asked_upright() {
     let upright = trixelate_asking(&[wide, "--width", "4", "--yes", "--portrait"]);
 
     let page = |name| {
-        written_beside(&folder, name, "sheet.png")
+        written_beside(&folder, name, "sheet.pdf")
             .and_then(|path| fs::read(path).ok())
-            .and_then(|bytes| png_file::read(&bytes).ok())
-            .map(|sheet| (sheet.width(), sheet.height()))
+            .and_then(|bytes| page_size(&bytes))
     };
     assert!(suiting.status.success(), "{}", text(&suiting.stderr));
     assert!(upright.status.success(), "{}", text(&upright.stderr));
     assert_eq!(
         [page("sunset-4-4-a4-landscape"), page("sunset-4-4-a4")],
-        [Some((3508, 2480)), Some((2480, 3508))]
+        [
+            Some(A4_ON_ITS_SIDE.to_string()),
+            Some(A4_UPRIGHT.to_string())
+        ]
     );
 }
 
@@ -285,13 +284,21 @@ fn a_twelve_colour_picture_in(folder: &Path) -> PathBuf {
     path
 }
 
-/// Compares a sheet with its golden master, or writes the master when TRIXELATE_BLESS is set.
+/// Compares a sheet with its golden master, a PDF byte for byte but for the moment it was made and a PNG dot for dot,
+/// or writes the master when TRIXELATE_BLESS is set.
 fn matches_golden(sheet: &Path, golden: &str) -> bool {
     let golden = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("tests/golden")
         .join(golden);
     if std::env::var_os("TRIXELATE_BLESS").is_some() {
         fs::copy(sheet, &golden).expect("the golden master written");
+    }
+    if golden
+        .extension()
+        .is_some_and(|extension| extension == "pdf")
+    {
+        let read = |path: &Path| fs::read(path).ok().map(undated);
+        return read(sheet).is_some() && read(sheet) == read(&golden);
     }
     let read = |path: &Path| {
         fs::read(path)
@@ -301,12 +308,24 @@ fn matches_golden(sheet: &Path, golden: &str) -> bool {
     read(sheet).is_some() && read(sheet) == read(&golden)
 }
 
+/// A PDF without the moment it was made, for two made at different moments to compare.
+fn undated(pdf: Vec<u8>) -> Vec<u8> {
+    let text = String::from_utf8_lossy(&pdf).into_owned();
+    match text.split_once("/CreationDate (D:") {
+        Some((before, after)) => {
+            let (_, after) = after.split_once(')').unwrap_or_default();
+            format!("{before}{after}").into_bytes()
+        }
+        None => pdf,
+    }
+}
+
 #[test]
 fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot_its_miniature_in_the_corner_and_its_title_on_top()
  {
     let folder = folder("golden");
     let picture = a_twelve_colour_picture_in(&folder);
-    let sheet = folder.join("twelve.sheet.png");
+    let sheet = folder.join("twelve.sheet.pdf");
 
     let run = trixelate(&[
         picture.to_str().unwrap_or_default(),
@@ -321,7 +340,7 @@ fn a_twelve_colour_sheet_on_a5_matches_its_golden_master_dot_for_dot_its_miniatu
     ]);
 
     assert!(run.status.success(), "{}", text(&run.stderr));
-    assert!(matches_golden(&sheet, "twelve-a5.sheet.png"));
+    assert!(matches_golden(&sheet, "twelve-a5.sheet.pdf"));
 }
 
 #[test]
@@ -329,7 +348,7 @@ fn a_twelve_colour_sheet_on_a5_on_its_side_matches_its_golden_master_dot_for_dot
  {
     let folder = folder("golden-landscape");
     let picture = a_twelve_colour_picture_in(&folder);
-    let sheet = folder.join("twelve-landscape.sheet.png");
+    let sheet = folder.join("twelve-landscape.sheet.pdf");
 
     let run = trixelate(&[
         picture.to_str().unwrap_or_default(),
@@ -345,7 +364,7 @@ fn a_twelve_colour_sheet_on_a5_on_its_side_matches_its_golden_master_dot_for_dot
     ]);
 
     assert!(run.status.success(), "{}", text(&run.stderr));
-    assert!(matches_golden(&sheet, "twelve-a5-landscape.sheet.png"));
+    assert!(matches_golden(&sheet, "twelve-a5-landscape.sheet.pdf"));
 }
 
 #[test]
@@ -422,8 +441,8 @@ fn an_output_naming_a_folder_or_no_file_at_all_gets_the_sheet_under_its_stamped_
         "{}",
         text(&into_no_file.stderr)
     );
-    assert!(written_beside(&inside, "sunset-4-4-a4", "sheet.png").is_some());
-    assert!(written_beside(&folder, "sunset-5-4-a4", "sheet.png").is_some());
+    assert!(written_beside(&inside, "sunset-4-4-a4", "sheet.pdf").is_some());
+    assert!(written_beside(&folder, "sunset-5-4-a4", "sheet.pdf").is_some());
     assert!(
         text(&into_no_file_nowhere.stderr).contains("nowhere/../sunset-6-4-a4-"),
         "{}",
@@ -439,7 +458,7 @@ fn a_sheet_made_in_a_second_already_taken_is_written_under_the_next_number_overw
         .duration_since(SystemTime::UNIX_EPOCH)
         .map_or(0, |since| since.as_secs());
     let taken: Vec<PathBuf> = (now - 1..now + 30)
-        .map(|second| folder.join(stamped("sunset-4-4-a4.sheet.png", second, 0)))
+        .map(|second| folder.join(stamped("sunset-4-4-a4.sheet.pdf", second, 0)))
         .collect();
     for path in &taken {
         fs::write(path, "a sheet made earlier that second").expect("a sheet already there");
@@ -452,7 +471,7 @@ fn a_sheet_made_in_a_second_already_taken_is_written_under_the_next_number_overw
         .flatten()
         .flatten()
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
-        .find(|name| name.ends_with("Z-2.sheet.png"));
+        .find(|name| name.ends_with("Z-2.sheet.pdf"));
     assert!(run.status.success(), "{}", text(&run.stderr));
     assert!(numbered.is_some_and(|name| text(&run.stdout).contains(&name)));
     assert!(taken.iter().all(|path| {
@@ -580,26 +599,29 @@ fn a_folder_or_a_file_over_a_hundred_megabytes_is_refused_before_it_is_read() {
     }
 }
 
-/// The dots per metre a PNG tells printers, read from its pHYs chunk.
-fn dots_per_metre(png: &[u8]) -> Option<u32> {
-    let chunk = png.windows(4).position(|name| name == b"pHYs")?;
-    let across = png.get(chunk + 4..chunk + 8)?;
-    Some(u32::from_be_bytes(across.try_into().ok()?))
+/// An A4 page upright and on its side, in points, as a PDF's media box gives it.
+const A4_UPRIGHT: &str = "595.2 841.92";
+const A4_ON_ITS_SIDE: &str = "841.92 595.2";
+
+/// The width and height of a PDF's first page, in points as written in its media box, if it is a PDF.
+fn page_size(pdf: &[u8]) -> Option<String> {
+    let text = String::from_utf8_lossy(pdf.strip_prefix(b"%PDF-")?);
+    let (_, rest) = text.split_once("/MediaBox [0 0 ")?;
+    let (size, _) = rest.split_once(']')?;
+    Some(size.to_string())
 }
 
 #[test]
-fn a_poster_on_a2_takes_64_cells_across_and_8_colours_on_a_page_printed_at_300_dots_per_inch() {
+fn a_poster_on_a2_takes_64_cells_across_and_8_colours_on_a_page_of_its_size() {
     let folder = folder("poster");
     let picture = a_picture_in(&folder);
     let run = trixelate(&[picture.to_str().unwrap_or_default(), "--format", "a2"]);
 
     assert!(run.status.success(), "{}", text(&run.stderr));
-    let bytes = written_beside(&folder, "sunset-64-8-a2", "sheet.png")
+    let bytes = written_beside(&folder, "sunset-64-8-a2", "sheet.pdf")
         .and_then(|poster| fs::read(poster).ok())
         .unwrap_or_default();
-    let page = png_file::read(&bytes).map(|sheet| (sheet.width(), sheet.height()));
-    assert_eq!(page.ok(), Some((4961, 7016)));
-    assert_eq!(dots_per_metre(&bytes), Some(11811));
+    assert_eq!(page_size(&bytes).as_deref(), Some("1190.64 1683.84"));
 }
 
 #[test]
@@ -614,8 +636,8 @@ fn without_a_width_or_colours_a_sheet_takes_its_papers_usual_32_cells_and_4_colo
 
     assert!(on_a4.status.success(), "{}", text(&on_a4.stderr));
     assert!(on_a5.status.success(), "{}", text(&on_a5.stderr));
-    assert!(written_beside(&folder, "sunset-32-4-a4", "sheet.png").is_some());
-    assert!(written_beside(&folder, "sunset-24-4-a5", "sheet.png").is_some());
+    assert!(written_beside(&folder, "sunset-32-4-a4", "sheet.pdf").is_some());
+    assert!(written_beside(&folder, "sunset-24-4-a5", "sheet.pdf").is_some());
 }
 
 #[test]
