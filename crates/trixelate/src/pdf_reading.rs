@@ -336,3 +336,22 @@ pub(crate) fn info_of(pdf: &[u8]) -> BTreeMap<String, String> {
     }
     info
 }
+
+/// Each page of a PDF, row after row: its media box as written, and its drawing.
+pub(crate) fn pages_of(pdf: &[u8]) -> Vec<(String, String)> {
+    let objects = objects_of(pdf);
+    let tree = number_after(&dictionary_of(&objects, 1), "/Pages ");
+    numbers_referred_to(&dictionary_of(&objects, tree), "/Kids [")
+        .into_iter()
+        .map(|page| {
+            let dictionary = dictionary_of(&objects, page);
+            let media_box = dictionary
+                .split_once("/MediaBox [")
+                .and_then(|(_, rest)| rest.split_once(']'))
+                .map(|(media_box, _)| media_box.to_string())
+                .unwrap_or_default();
+            let contents = number_after(&dictionary, "/Contents ");
+            (media_box, stream_of(&objects, contents))
+        })
+        .collect()
+}

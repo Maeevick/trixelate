@@ -178,6 +178,19 @@ pub fn preview_pdf(
     ))
 }
 
+/// A colouring's sheet cut into A4 pieces for a home printer, as a PDF of a page each, row after row, saying what it is,
+/// or none for a sheet a home printer takes whole.
+pub fn pieces_pdf(
+    colouring: &Colouring,
+    order: Order,
+    file_name: &str,
+    made: u64,
+) -> Result<Option<Vec<u8>>, NoRoom> {
+    lay_out(colouring, order)?;
+    let _ = (file_name, made);
+    Ok(None)
+}
+
 /// A drawing as a PDF of one page, saying what it is about.
 fn pdf_of(drawing: &drawing::Drawing, about: pdf_file::About) -> Vec<u8> {
     pdf_file::write_pages(
@@ -581,6 +594,68 @@ mod tests {
         .map(|(key, value)| (key.to_string(), value))
         .into();
         assert_eq!(info, expected);
+    }
+
+    #[test]
+    fn a_posters_pieces_are_a_pdf_of_an_a4_page_each_its_sheet_drawn_in_a_window_inside_the_margin_each_starting_where_the_last_shares_its_strip()
+     {
+        let (colouring, _) = four_colours_on_a5();
+        let order = Order::new(
+            12,
+            ColourCount::new(4).expect("a count"),
+            PageFormat::A2,
+            Orientation::Portrait,
+            Margin::new(10).expect("a margin"),
+        )
+        .expect("an order");
+        let sheet = sheet_pdf(&colouring, order, "goblin-12-4-a2.pieces.pdf", 0).expect("room");
+        let (_, drawing) = pdf_reading::pages_of(&sheet).remove(0);
+        let (margin, part, apart) = (118.0, (2244.0, 3272.0), (2126.0, 3154.0));
+        let points = |dots: f64| dots * 72.0 / 300.0;
+
+        let pdf = pieces_pdf(&colouring, order, "goblin-12-4-a2.pieces.pdf", 0)
+            .expect("room")
+            .expect("pieces");
+
+        let pages = pdf_reading::pages_of(&pdf);
+        assert_eq!(pages.len(), 4);
+        for (at, (media_box, content)) in pages.iter().enumerate() {
+            let (column, row) = (at as f64 % 2.0, (at / 2) as f64);
+            let numbers_before = |operator: &str| -> Vec<f64> {
+                let (before, _) = content.split_once(operator).unwrap_or_default();
+                let mut numbers: Vec<f64> = before
+                    .split_whitespace()
+                    .rev()
+                    .map_while(|token| token.parse().ok())
+                    .collect();
+                numbers.reverse();
+                numbers
+            };
+            let window = numbers_before(" re W n");
+            let moved = numbers_before(" cm\n");
+            let (scale, right, up) = (moved[0], moved[4], moved[5]);
+            let corner = (
+                points(column * apart.0 / scale),
+                points(7016.0 - row * apart.1 / scale),
+            );
+            assert_eq!(media_box, "0 0 595.2 841.92");
+            assert_eq!(
+                window,
+                [margin, margin, part.0, part.1].map(points),
+                "piece {at}"
+            );
+            assert_eq!(moved[1..3], [0.0, 0.0]);
+            assert_eq!(moved[3], scale);
+            assert!(
+                (scale * corner.0 + right - points(margin)).abs() < 0.01,
+                "piece {at}"
+            );
+            assert!(
+                (scale * corner.1 + up - points(margin + part.1)).abs() < 0.01,
+                "piece {at}"
+            );
+            assert!(content.contains(&drawing), "piece {at} draws its sheet");
+        }
     }
 
     #[test]
