@@ -1,7 +1,7 @@
 //! A sheet cut into A4 pieces, for a printer that takes nothing bigger: each piece prints its part of the sheet at actual
 //! size, and the pieces glued together make the sheet again.
 
-use crate::layout::{dots, dots_of_tenths};
+use crate::layout::{Orientation, PageFormat, dots, dots_of_tenths};
 use crate::lettering;
 use crate::pdf_file::{self, CannotWritePdf};
 use crate::sheet::{BLACK, NUMBER_GREY, Paper, Sheet};
@@ -18,8 +18,44 @@ const CUT_MARK_THICKNESS_TENTHS_OF_MM: u32 = 3;
 /// A piece says where it goes in letters about three millimetres tall.
 const PLACE_TENTHS_OF_MM_TALL: u32 = 30;
 
+/// How a poster is cut into A4 pieces for a home printer: how many across and down, the page each is printed on, upright
+/// or on its side, and how much the poster shrinks for its pieces to be as many as the A4 pages its paper is made of.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Pieces {
+    across: u32,
+    down: u32,
+    page: (u32, u32),
+    scale: f64,
+}
+
+impl Pieces {
+    /// The pieces a sheet on a paper lying one way is cut into, none for a paper a home printer takes whole.
+    pub fn of(format: PageFormat, orientation: Orientation) -> Option<Pieces> {
+        let _ = (format, orientation);
+        None
+    }
+
+    pub fn across(&self) -> u32 {
+        self.across
+    }
+
+    pub fn down(&self) -> u32 {
+        self.down
+    }
+
+    /// How big the glued pieces are against the paper, in whole percent rounded down.
+    pub fn percent(&self) -> u32 {
+        (self.scale * 100.0) as u32
+    }
+
+    /// Whether each piece is printed on an A4 page on its side.
+    pub fn on_their_side(&self) -> bool {
+        self.page.0 > self.page.1
+    }
+}
+
 /// A sheet cut into A4 pieces, in columns and rows.
-pub struct Pieces<'a> {
+pub struct Cut<'a> {
     sheet: &'a Sheet,
     cutting: Cutting,
 }
@@ -38,7 +74,7 @@ struct Cutting {
 }
 
 /// Cuts a sheet into the fewest A4 pieces that cover it, lying whichever way needs fewer.
-pub fn cut(sheet: &Sheet) -> Pieces<'_> {
+pub fn cut(sheet: &Sheet) -> Cut<'_> {
     let dots_per_inch = sheet.dots_per_inch();
     let (short, long) = (
         dots(A4_MILLIMETRES.0, dots_per_inch),
@@ -47,7 +83,7 @@ pub fn cut(sheet: &Sheet) -> Pieces<'_> {
     let [upright, on_its_side] =
         [(short, long), (long, short)].map(|page| Cutting::of(sheet, page));
     let cutting = std::cmp::min_by_key(upright, on_its_side, |cutting| cutting.count());
-    Pieces { sheet, cutting }
+    Cut { sheet, cutting }
 }
 
 impl Cutting {
@@ -76,7 +112,7 @@ impl Cutting {
     }
 }
 
-impl Pieces<'_> {
+impl Cut<'_> {
     pub fn across(&self) -> u32 {
         self.cutting.across
     }
@@ -161,7 +197,7 @@ fn write_the_place(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::layout::{Margin, Orientation, PageFormat};
+    use crate::layout::Margin;
     use crate::lettering;
     use crate::palette::ColourCount;
     use crate::pdf_reading::{dictionary_of, number_after, numbers_referred_to, objects_of};
@@ -181,6 +217,43 @@ mod tests {
         let order =
             Order::new(12, colours, format, orientation, Margin::AROUND_A_SHEET).expect("an order");
         make_sheet(&picture, order, "goblin.png").expect("room")
+    }
+
+    #[test]
+    fn a_poster_takes_as_many_a4_pieces_as_its_paper_holds_a4_pages_shrunk_to_88_percent_and_a_sheet_none()
+     {
+        let (upright, on_its_side) = (Orientation::Portrait, Orientation::Landscape);
+
+        let cuts = [
+            (PageFormat::A2, upright),
+            (PageFormat::A2, on_its_side),
+            (PageFormat::A3, upright),
+            (PageFormat::A3, on_its_side),
+            (PageFormat::A4, upright),
+            (PageFormat::A5, on_its_side),
+        ]
+        .map(|(format, orientation)| {
+            Pieces::of(format, orientation).map(|pieces| {
+                (
+                    pieces.across(),
+                    pieces.down(),
+                    pieces.on_their_side(),
+                    pieces.percent(),
+                )
+            })
+        });
+
+        assert_eq!(
+            cuts,
+            [
+                Some((2, 2, false, 88)),
+                Some((2, 2, true, 88)),
+                Some((1, 2, true, 88)),
+                Some((2, 1, false, 88)),
+                None,
+                None
+            ]
+        );
     }
 
     #[test]
