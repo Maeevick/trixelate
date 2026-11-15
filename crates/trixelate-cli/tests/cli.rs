@@ -34,9 +34,15 @@ fn a_picture_in(folder: &Path) -> PathBuf {
     path
 }
 
-/// The command run as from a script that already said yes to any warning, the warnings not being what most tests are about.
+/// The command run as from a script that already said yes to any warning and, unless asked on its side, upright, the
+/// warnings and the way up not being what most tests are about.
 fn trixelate(arguments: &[&str]) -> Output {
-    trixelate_asking(&[arguments, &["--yes"]].concat())
+    let way_up: &[&str] = if arguments.contains(&"--landscape") {
+        &[]
+    } else {
+        &["--portrait"]
+    };
+    trixelate_asking(&[arguments, &["--yes"], way_up].concat())
 }
 
 /// The command run with no one at a terminal to answer it, as from a script.
@@ -201,7 +207,7 @@ fn a_sheet_of_few_cells_or_few_colours_is_warned_of_and_written_only_once_the_us
     let folder = folder("warned");
     let picture = a_picture_in(&folder);
     let picture = picture.to_str().unwrap_or_default();
-    let written = || written_beside(&folder, "sunset-4-2-a4", "sheet.png").is_some();
+    let written = || written_beside(&folder, "sunset-4-2-a4-landscape", "sheet.png").is_some();
 
     let unanswered = trixelate_asking(&[picture, "--width", "4", "--colours", "2"]);
     let written_unanswered = written();
@@ -251,8 +257,8 @@ fn a_sheet_lies_the_way_its_picture_suits_unless_asked_upright() {
     let wide = a_picture_in(&folder);
     let wide = wide.to_str().unwrap_or_default();
 
-    let suiting = trixelate(&[wide, "--width", "4"]);
-    let upright = trixelate(&[wide, "--width", "4", "--portrait"]);
+    let suiting = trixelate_asking(&[wide, "--width", "4", "--yes"]);
+    let upright = trixelate_asking(&[wide, "--width", "4", "--yes", "--portrait"]);
 
     let page = |name| {
         written_beside(&folder, name, "sheet.png")

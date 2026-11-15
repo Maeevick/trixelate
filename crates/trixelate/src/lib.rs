@@ -75,6 +75,14 @@ impl Order {
         self.format
     }
 
+    /// The same order on a page lying the other way, as a picture suits it.
+    pub fn lying(self, orientation: Orientation) -> Order {
+        Order {
+            orientation,
+            ..self
+        }
+    }
+
     /// The grid a picture is simplified into for this order: the cells across asked, and the rows that keep the
     /// picture's proportions, refused when the page could never number that many rows, before any cell is coloured.
     pub fn grid_for(&self, picture: &Picture) -> Result<GridSize, NoRoom> {

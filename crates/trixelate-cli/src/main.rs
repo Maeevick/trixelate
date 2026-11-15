@@ -14,7 +14,7 @@ use answer::said_yes;
 use clap::error::ErrorKind as ArgumentError;
 use clap::{CommandFactory, Parser, ValueEnum};
 use report::{Written, shown};
-use trixelate::layout::{self, Margin, NoRoom, PageFormat};
+use trixelate::layout::{self, Margin, NoRoom, Orientation, PageFormat};
 use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
@@ -48,9 +48,13 @@ struct Cli {
     #[arg(short, long, value_enum, default_value_t = Format::A4)]
     format: Format,
 
-    /// Lay the paper on its side, for wide pictures [default: upright]
+    /// Lay the paper on its side [default: the way the picture suits, on its side once it is a tenth wider than tall]
     #[arg(long)]
     landscape: bool,
+
+    /// Stand the paper upright [default: the way the picture suits, upright unless it is a tenth wider than tall]
+    #[arg(long, conflicts_with = "landscape")]
+    portrait: bool,
 
     /// The blank paper around the sheet, in millimetres, from 5 for the title and the credit to 20, leaving the room to the cells
     #[arg(short, long, default_value_t = Margin::AROUND_A_SHEET, value_parser = margin)]
@@ -104,14 +108,20 @@ fn colours(cli: &Cli) -> ColourCount {
         .unwrap_or_else(|| layout::usual_colours(cli.format.into()))
 }
 
-/// The order the arguments make, or why the library refuses it, worded for the command line.
+/// The way up asked for, if any.
+fn asked_way_up(cli: &Cli) -> Option<Orientation> {
+    match (cli.landscape, cli.portrait) {
+        (true, _) => Some(Orientation::Landscape),
+        (_, true) => Some(Orientation::Portrait),
+        _ => None,
+    }
+}
+
+/// The order the arguments make, upright until the picture is read unless asked otherwise, or why the library refuses
+/// it, worded for the command line.
 fn ordered(cli: &Cli) -> Result<Order, String> {
     let format = PageFormat::from(cli.format);
-    let orientation = if cli.landscape {
-        layout::Orientation::Landscape
-    } else {
-        layout::Orientation::Portrait
-    };
+    let orientation = asked_way_up(cli).unwrap_or(Orientation::Portrait);
     Order::new(cells_across(cli), colours(cli), format, orientation, cli.margin).map_err(|refusal| {
         match refusal {
             Refusal::NoCellAcross => "a grid needs at least one cell across".to_string(),
@@ -206,6 +216,7 @@ type Naming = fn(&str, &Order) -> String;
 fn run(cli: Cli, order: Order, now: SystemTime) -> Result<String, String> {
     let started = Instant::now();
     let picture = read_picture(&cli.picture)?;
+    let order = order.lying(asked_way_up(&cli).unwrap_or_else(|| Orientation::suiting(&picture)));
     let grid = order.grid_for(&picture).map_err(explain)?;
     let asked = match (cli.preview, cli.pieces) {
         (true, _) => Asked::Preview,
