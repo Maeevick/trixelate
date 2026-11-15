@@ -1,6 +1,7 @@
 //! The page printed for the child: the grid of numbered cells and its legend, drawn where the layout says.
 
 use crate::colouring::Colouring;
+use crate::drawing::Drawing;
 use crate::layout::{CREDIT, Disc, Layout};
 use crate::lettering;
 use crate::picture::{Picture, Rgb};
@@ -49,37 +50,51 @@ impl Sheet {
 
 /// Draws a colouring's sheet on white paper, as laid out.
 pub fn draw(colouring: &Colouring, layout: &Layout) -> Sheet {
+    drawing(colouring, layout).painted()
+}
+
+/// The marks of a colouring's sheet on white paper, as laid out.
+pub(crate) fn drawing(colouring: &Colouring, layout: &Layout) -> Drawing {
     drawn_with(number_the_cells, colouring, layout)
 }
 
 /// Draws a colouring's sheet as it looks once coloured in: every cell filled with its colour inside its outline.
 pub fn draw_coloured_in(colouring: &Colouring, layout: &Layout) -> Sheet {
+    drawing_coloured_in(colouring, layout).painted()
+}
+
+/// The marks of a colouring's sheet as it looks once coloured in.
+pub(crate) fn drawing_coloured_in(colouring: &Colouring, layout: &Layout) -> Drawing {
     drawn_with(colour_the_cells, colouring, layout)
 }
 
 /// A sheet on white paper, its cells outlined then filled as asked, its miniature, legend, credit and title drawn over.
 fn drawn_with(
-    fill_the_cells: fn(&mut Paper, &Colouring, &Layout),
+    fill_the_cells: fn(&mut Drawing, &Colouring, &Layout),
     colouring: &Colouring,
     layout: &Layout,
-) -> Sheet {
-    let mut paper = Paper::blank(layout.page_width(), layout.page_height());
-    outline_the_cells(&mut paper, colouring, layout);
-    fill_the_cells(&mut paper, colouring, layout);
-    draw_the_miniature(&mut paper, colouring, layout);
-    draw_the_legend(&mut paper, colouring, layout);
-    write_the_credit(&mut paper, layout);
-    write_the_title(&mut paper, layout);
-    paper.into_sheet(layout.dots_per_inch())
+) -> Drawing {
+    let mut page = Drawing::blank(
+        layout.page_width(),
+        layout.page_height(),
+        layout.dots_per_inch(),
+    );
+    outline_the_cells(&mut page, colouring, layout);
+    fill_the_cells(&mut page, colouring, layout);
+    draw_the_miniature(&mut page, colouring, layout);
+    draw_the_legend(&mut page, colouring, layout);
+    write_the_credit(&mut page, layout);
+    write_the_title(&mut page, layout);
+    page
 }
 
 /// Fills each cell with its colour inside its outline, as a child who coloured it in would.
-fn colour_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+fn colour_the_cells(page: &mut Drawing, colouring: &Colouring, layout: &Layout) {
     let place = layout.grid();
     for (column, row, number) in colouring.numbered_cells() {
         let cell = place.cell(column, row);
         let inside = cell.side - layout.line();
-        paper.fill(
+        page.fill(
             cell.left + layout.line(),
             cell.top + layout.line(),
             inside,
@@ -90,7 +105,7 @@ fn colour_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
 }
 
 /// Paints the model's miniature, a block of colour per cell, framed like the grid's lines.
-fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+fn draw_the_miniature(page: &mut Drawing, colouring: &Colouring, layout: &Layout) {
     let miniature = layout.miniature();
     let side = miniature.cell_side;
     let (width, height) = (
@@ -98,7 +113,7 @@ fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout)
         colouring.size().rows() * side,
     );
     let line = layout.line();
-    paper.fill(
+    page.fill(
         miniature.left - line,
         miniature.top - line,
         width + 2 * line,
@@ -106,7 +121,7 @@ fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout)
         LINE_GREY,
     );
     for (column, row, number) in colouring.numbered_cells() {
-        paper.fill(
+        page.fill(
             miniature.left + column * side,
             miniature.top + row * side,
             side,
@@ -116,29 +131,28 @@ fn draw_the_miniature(paper: &mut Paper, colouring: &Colouring, layout: &Layout)
     }
 }
 
-fn write_the_credit(paper: &mut Paper, layout: &Layout) {
+fn write_the_credit(page: &mut Drawing, layout: &Layout) {
     let credit = layout.credit();
-    write_small(paper, CREDIT, (credit.left, credit.top), credit.scale);
+    write_small(page, CREDIT, (credit.left, credit.top), credit.scale);
 }
 
-fn write_the_title(paper: &mut Paper, layout: &Layout) {
+fn write_the_title(page: &mut Drawing, layout: &Layout) {
     if let Some(title) = layout.title() {
-        write_small(paper, &title.text, (title.left, title.top), title.scale);
+        write_small(page, &title.text, (title.left, title.top), title.scale);
     }
 }
 
 /// Writes a line in grey in a margin, from the top left corner of its first character.
-fn write_small(paper: &mut Paper, text: &str, (left, top): (u32, u32), scale: u32) {
-    for (x, y) in lettering::ink(text, scale) {
-        paper.fill(left + x, top + y, 1, 1, NUMBER_GREY);
-    }
+fn write_small(page: &mut Drawing, text: &str, (left, top): (u32, u32), scale: u32) {
+    page.letters(text, scale, (left, top), NUMBER_GREY);
 }
 
-fn draw_the_legend(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+fn draw_the_legend(page: &mut Drawing, colouring: &Colouring, layout: &Layout) {
     for (bubble, (number, colour)) in layout.bubbles().iter().zip(colouring.palette().numbered()) {
-        paper.disc(bubble, colour);
+        let outline = (bubble.diameter / OUTLINES_PER_BUBBLE_DIAMETER).max(1);
+        page.disc(*bubble, outline, colour);
         let radius = bubble.diameter / 2;
-        paper.write(
+        page.write(
             &number.to_string(),
             layout.bubble_number_scale(),
             (bubble.centre_x - radius, bubble.centre_y - radius),
@@ -169,12 +183,12 @@ fn readable_on(Rgb(red, green, blue): Rgb) -> Rgb {
 }
 
 /// Writes each cell's number in grey, centred inside its outline.
-fn number_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+fn number_the_cells(page: &mut Drawing, colouring: &Colouring, layout: &Layout) {
     let place = layout.grid();
     for (column, row, number) in colouring.numbered_cells() {
         let cell = place.cell(column, row);
         let inside = cell.side - layout.line();
-        paper.write(
+        page.write(
             &number.to_string(),
             layout.cell_number_scale(),
             (cell.left + layout.line(), cell.top + layout.line()),
@@ -184,7 +198,7 @@ fn number_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
     }
 }
 
-fn outline_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) {
+fn outline_the_cells(page: &mut Drawing, colouring: &Colouring, layout: &Layout) {
     let place = layout.grid();
     let (columns, rows) = (colouring.size().columns(), colouring.size().rows());
     let top_left = place.cell(0, 0);
@@ -193,11 +207,11 @@ fn outline_the_cells(paper: &mut Paper, colouring: &Colouring, layout: &Layout) 
     let grid_height = bottom_right.top - top_left.top + layout.line();
     for column in 0..=columns {
         let left = place.cell(column, 0).left;
-        paper.fill(left, top_left.top, layout.line(), grid_height, LINE_GREY);
+        page.fill(left, top_left.top, layout.line(), grid_height, LINE_GREY);
     }
     for row in 0..=rows {
         let top = place.cell(0, row).top;
-        paper.fill(top_left.left, top, grid_width, layout.line(), LINE_GREY);
+        page.fill(top_left.left, top, grid_width, layout.line(), LINE_GREY);
     }
 }
 
@@ -226,9 +240,8 @@ impl Paper {
     }
 
     /// Fills a disc with a colour, outlined in black.
-    fn disc(&mut self, disc: &Disc, colour: Rgb) {
+    pub(crate) fn disc(&mut self, disc: &Disc, outline: u32, colour: Rgb) {
         let radius = disc.diameter / 2;
-        let outline = (disc.diameter / OUTLINES_PER_BUBBLE_DIAMETER).max(1);
         let (centre_x, centre_y) = (disc.centre_x, disc.centre_y);
         for y in centre_y - radius..=centre_y + radius {
             for x in centre_x - radius..=centre_x + radius {
@@ -257,8 +270,13 @@ impl Paper {
         let (number_width, number_height) = lettering::size(number, scale);
         let number_left = left + width.saturating_sub(number_width) / 2;
         let number_top = top + height.saturating_sub(number_height) / 2;
-        for (x, y) in lettering::ink(number, scale) {
-            self.fill(number_left + x, number_top + y, 1, 1, colour);
+        self.letters(number, scale, (number_left, number_top), colour);
+    }
+
+    /// Writes a line of lettering from the top left corner of its first character.
+    pub(crate) fn letters(&mut self, text: &str, scale: u32, (left, top): (u32, u32), colour: Rgb) {
+        for (x, y) in lettering::ink(text, scale) {
+            self.fill(left + x, top + y, 1, 1, colour);
         }
     }
 

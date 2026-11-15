@@ -1,6 +1,7 @@
 //! Turns a picture into a colour-by-number pixel sheet, ready to print.
 
 pub mod colouring;
+mod drawing;
 pub mod grid;
 pub mod jpeg_file;
 pub mod layout;
