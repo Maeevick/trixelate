@@ -39,8 +39,11 @@ impl Default for Settings {
 
 impl Settings {
     /// The settings for a picture dropped in: the paper on its side when the picture suits it, upright otherwise.
-    pub fn for_picture(self, _picture: &Picture) -> Settings {
-        self
+    pub fn for_picture(self, picture: &Picture) -> Settings {
+        Settings {
+            landscape: Orientation::suiting(picture) == Orientation::Landscape,
+            ..self
+        }
     }
 
     /// The settings on another paper, the cells across and the colours following it when they were the old paper's
