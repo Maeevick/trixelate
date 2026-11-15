@@ -8,6 +8,8 @@ pub mod layout;
 pub mod lettering;
 pub mod palette;
 pub mod pdf_file;
+#[cfg(test)]
+mod pdf_reading;
 pub mod picture;
 pub mod picture_file;
 pub mod pieces;

@@ -164,6 +164,7 @@ mod tests {
     use crate::layout::{Margin, Orientation, PageFormat};
     use crate::lettering;
     use crate::palette::ColourCount;
+    use crate::pdf_reading::{dictionary_of, number_after, numbers_referred_to, objects_of};
     use crate::picture::{Picture, Rgb};
     use crate::{Order, make_sheet};
     use std::collections::{BTreeMap, BTreeSet};
@@ -320,63 +321,6 @@ mod tests {
             pages == expected,
             "the PDF's pages are not the pieces, row after row"
         );
-    }
-
-    /// Every object of a PDF by its number, from where its cross-reference table says it starts, which must be there.
-    fn objects_of(pdf: &[u8]) -> BTreeMap<u32, &[u8]> {
-        let text = String::from_utf8_lossy(pdf);
-        let table_at: usize = text
-            .rsplit_once("startxref\n")
-            .and_then(|(_, rest)| rest.lines().next())
-            .and_then(|line| line.parse().ok())
-            .unwrap_or_default();
-        let table = String::from_utf8_lossy(&pdf[table_at..]);
-        let mut lines = table.lines();
-        assert_eq!(lines.next(), Some("xref"));
-        let count: u32 = lines
-            .next()
-            .and_then(|line| line.split(' ').nth(1))
-            .and_then(|count| count.parse().ok())
-            .unwrap_or_default();
-        lines
-            .skip(1)
-            .take(count as usize - 1)
-            .zip(1..)
-            .map(|(entry, number)| {
-                let at: usize = entry[..10].parse().unwrap_or_default();
-                let object = &pdf[at..];
-                assert!(object.starts_with(format!("{number} 0 obj\n").as_bytes()));
-                (number, object)
-            })
-            .collect()
-    }
-
-    fn dictionary_of(objects: &BTreeMap<u32, &[u8]>, number: u32) -> String {
-        let object = String::from_utf8_lossy(objects.get(&number).copied().unwrap_or_default());
-        let end = [object.find("stream\n"), object.find("endobj")]
-            .into_iter()
-            .flatten()
-            .min();
-        object[..end.unwrap_or_default()].to_string()
-    }
-
-    fn number_after(text: &str, key: &str) -> u32 {
-        text.split_once(key)
-            .and_then(|(_, rest)| rest.split(|c: char| !c.is_ascii_digit()).next())
-            .and_then(|number| number.parse().ok())
-            .unwrap_or_default()
-    }
-
-    fn numbers_referred_to(text: &str, key: &str) -> Vec<u32> {
-        text.split_once(key)
-            .and_then(|(_, rest)| rest.split_once(']'))
-            .map(|(references, _)| {
-                references
-                    .split(" 0 R")
-                    .filter_map(|number| number.trim().parse().ok())
-                    .collect()
-            })
-            .unwrap_or_default()
     }
 
     /// An image object's dots, red, green and blue, row after row, its stream read as a PNG's compressed rows are.
