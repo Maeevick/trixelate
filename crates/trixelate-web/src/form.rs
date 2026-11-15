@@ -38,20 +38,22 @@ impl Default for Settings {
 }
 
 impl Settings {
-    /// The settings on another paper, the cells across following it when they were the most the old paper holds or
-    /// are more than the new one holds, as the command line takes the most a paper holds unless told otherwise.
+    /// The settings on another paper, the cells across and the colours following it when they were the old paper's
+    /// usual, as the command line takes a paper's usual unless told otherwise, and the cells never more than it holds.
     pub fn on_paper(self, format: PageFormat) -> Settings {
-        let (was_the_most, most) = (
-            self.width == most_cells_across(self.format),
-            most_cells_across(format),
-        );
-        let width = if was_the_most || self.width > most {
-            most
+        let width = if self.width == usual_cells_across(self.format) {
+            usual_cells_across(format)
         } else {
-            self.width
+            self.width.min(most_cells_across(format))
+        };
+        let colours = if self.colours == usual_colours(self.format).get() {
+            usual_colours(format).get()
+        } else {
+            self.colours
         };
         Settings {
             width,
+            colours,
             format,
             ..self
         }
