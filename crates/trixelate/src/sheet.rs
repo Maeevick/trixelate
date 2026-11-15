@@ -32,16 +32,6 @@ impl Sheet {
         self.page.pixel(x, y)
     }
 
-    /// How finely the sheet is printed, for it to print at its paper's size.
-    pub fn dots_per_inch(&self) -> u32 {
-        self.dots_per_inch
-    }
-
-    /// The sheet as PNG bytes that tell printers its dots per inch, so it prints at its paper's size.
-    pub fn png(&self) -> Result<Vec<u8>, CannotWritePng> {
-        png_file::write(&self.page, self.dots_per_inch)
-    }
-
     /// The sheet as PNG bytes encoded faster and bigger, for a screen to show rather than a printer to keep.
     pub fn png_to_show(&self) -> Result<Vec<u8>, CannotWritePng> {
         png_file::write_to_show(&self.page, self.dots_per_inch)
@@ -258,41 +248,10 @@ impl Paper {
         }
     }
 
-    /// Writes a number centred in a box given by its top left corner and its size.
-    pub(crate) fn write(
-        &mut self,
-        number: &str,
-        scale: u32,
-        (left, top): (u32, u32),
-        (width, height): (u32, u32),
-        colour: Rgb,
-    ) {
-        let (number_width, number_height) = lettering::size(number, scale);
-        let number_left = left + width.saturating_sub(number_width) / 2;
-        let number_top = top + height.saturating_sub(number_height) / 2;
-        self.letters(number, scale, (number_left, number_top), colour);
-    }
-
     /// Writes a line of lettering from the top left corner of its first character.
     pub(crate) fn letters(&mut self, text: &str, scale: u32, (left, top): (u32, u32), colour: Rgb) {
         for (x, y) in lettering::ink(text, scale) {
             self.fill(left + x, top + y, 1, 1, colour);
-        }
-    }
-
-    /// Lays a part of a sheet on the paper, given by its top left corner and its size, at a place on the paper.
-    pub(crate) fn lay(
-        &mut self,
-        sheet: &Sheet,
-        (left, top): (u32, u32),
-        (width, height): (u32, u32),
-        (at_x, at_y): (u32, u32),
-    ) {
-        let dots = sheet.page.pixels();
-        for y in 0..height {
-            let from = ((top + y) * sheet.width() + left) as usize;
-            let to = ((at_y + y) * self.width + at_x) as usize;
-            self.dots[to..to + width as usize].copy_from_slice(&dots[from..from + width as usize]);
         }
     }
 
@@ -339,27 +298,15 @@ mod tests {
     }
 
     #[test]
-    fn a_sheet_encoded_to_show_reads_back_as_the_same_page_at_the_same_dots_per_inch() {
+    fn a_sheet_encoded_to_show_reads_back_as_the_same_page() {
         let (colouring, layout) = red_red_yellow();
         let sheet = draw(&colouring, &layout);
 
-        let [kept, shown] = [sheet.png(), sheet.png_to_show()].map(Result::unwrap_or_default);
+        let shown = sheet.png_to_show().unwrap_or_default();
 
-        let read = |bytes: &[u8]| {
-            let pixels = png_file::read(bytes).ok();
-            let dots_per_metre = png::Decoder::new(std::io::Cursor::new(bytes))
-                .read_info()
-                .ok()
-                .and_then(|reader| reader.info().pixel_dims)
-                .map(|dims| dims.xppu);
-            (pixels, dots_per_metre)
-        };
-        let ((shown_pixels, shown_dots), (kept_pixels, kept_dots)) = (read(&shown), read(&kept));
-        assert!(kept_pixels.is_some());
-        assert_eq!(shown_dots, kept_dots);
         assert!(
-            shown_pixels == kept_pixels,
-            "the page shown differs from the page kept"
+            png_file::read(&shown).ok().as_ref() == Some(&sheet.page),
+            "the page shown differs from the page drawn"
         );
     }
 
