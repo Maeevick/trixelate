@@ -159,6 +159,16 @@ pub fn sheet_pdf(
     ))
 }
 
+/// The preview of a colouring's sheet as a PDF of one page, the sheet as it looks once coloured in, said to be one.
+pub fn preview_pdf(
+    colouring: &Colouring,
+    order: Order,
+    file_name: &str,
+    made: u64,
+) -> Result<Vec<u8>, NoRoom> {
+    sheet_pdf(colouring, order, file_name, made)
+}
+
 /// What a PDF made by trixelate says of itself.
 fn about(title: &str, subject: &str, made: u64) -> pdf_file::About {
     let version = env!("CARGO_PKG_VERSION");
@@ -459,15 +469,9 @@ mod tests {
         (colour(&picture, order).expect("room"), order)
     }
 
-    #[test]
-    fn a_sheet_written_as_a_pdf_draws_every_dot_of_the_sheet_in_shapes_on_a_page_of_its_papers_size()
-    -> Result<(), NoRoom> {
-        let (colouring, order) = four_colours_on_a5();
-        let sheet = sheet_of(&colouring, order, "goblin-12-4-a5.sheet.pdf")?;
-
-        let pdf = sheet_pdf(&colouring, order, "goblin-12-4-a5.sheet.pdf", 0)?;
-
-        let pages: Vec<_> = pdf_reading::pages_drawn(&pdf, 300)
+    /// Each page of a PDF drawn dot by dot, as its width, its height and how many of its dots differ from a sheet's.
+    fn pages_against(pdf: &[u8], sheet: &Sheet) -> Vec<(u32, u32, usize)> {
+        pdf_reading::pages_drawn(pdf, 300)
             .into_iter()
             .map(|(width, height, dots)| {
                 let differing = dots
@@ -480,8 +484,42 @@ mod tests {
                     .count();
                 (width, height, differing)
             })
-            .collect();
-        assert_eq!(pages, [(sheet.width(), sheet.height(), 0)]);
+            .collect()
+    }
+
+    #[test]
+    fn a_sheet_written_as_a_pdf_draws_every_dot_of_the_sheet_in_shapes_on_a_page_of_its_papers_size()
+    -> Result<(), NoRoom> {
+        let (colouring, order) = four_colours_on_a5();
+        let sheet = sheet_of(&colouring, order, "goblin-12-4-a5.sheet.pdf")?;
+
+        let pdf = sheet_pdf(&colouring, order, "goblin-12-4-a5.sheet.pdf", 0)?;
+
+        assert_eq!(
+            pages_against(&pdf, &sheet),
+            [(sheet.width(), sheet.height(), 0)]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_preview_written_as_a_pdf_draws_every_dot_of_the_preview_in_shapes_saying_it_is_one()
+    -> Result<(), NoRoom> {
+        let (colouring, order) = four_colours_on_a5();
+        let preview = preview_of(&colouring, order, "goblin-12-4-a5.preview.pdf")?;
+
+        let pdf = preview_pdf(&colouring, order, "goblin-12-4-a5.preview.pdf", 0)?;
+
+        assert_eq!(
+            pages_against(&pdf, &preview),
+            [(preview.width(), preview.height(), 0)]
+        );
+        assert_eq!(
+            pdf_reading::info_of(&pdf)
+                .get("Subject")
+                .map(String::as_str),
+            Some("A colour-by-number sheet's preview, coloured in")
+        );
         Ok(())
     }
 
