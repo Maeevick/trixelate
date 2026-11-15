@@ -99,8 +99,12 @@ pub enum Orientation {
 impl Orientation {
     /// The way up that suits a picture: on its side once it is a tenth wider than tall, upright otherwise, a square
     /// included.
-    pub fn suiting(_picture: &Picture) -> Orientation {
-        Orientation::Portrait
+    pub fn suiting(picture: &Picture) -> Orientation {
+        if u64::from(picture.width()) * 10 >= u64::from(picture.height()) * 11 {
+            Orientation::Landscape
+        } else {
+            Orientation::Portrait
+        }
     }
 }
 
