@@ -657,7 +657,7 @@ fn pieces_of_an_a4_or_a5_sheet_are_refused_as_misuse_since_a_home_printer_takes_
     );
     assert!(
         text(&on_a4.stderr)
-            .contains("an A4 sheet prints whole at home: --pieces is for an A3 or A2 poster")
+            .contains("an A4 sheet prints whole at home: --pieces is for an A3 or A2 sheet")
     );
     assert!(text(&on_a5.stderr).contains("an A5 sheet prints whole at home"));
 }
