@@ -24,6 +24,7 @@ use grid::GridSize;
 use layout::{Layout, Margin, NoRoom, Orientation, PageFormat};
 use palette::ColourCount;
 use picture::Picture;
+use pieces::Pieces;
 use sheet::Sheet;
 
 /// What a sheet is asked to be: its cells across, its number of colours, its paper, which way up it lies and its
@@ -76,6 +77,11 @@ impl Order {
 
     pub fn format(&self) -> PageFormat {
         self.format
+    }
+
+    /// How the sheet is cut into A4 pieces for a home printer, none for a sheet it takes whole.
+    pub fn pieces(&self) -> Option<Pieces> {
+        Pieces::of(self.format, self.orientation)
     }
 
     /// The same order on a page lying the other way, as a picture suits it.
@@ -186,9 +192,13 @@ pub fn pieces_pdf(
     file_name: &str,
     made: u64,
 ) -> Result<Option<Vec<u8>>, NoRoom> {
-    lay_out(colouring, order)?;
-    let _ = (file_name, made);
-    Ok(None)
+    let drawing = sheet::drawing(colouring, &lay_out(colouring, order)?.titled(file_name));
+    Ok(order.pieces().map(|pieces| {
+        let (pages, characters) = pieces.pages(&drawing);
+        let subject =
+            "A colour-by-number poster in A4 pieces, to print at actual size and glue together";
+        pdf_file::write_pages(&pages, &characters, &about(file_name, subject, made))
+    }))
 }
 
 /// A drawing as a PDF of one page, saying what it is about.

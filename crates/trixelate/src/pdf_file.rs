@@ -279,11 +279,11 @@ fn colour_of(Rgb(red, green, blue): Rgb) -> String {
 }
 
 /// A number written to the hundredth, as short as it reads.
-fn number(value: f64) -> String {
+pub(crate) fn number(value: f64) -> String {
     number_to(value, 2)
 }
 
-fn number_to(value: f64, decimals: usize) -> String {
+pub(crate) fn number_to(value: f64, decimals: usize) -> String {
     let written = format!("{value:.decimals$}");
     let trimmed = written.trim_end_matches('0').trim_end_matches('.');
     match trimmed {
