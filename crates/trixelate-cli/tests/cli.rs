@@ -245,6 +245,29 @@ fn a_landscape_sheet_lies_on_its_side() {
     );
 }
 
+#[test]
+fn a_sheet_lies_the_way_its_picture_suits_unless_asked_upright() {
+    let folder = folder("suiting");
+    let wide = a_picture_in(&folder);
+    let wide = wide.to_str().unwrap_or_default();
+
+    let suiting = trixelate(&[wide, "--width", "4"]);
+    let upright = trixelate(&[wide, "--width", "4", "--portrait"]);
+
+    let page = |name| {
+        written_beside(&folder, name, "sheet.png")
+            .and_then(|path| fs::read(path).ok())
+            .and_then(|bytes| png_file::read(&bytes).ok())
+            .map(|sheet| (sheet.width(), sheet.height()))
+    };
+    assert!(suiting.status.success(), "{}", text(&suiting.stderr));
+    assert!(upright.status.success(), "{}", text(&upright.stderr));
+    assert_eq!(
+        [page("sunset-4-4-a4-landscape"), page("sunset-4-4-a4")],
+        [Some((3508, 2480)), Some((2480, 3508))]
+    );
+}
+
 /// Twelve colours in a four by three picture, so the sheet writes every digit from 0 to 9.
 fn a_twelve_colour_picture_in(folder: &Path) -> PathBuf {
     let pixels: Vec<u8> = (0..12u8)
