@@ -28,19 +28,25 @@ pub struct Decoded {
 }
 
 /// A JPEG decoded by zune-jpeg, whatever its colour space, or nothing.
-pub fn decoded(_bytes: &[u8]) -> Option<Decoded> {
-    None
+pub fn decoded(bytes: &[u8]) -> Option<Decoded> {
+    let options = DecoderOptions::default().jpeg_set_out_colorspace(ColorSpace::RGBA);
+    let mut decoder = JpegDecoder::new_with_options(ZCursor::new(bytes), options);
+    let rgba = decoder.decode().ok()?;
+    let info = decoder.info()?;
+    Some(Decoded {
+        width: u32::from(info.width),
+        height: u32::from(info.height),
+        rgba,
+        exif: decoder.exif().cloned(),
+    })
 }
 
 /// The picture a JPEG holds, as `decode` hands it back, in red, green and blue, turned upright as its camera says.
-pub fn read(bytes: &[u8], _decode: impl Fn(&[u8]) -> Option<Decoded>) -> Result<Picture, NotAJpeg> {
-    let options = DecoderOptions::default().jpeg_set_out_colorspace(ColorSpace::RGBA);
-    let mut decoder = JpegDecoder::new_with_options(ZCursor::new(bytes), options);
-    let rgba = decoder.decode().map_err(|_| NotAJpeg)?;
-    let size = decoder.info().ok_or(NotAJpeg)?;
-    let stored = Picture::from_rgba(u32::from(size.width), u32::from(size.height), &rgba)
-        .map_err(|_| NotAJpeg)?;
-    let how = decoder.exif().and_then(|exif| how_stored(exif));
+pub fn read(bytes: &[u8], decode: impl Fn(&[u8]) -> Option<Decoded>) -> Result<Picture, NotAJpeg> {
+    let decoded = decode(bytes).ok_or(NotAJpeg)?;
+    let stored =
+        Picture::from_rgba(decoded.width, decoded.height, &decoded.rgba).map_err(|_| NotAJpeg)?;
+    let how = decoded.exif.as_deref().and_then(how_stored);
     Ok(turned(stored, how.unwrap_or(HowStored::AsShown)))
 }
 
