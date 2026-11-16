@@ -107,7 +107,7 @@ pub struct Painted {
     pub name: String,
 }
 
-const CANNOT_SHOW_THE_SHEET: &str = "The sheet could not be turned into a PNG. That one is on us.";
+const CANNOT_SHOW_THE_SHEET: &str = "The sheet could not be shown. That one is on us.";
 const PRINTS_WHOLE: &str = "This sheet prints whole at home: pieces are for an A3 or A2 sheet.";
 
 /// A colouring's sheet painted on the order's page, named after the picture, encoded by `encode` to be shown only,
