@@ -503,7 +503,7 @@ mod tests {
             ))
         });
 
-        let on_us = "The sheet could not be turned into a PNG. That one is on us.".to_string();
+        let on_us = "The sheet could not be shown. That one is on us.".to_string();
         assert_eq!(shown, Ok((Some(on_us.clone()), Some(on_us))));
     }
 
