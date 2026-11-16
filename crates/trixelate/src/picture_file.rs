@@ -31,7 +31,7 @@ pub fn read(bytes: &[u8]) -> Result<Picture, Unreadable> {
     }
     png_file::read(bytes)
         .ok()
-        .or_else(|| jpeg_file::read(bytes).ok())
+        .or_else(|| jpeg_file::read(bytes, jpeg_file::decoded).ok())
         .ok_or(Unreadable::NeitherPngNorJpeg)
 }
 

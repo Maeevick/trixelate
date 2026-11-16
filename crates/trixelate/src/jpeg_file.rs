@@ -18,8 +18,22 @@ pub(crate) fn size(bytes: &[u8]) -> Option<(u32, u32)> {
     Some((u32::from(info.width), u32::from(info.height)))
 }
 
-/// The picture a JPEG holds, whatever its colour space, in red, green and blue, turned upright as its camera says.
-pub fn read(bytes: &[u8]) -> Result<Picture, NotAJpeg> {
+/// A JPEG as its decoder hands it back: its width and height, its pixels row after row as red, green, blue and alpha
+/// bytes, and its EXIF block if it has one.
+pub struct Decoded {
+    pub width: u32,
+    pub height: u32,
+    pub rgba: Vec<u8>,
+    pub exif: Option<Vec<u8>>,
+}
+
+/// A JPEG decoded by zune-jpeg, whatever its colour space, or nothing.
+pub fn decoded(_bytes: &[u8]) -> Option<Decoded> {
+    None
+}
+
+/// The picture a JPEG holds, as `decode` hands it back, in red, green and blue, turned upright as its camera says.
+pub fn read(bytes: &[u8], _decode: impl Fn(&[u8]) -> Option<Decoded>) -> Result<Picture, NotAJpeg> {
     let options = DecoderOptions::default().jpeg_set_out_colorspace(ColorSpace::RGBA);
     let mut decoder = JpegDecoder::new_with_options(ZCursor::new(bytes), options);
     let rgba = decoder.decode().map_err(|_| NotAJpeg)?;
@@ -230,12 +244,12 @@ mod tests {
         let orientations = [1, 2, 3, 4, 5, 6, 7, 8];
 
         let turned = orientations.map(|orientation| {
-            read(&told_to_turn(orientation, orientation % 2 == 0))
+            read(&told_to_turn(orientation, orientation % 2 == 0), decoded)
                 .map(|picture| red_corner_of(&picture))
         });
 
         assert_eq!(
-            read(RED_CORNER).map(|picture| red_corner_of(&picture)),
+            read(RED_CORNER, decoded).map(|picture| red_corner_of(&picture)),
             Ok((16, 8, "top left".to_string()))
         );
         assert_eq!(
@@ -263,7 +277,8 @@ mod tests {
             with_exif(&[(make, 0), (model, 0)], true),
         ];
 
-        let turned = photos.map(|photo| read(&photo).map(|picture| red_corner_of(&picture)));
+        let turned =
+            photos.map(|photo| read(&photo, decoded).map(|picture| red_corner_of(&picture)));
 
         assert_eq!(
             turned,
@@ -283,7 +298,7 @@ mod tests {
             told_to_turn(u16::MAX, true),
         ];
 
-        let read = photos.map(|photo| read(&photo).map(|picture| red_corner_of(&picture)));
+        let read = photos.map(|photo| read(&photo, decoded).map(|picture| red_corner_of(&picture)));
 
         assert_eq!(read, [(); 3].map(|_| Ok((16, 8, "top left".to_string()))));
     }
@@ -308,8 +323,9 @@ mod tests {
             tiff[..6].to_vec(),
         ];
 
-        let read = blocks
-            .map(|block| read(&with_exif_block(&block)).map(|picture| red_corner_of(&picture)));
+        let read = blocks.map(|block| {
+            read(&with_exif_block(&block), decoded).map(|picture| red_corner_of(&picture))
+        });
 
         let as_stored = Ok((16, 8, "top left".to_string()));
         assert_eq!(read[0], Ok((8, 16, "top right".to_string())));
@@ -318,7 +334,7 @@ mod tests {
 
     #[test]
     fn a_jpeg_red_on_its_left_and_blue_on_its_right_reads_so_within_its_compression() {
-        let picture = read(RED_AND_BLUE);
+        let picture = read(RED_AND_BLUE, decoded);
 
         let seen = picture.map(|picture| {
             (
@@ -330,5 +346,35 @@ mod tests {
         });
 
         assert_eq!(seen, Ok((16, 8, true, true)));
+    }
+
+    #[test]
+    fn a_jpeg_its_decoder_fails_on_or_hands_back_no_pixel_or_pixels_short_of_their_size_is_no_picture()
+     {
+        let failing = |_: &[u8]| None;
+        let empty = |_: &[u8]| {
+            Some(Decoded {
+                width: 0,
+                height: 0,
+                rgba: Vec::new(),
+                exif: None,
+            })
+        };
+        let short = |_: &[u8]| {
+            Some(Decoded {
+                width: 2,
+                height: 1,
+                rgba: vec![255; 4],
+                exif: None,
+            })
+        };
+
+        let read = [
+            read(RED_AND_BLUE, failing).err(),
+            read(RED_AND_BLUE, empty).err(),
+            read(RED_AND_BLUE, short).err(),
+        ];
+
+        assert_eq!(read, [Some(NotAJpeg); 3]);
     }
 }
