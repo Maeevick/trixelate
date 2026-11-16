@@ -206,7 +206,8 @@ impl Drawn {
     ) {
         let mut saved = Vec::new();
         let mut operands: Vec<f64> = Vec::new();
-        let mut path: Vec<Part> = Vec::new();
+        let mut rectangles: Vec<(f64, f64, f64, f64)> = Vec::new();
+        let mut curve: Vec<(f64, f64)> = Vec::new();
         let mut name = String::new();
         for token in content.split_whitespace() {
             if let Ok(number) = token.parse() {
@@ -237,23 +238,24 @@ impl Drawn {
                     let channel = |share: f64| (share * 255.0).round() as u8;
                     state.colour = Rgb(channel(red), channel(green), channel(blue));
                 }
-                ("re", &[x, y, width, height]) => path.push(Part::Rectangle(x, y, width, height)),
-                ("m", &[x, y]) => path.push(Part::Points(vec![(x, y)])),
-                ("c", &[x1, y1, x2, y2, x3, y3]) => {
-                    if let Some(Part::Points(points)) = path.last_mut() {
-                        points.extend([(x1, y1), (x2, y2), (x3, y3)]);
-                    }
-                }
+                ("re", &[x, y, width, height]) => rectangles.push((x, y, width, height)),
+                ("m", &[x, y]) => curve = vec![(x, y)],
+                ("c", &[x1, y1, x2, y2, x3, y3]) => curve.extend([(x1, y1), (x2, y2), (x3, y3)]),
                 ("W", []) => {
-                    if let Some(Part::Rectangle(x, y, width, height)) = path.first() {
-                        let (left, bottom) = self.dot(state.matrix, (*x, *y));
-                        let (right, top) = self.dot(state.matrix, (x + width, y + height));
-                        state.clip = Some((left, top, right, bottom));
-                    }
+                    let &(x, y, width, height) = rectangles.first().expect("a window to clip to");
+                    let (left, bottom) = self.dot(state.matrix, (x, y));
+                    let (right, top) = self.dot(state.matrix, (x + width, y + height));
+                    state.clip = Some((left, top, right, bottom));
                 }
-                ("n", []) => path.clear(),
+                ("n", []) => rectangles.clear(),
                 ("f", []) => {
-                    for part in path.drain(..) {
+                    let parts = rectangles
+                        .drain(..)
+                        .map(|(x, y, width, height)| Part::Rectangle(x, y, width, height))
+                        .chain(
+                            (!curve.is_empty()).then(|| Part::Points(std::mem::take(&mut curve))),
+                        );
+                    for part in parts {
                         self.fill(&part, state);
                     }
                 }
