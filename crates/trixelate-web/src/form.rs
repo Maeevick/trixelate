@@ -463,6 +463,27 @@ mod tests {
     }
 
     #[test]
+    fn an_a4_or_a5_sheet_asked_for_in_pieces_is_said_to_print_whole_at_home() {
+        let picture = red_and_yellow();
+        let on = |format| Settings {
+            format,
+            width: 2,
+            ..Settings::default()
+        };
+
+        let painted = [PageFormat::A4, PageFormat::A5].map(|format| {
+            ready(on(format)).and_then(|order| {
+                let colouring = coloured(&picture, order)?;
+                paint_pieces(&colouring, "red-yellow.png", order, 0).map(|pieces| pieces.name)
+            })
+        });
+
+        let prints_whole =
+            "This sheet prints whole at home: pieces are for an A3 or A2 sheet.".to_string();
+        assert_eq!(painted, [Err(prints_whole.clone()), Err(prints_whole)]);
+    }
+
+    #[test]
     fn a_colouring_is_reused_for_another_paper_margin_or_orientation_of_the_same_picture_and_made_anew_otherwise()
      {
         let picture = Arc::new(red_and_yellow());
