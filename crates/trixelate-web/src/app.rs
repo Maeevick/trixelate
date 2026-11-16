@@ -9,6 +9,7 @@ use leptos::task::spawn_local;
 use trixelate::layout::{PageFormat, most_cells_across};
 use trixelate::picture::Picture;
 use trixelate::picture_file::{self, Unreadable};
+use trixelate::sheet::Sheet;
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, BlobPropertyBag, Element, File, HtmlAnchorElement, HtmlInputElement, Url};
 
@@ -191,7 +192,11 @@ pub fn App() -> impl IntoView {
             }
             let made = ready(settings).and_then(|order| {
                 let colouring = last_colouring.write_value().for_order(&picture, order)?;
-                Ok((paint_sheet(&colouring, &name, order)?, colouring, order))
+                Ok((
+                    paint_sheet(&colouring, &name, order, Sheet::png_to_show)?,
+                    colouring,
+                    order,
+                ))
             });
             let (sheet, colouring, order) = match made {
                 Ok(made) => made,
@@ -209,7 +214,7 @@ pub fn App() -> impl IntoView {
                 if !still_latest() {
                     return;
                 }
-                match paint_preview(&colouring, &title, order) {
+                match paint_preview(&colouring, &title, order, Sheet::png_to_show) {
                     Ok(preview) => coloured_in_shown.set(ObjectUrl::of_png(&preview).map(Arc::new)),
                     Err(why) => refusal.set(Some(why)),
                 }

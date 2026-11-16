@@ -11,6 +11,8 @@ use trixelate::palette::ColourCount;
 use trixelate::picture::Picture;
 use trixelate::picture_file::{MOST_MEGABYTES, MOST_MEGAPIXELS, Unreadable};
 use trixelate::pieces::Pieces;
+use trixelate::png_file::CannotWritePng;
+use trixelate::sheet::Sheet;
 use trixelate::warning::warnings_for;
 use trixelate::{
     Order, Refusal, colour, pieces_file_name, pieces_pdf, preview_of, sheet_file_name, sheet_of,
@@ -105,20 +107,23 @@ pub struct Painted {
     pub name: String,
 }
 
-const NOT_A_PNG: &str = "The sheet could not be turned into a PNG. That one is on us.";
+const CANNOT_SHOW_THE_SHEET: &str = "The sheet could not be turned into a PNG. That one is on us.";
 const PRINTS_WHOLE: &str = "This sheet prints whole at home: pieces are for an A3 or A2 sheet.";
 
-/// A colouring's sheet painted on the order's page, named after the picture, encoded fast to be shown only, or why it
-/// cannot be.
+/// A colouring's sheet painted on the order's page, named after the picture, encoded by `encode` to be shown only,
+/// or why it cannot be.
 pub fn paint_sheet(
     colouring: &Colouring,
     picture_name: &str,
     order: Order,
+    _encode: impl Fn(&Sheet) -> Result<Vec<u8>, CannotWritePng>,
 ) -> Result<Painted, String> {
     let name = sheet_file_name(picture_name, &order);
     let sheet = sheet_of(colouring, order, &name).map_err(explain)?;
     Ok(Painted {
-        bytes: sheet.png_to_show().map_err(|_| NOT_A_PNG.to_string())?,
+        bytes: sheet
+            .png_to_show()
+            .map_err(|_| CANNOT_SHOW_THE_SHEET.to_string())?,
         name,
     })
 }
@@ -138,12 +143,18 @@ pub fn sheet_to_print(
     })
 }
 
-/// A colouring's preview painted on the order's page, titled as its sheet, encoded fast to be shown only.
-pub fn paint_preview(colouring: &Colouring, title: &str, order: Order) -> Result<Vec<u8>, String> {
+/// A colouring's preview painted on the order's page, titled as its sheet, encoded by `encode` to be shown only, or why
+/// it cannot be.
+pub fn paint_preview(
+    colouring: &Colouring,
+    title: &str,
+    order: Order,
+    _encode: impl Fn(&Sheet) -> Result<Vec<u8>, CannotWritePng>,
+) -> Result<Vec<u8>, String> {
     preview_of(colouring, order, title)
         .map_err(explain)?
         .png_to_show()
-        .map_err(|_| NOT_A_PNG.to_string())
+        .map_err(|_| CANNOT_SHOW_THE_SHEET.to_string())
 }
 
 /// Whether a sheet on this paper is offered in A4 pieces: only one bigger than a home printer takes.
@@ -396,8 +407,8 @@ mod tests {
         let painted = [Settings::default(), on_its_side].map(|settings| {
             ready(settings).and_then(|order| {
                 let colouring = coloured(&picture, order)?;
-                let sheet = paint_sheet(&colouring, "red-yellow.png", order)?;
-                let preview = paint_preview(&colouring, &sheet.name, order)?;
+                let sheet = paint_sheet(&colouring, "red-yellow.png", order, Sheet::png_to_show)?;
+                let preview = paint_preview(&colouring, &sheet.name, order, Sheet::png_to_show)?;
                 Ok((page(&sheet.bytes), page(&preview), sheet.name))
             })
         });
@@ -481,6 +492,23 @@ mod tests {
         let prints_whole =
             "This sheet prints whole at home: pieces are for an A3 or A2 sheet.".to_string();
         assert_eq!(painted, [Err(prints_whole.clone()), Err(prints_whole)]);
+    }
+
+    #[test]
+    fn a_sheet_or_its_preview_the_page_cannot_encode_to_show_says_so_owning_the_failure() {
+        let picture = red_and_yellow();
+        let failing = |_: &Sheet| Err(CannotWritePng);
+
+        let shown = ready(Settings::default()).and_then(|order| {
+            let colouring = coloured(&picture, order)?;
+            Ok((
+                paint_sheet(&colouring, "red-yellow.png", order, failing).err(),
+                paint_preview(&colouring, "red-yellow-32-4-a4.sheet.pdf", order, failing).err(),
+            ))
+        });
+
+        let on_us = "The sheet could not be turned into a PNG. That one is on us.".to_string();
+        assert_eq!(shown, Ok((Some(on_us.clone()), Some(on_us))));
     }
 
     #[test]
