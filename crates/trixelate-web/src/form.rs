@@ -116,14 +116,12 @@ pub fn paint_sheet(
     colouring: &Colouring,
     picture_name: &str,
     order: Order,
-    _encode: impl Fn(&Sheet) -> Result<Vec<u8>, CannotWritePng>,
+    encode: impl Fn(&Sheet) -> Result<Vec<u8>, CannotWritePng>,
 ) -> Result<Painted, String> {
     let name = sheet_file_name(picture_name, &order);
     let sheet = sheet_of(colouring, order, &name).map_err(explain)?;
     Ok(Painted {
-        bytes: sheet
-            .png_to_show()
-            .map_err(|_| CANNOT_SHOW_THE_SHEET.to_string())?,
+        bytes: encode(&sheet).map_err(|_| CANNOT_SHOW_THE_SHEET.to_string())?,
         name,
     })
 }
@@ -149,11 +147,9 @@ pub fn paint_preview(
     colouring: &Colouring,
     title: &str,
     order: Order,
-    _encode: impl Fn(&Sheet) -> Result<Vec<u8>, CannotWritePng>,
+    encode: impl Fn(&Sheet) -> Result<Vec<u8>, CannotWritePng>,
 ) -> Result<Vec<u8>, String> {
-    preview_of(colouring, order, title)
-        .map_err(explain)?
-        .png_to_show()
+    encode(&preview_of(colouring, order, title).map_err(explain)?)
         .map_err(|_| CANNOT_SHOW_THE_SHEET.to_string())
 }
 
