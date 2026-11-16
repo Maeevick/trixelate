@@ -525,8 +525,7 @@ mod tests {
         let blank = characters
             .iter()
             .zip(&shapes)
-            .filter(|(_, shape)| shape.is_empty())
-            .map(|(character, _)| *character)
+            .filter_map(|(character, shape)| shape.is_empty().then_some(*character))
             .collect::<String>();
         let distinct = shapes.iter().collect::<std::collections::HashSet<_>>();
         assert_eq!(blank, "");
